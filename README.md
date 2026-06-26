@@ -1,36 +1,193 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# College ERP System
 
-## Getting Started
+A modern full-stack **College ERP (Enterprise Resource Planning)** platform designed to streamline academic and administrative workflows for students, faculty, and administrators.
 
-First, run the development server:
+This system centralizes attendance, academics, examinations, fee management, and student opportunities into a single scalable platform.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## Overview
+
+Managing academic operations manually can be inefficient and time-consuming.
+
+This ERP system digitizes and automates core college workflows such as:
+
+* Student management
+* Attendance tracking
+* Academic progress monitoring
+* Examination schedules
+* Fee tracking
+* Notifications
+* Timetable management
+
+The project is built with a modern SaaS-style dashboard to provide an intuitive and efficient user experience.
+
+---
+
+## Features
+
+### Student Module
+
+* Student dashboard
+* Attendance tracking
+* Academic performance monitoring
+* Timetable access
+* Assignment tracking
+* Fee status monitoring
+* Notifications and announcements
+
+### Faculty Module
+
+* Manage student attendance
+* Upload marks
+* Create assignments
+* View class performance
+* Schedule exams
+
+### Admin Module
+
+* Manage students and faculty
+* Department management
+* Fee records
+* Academic schedules
+* Examination control
+* System-wide announcements
+
+---
+
+## Dashboard Features
+
+* Interactive attendance analytics
+* CGPA trend visualization
+* Upcoming deadlines
+* Calendar-based timetable
+* Opportunity feed
+* Task management
+* Notification timeline
+* Theme support (Dark / Light Mode)
+
+---
+
+## Tech Stack
+
+### Frontend
+
+* Next.js
+* TypeScript
+* Tailwind CSS
+* React
+
+### Backend
+
+* Node.js
+* Express.js
+* TypeScript
+
+### Database
+
+* PostgreSQL
+
+### Authentication
+
+* JWT Authentication
+* Role-based access control
+
+---
+
+## Project Structure
+
+```text id="l8v9ds"
+college-erp/
+├── frontend/      # Next.js frontend
+├── backend/       # Node.js backend
+├── database/      # PostgreSQL configurations
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Installation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Clone the repository:
 
-## Learn More
+```bash id="x8d2wy"
+git clone <your-repo-url>
+cd college-erp
+```
 
-To learn more about Next.js, take a look at the following resources:
+Install frontend dependencies:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash id="v5k9rc"
+cd frontend
+npm install
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Install backend dependencies:
 
-## Deploy on Vercel
+```bash id="f2m7na"
+cd ../backend
+npm install
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Setup environment variables:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Backend:
+
+```env id="k4t8vz"
+PORT=3001
+DATABASE_URL=your_database_url
+JWT_ACCESS_SECRET=your_secret
+JWT_REFRESH_SECRET=your_secret
+```
+
+Frontend:
+
+```env id="c6q3ep"
+NEXT_PUBLIC_API_URL=http://127.0.0.1:3001/api
+```
+
+Run backend:
+
+```bash id="w7r2mx"
+npm run dev
+```
+
+Run frontend:
+
+```bash id="d3n8lv"
+npm run dev
+```
+
+---
+
+## Future Improvements
+
+* AI-based performance analytics
+* Smart timetable optimization
+* Parent portal
+* Placement tracking
+* Hostel management
+* Transport management
+* AI chatbot assistant
+
+---
+
+## Use Cases
+
+* Colleges
+* Universities
+* Educational institutions
+* Academic administration systems
+
+---
+
+## Author
+
+**Bhuvanesh T**
+
+B.Tech AIML | Full Stack Developer | AI Enthusiast
+
+---
+
+## License
+
+This project is developed for educational and institutional use.
