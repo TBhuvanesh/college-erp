@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import { query, withTransaction } from '../config/database';
 import { hashPassword } from '../utils/password';
 import { auditLog } from '../utils/audit';
@@ -231,6 +232,19 @@ export async function createStudent(
       ]
     );
     const studentId = studentRows[0].id;
+
+    // Automatically create a Tuition Fee entry of ₹106,000 for the new student
+    const feeId = uuidv4();
+    const dueDate = new Date();
+    dueDate.setMonth(dueDate.getMonth() + 1); // 1 month due date
+    const dueDateStr = dueDate.toISOString().split('T')[0];
+
+    await client.query(
+      `INSERT INTO fees
+         (id, student_id, academic_year, semester, fee_type, total_amount, paid_amount, pending_amount, due_date, payment_status, remarks)
+       VALUES ($1, $2, $3, $4, 'Tuition Fee', 106000.00, 0.00, 106000.00, $5, 'Pending', 'Initial Tuition Fee Allocation')`,
+      [feeId, studentId, data.academicYear, data.semester, dueDateStr]
+    );
 
     // Fetch the full detail row within the same transaction
     const { rows: detail } = await client.query<StudentDetailRow>(

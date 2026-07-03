@@ -18,11 +18,11 @@ const uuidParam = { params: z.object({ id: z.string().uuid('Invalid fee record I
 
 // ── Static paths before /:id ───────────────────────────────────────────────────
 
-// Admin: batch-assign same fee to all students in a program or explicit list
+// Admin/Accountant: batch-assign same fee to all students in a program or explicit list
 router.post(
   '/bulk',
   authenticate,
-  requireRole('admin'),
+  requireRole('admin', 'accountant'),
   validate({ body: bulkCreateFeeSchema }),
   feeController.bulkCreateFees
 );
@@ -45,69 +45,69 @@ router.get(
 
 // ── Collection endpoints ───────────────────────────────────────────────────────
 
-// Admin: list all fee records with filters
+// Admin/Accountant: list all fee records with filters
 router.get(
   '/',
   authenticate,
-  requireRole('admin'),
+  requireRole('admin', 'accountant'),
   validate({ query: listFeesQuerySchema }),
   feeController.listFees
 );
 
-// Admin: create a single fee record
+// Admin/Accountant: create a single fee record
 router.post(
   '/',
   authenticate,
-  requireRole('admin'),
+  requireRole('admin', 'accountant'),
   validate({ body: createFeeSchema }),
   feeController.createFee
 );
 
 // ── Individual fee endpoints (/:id last) ───────────────────────────────────────
 
-// Admin + Student: view single fee record (student sees own only)
+// Admin/Accountant + Student: view single fee record (student sees own only)
 router.get(
   '/:id',
   authenticate,
-  requireRole('admin', 'student'),
+  requireRole('admin', 'student', 'accountant'),
   validate(uuidParam),
   feeController.getFee
 );
 
-// Admin: update fee amount, due date, or remarks
+// Admin/Accountant: update fee amount, due date, or remarks
 router.patch(
   '/:id',
   authenticate,
-  requireRole('admin'),
+  requireRole('admin', 'accountant'),
   validate({ ...uuidParam, body: updateFeeSchema }),
   feeController.updateFee
 );
 
-// Admin: soft-delete (only if no payments recorded)
+// Admin/Accountant: soft-delete (only if no payments recorded)
 router.delete(
   '/:id',
   authenticate,
-  requireRole('admin'),
+  requireRole('admin', 'accountant'),
   validate(uuidParam),
   feeController.deleteFee
 );
 
 // ── Payment sub-resource (/:id/payments) ──────────────────────────────────────
 
-// Admin: record a new payment against this fee
+// Admin/Accountant: record a new payment against this fee
 router.post(
   '/:id/payments',
   authenticate,
-  requireRole('admin'),
+  requireRole('admin', 'accountant'),
   validate({ ...uuidParam, body: recordPaymentSchema }),
   feeController.recordPayment
 );
 
-// Admin + Student: view payment history (student sees own only)
+// Admin/Accountant + Student: view payment history (student sees own only)
 router.get(
   '/:id/payments',
   authenticate,
-  requireRole('admin', 'student'),
+  requireRole('admin', 'student', 'accountant'),
   validate(uuidParam),
   feeController.getFeePayments
 );

@@ -1,10 +1,10 @@
-export const ROLES = ['admin', 'faculty', 'student'] as const;
+export const ROLES = ['admin', 'faculty', 'student', 'accountant'] as const;
 export type Role = (typeof ROLES)[number];
 
 export const PERMISSIONS = {
   // User management
   'users:create': ['admin'],
-  'users:read': ['admin', 'faculty', 'student'],
+  'users:read': ['admin', 'faculty', 'student', 'accountant'],
   'users:update': ['admin'],
   'users:delete': ['admin'],
   // Academic structure
@@ -28,12 +28,12 @@ export const PERMISSIONS = {
   'grades:create': ['faculty'],
   'grades:read': ['admin', 'faculty', 'student'],
   'grades:update': ['faculty'],
-  // Fees — admin manages invoices; student reads own
-  'fees:create': ['admin'],
-  'fees:read': ['admin', 'student'],
-  'fees:update': ['admin'],
+  // Fees — admin/accountant manages invoices; student reads own
+  'fees:create': ['admin', 'accountant'],
+  'fees:read': ['admin', 'student', 'accountant'],
+  'fees:update': ['admin', 'accountant'],
   // Reporting
-  'reports:read': ['admin', 'faculty'],
+  'reports:read': ['admin', 'faculty', 'accountant'],
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;

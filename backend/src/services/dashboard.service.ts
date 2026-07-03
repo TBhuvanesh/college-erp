@@ -1087,3 +1087,45 @@ export async function getHODDashboardStats(userId: string) {
     ],
   };
 }
+
+export async function getAccountantDashboardStats() {
+  const [studCountRes, collectedRes, pendingRes, paidCountRes, partialCountRes, transactionsRes] = await Promise.all([
+    query<{ count: string }>('SELECT COUNT(*)::text AS count FROM students WHERE deleted_at IS NULL'),
+    query<{ total: string }>('SELECT COALESCE(SUM(paid_amount), 0)::text AS total FROM fees WHERE deleted_at IS NULL'),
+    query<{ total: string }>('SELECT COALESCE(SUM(pending_amount), 0)::text AS total FROM fees WHERE deleted_at IS NULL'),
+    query<{ count: string }>("SELECT COUNT(*)::text AS count FROM fees WHERE payment_status = 'Paid' AND deleted_at IS NULL"),
+    query<{ count: string }>("SELECT COUNT(*)::text AS count FROM fees WHERE payment_status = 'Partially Paid' AND deleted_at IS NULL"),
+    query<{ id: string; amount: string; payment_date: string; payment_mode: string; student_name: string; roll_number: string }>(
+      `SELECT 
+         fp.id, 
+         fp.amount, 
+         TO_CHAR(fp.payment_date, 'YYYY-MM-DD') AS payment_date, 
+         fp.payment_mode, 
+         s.full_name AS student_name, 
+         s.roll_number
+       FROM fee_payments fp
+       JOIN fees f ON f.id = fp.fee_id
+       JOIN students s ON s.id = f.student_id
+       ORDER BY fp.created_at DESC
+       LIMIT 5`
+    ),
+  ]);
+
+  return {
+    metrics: {
+      totalStudents: Number(studCountRes.rows[0]?.count || 0),
+      totalCollected: parseFloat(collectedRes.rows[0]?.total || '0'),
+      totalPending: parseFloat(pendingRes.rows[0]?.total || '0'),
+      fullyPaidStudents: Number(paidCountRes.rows[0]?.count || 0),
+      partialPaidStudents: Number(partialCountRes.rows[0]?.count || 0),
+    },
+    recentTransactions: transactionsRes.rows.map(r => ({
+      id: r.id,
+      amount: parseFloat(r.amount),
+      paymentDate: r.payment_date,
+      paymentMode: r.payment_mode,
+      studentName: r.student_name,
+      rollNumber: r.roll_number,
+    })),
+  };
+}

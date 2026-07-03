@@ -90,12 +90,12 @@ interface SimulationContextType {
   announcements: Announcement[];
   
   // App state
-  currentRole: "Admin" | "Faculty" | "Student" | "HOD";
+  currentRole: "Admin" | "Faculty" | "Student" | "HOD" | "Accountant";
   currentStudentId: string; // The simulated active student
   currentFacultyId: string; // The simulated active faculty
   
   // Setters/Mutations
-  setCurrentRole: (role: "Admin" | "Faculty" | "Student" | "HOD") => void;
+  setCurrentRole: (role: "Admin" | "Faculty" | "Student" | "HOD" | "Accountant") => void;
   setCurrentStudentId: (id: string) => void;
   setCurrentFacultyId: (id: string) => void;
   
@@ -384,9 +384,9 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return INITIAL_GRADES;
   });
 
-  const [currentRole, setCurrentRole] = useState<"Admin" | "Faculty" | "Student" | "HOD">(() => {
+  const [currentRole, setCurrentRole] = useState<"Admin" | "Faculty" | "Student" | "HOD" | "Accountant">(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("erp_current_role") as "Admin" | "Faculty" | "Student" | "HOD") || "Admin";
+      return (localStorage.getItem("erp_current_role") as "Admin" | "Faculty" | "Student" | "HOD" | "Accountant") || "Admin";
     }
     return "Admin";
   });
@@ -456,7 +456,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [grades, initialized]);
 
-  const handleSetRole = (role: "Admin" | "Faculty" | "Student" | "HOD") => {
+  const handleSetRole = (role: "Admin" | "Faculty" | "Student" | "HOD" | "Accountant") => {
     setCurrentRole(role);
     if (typeof window !== "undefined") {
       localStorage.setItem("erp_current_role", role);

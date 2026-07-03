@@ -40,12 +40,14 @@ export const Sidebar: React.FC = () => {
 
   const getUserName = () => {
     if (currentRole === "Admin") return "Admin Control";
+    if (currentRole === "Accountant") return "Accounts Office";
     if (currentRole === "Faculty" || currentRole === "HOD") return activeFaculty?.name || "Dr. Amit Verma";
     return activeStudent?.name || "Rahul Sharma";
   };
 
   const getUserSub = () => {
     if (currentRole === "Admin") return "Super User";
+    if (currentRole === "Accountant") return "Chief Accountant";
     if (currentRole === "Faculty" || currentRole === "HOD") return activeFaculty?.employeeId || "EMP-CS203";
     return activeStudent?.rollNo || "2026CSE001";
   };
@@ -54,6 +56,7 @@ export const Sidebar: React.FC = () => {
     if (currentRole === "Admin") return "dark:text-purple-400 text-purple-700 dark:bg-purple-500/10 bg-purple-50 dark:border-purple-500/20 border-purple-200";
     if (currentRole === "Faculty") return "dark:text-blue-400 text-blue-700 dark:bg-blue-500/10 bg-blue-50 dark:border-blue-500/20 border-blue-200";
     if (currentRole === "HOD") return "dark:text-amber-400 text-amber-700 dark:bg-amber-500/10 bg-amber-50 dark:border-amber-500/20 border-amber-200";
+    if (currentRole === "Accountant") return "dark:text-indigo-400 text-indigo-700 dark:bg-indigo-500/10 bg-indigo-50 dark:border-indigo-500/20 border-indigo-200";
     return "dark:text-emerald-400 text-emerald-700 dark:bg-emerald-500/10 bg-emerald-50 dark:border-emerald-500/20 border-emerald-200";
   };
 
@@ -162,10 +165,26 @@ export const Sidebar: React.FC = () => {
     }
   ];
 
+  const accountantNav: NavGroup[] = [
+    {
+      section: "Overview",
+      items: [
+        { name: "Dashboard", href: "/accountant/dashboard", icon: LayoutDashboard },
+      ]
+    },
+    {
+      section: "Finances",
+      items: [
+        { name: "Student Fees", href: "/accountant/fees", icon: CreditCard },
+      ]
+    }
+  ];
+
   const navGroups =
     currentRole === "Admin" ? adminNav :
     currentRole === "Faculty" ? facultyNav :
     currentRole === "HOD" ? hodNav :
+    currentRole === "Accountant" ? accountantNav :
     studentNav;
 
   const handleReset = () => {

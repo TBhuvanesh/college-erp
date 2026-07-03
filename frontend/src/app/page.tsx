@@ -28,6 +28,8 @@ export default function Home() {
         }
       } else if (user.role === "student") {
         router.push("/student/dashboard");
+      } else if (user.role === "accountant") {
+        router.push("/accountant/dashboard");
       }
     }
   }, [user, router]);

@@ -19,4 +19,7 @@ router.get('/hod', requireRole('faculty'), dashboardController.hodDashboard);
 // GET /api/dashboard/student — attendance, fees, results, and events for the requesting student
 router.get('/student', requireRole('student'), dashboardController.studentDashboard);
 
+// GET /api/dashboard/accountant — financial metrics summary for Accountant
+router.get('/accountant', requireRole('accountant'), dashboardController.accountantDashboard);
+
 export default router;

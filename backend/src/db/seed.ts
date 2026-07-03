@@ -148,6 +148,15 @@ async function seed(): Promise<void> {
   );
   logStep('admin user', 1);
 
+  // ── Accountant User ────────────────────────────────────────────────────────
+  const accountantHash = await hashPassword('Accountant@12345');
+  const accountantUserId = uuidv4();
+  await query(
+    `INSERT INTO users (id, email, password_hash, role, full_name) VALUES ($1, $2, $3, $4, $5)`,
+    [accountantUserId, 'accountant@college.erp', accountantHash, 'accountant', 'Chief Accountant']
+  );
+  logStep('accountant user', 1);
+
   // ── Faculty Staff ──────────────────────────────────────────────────────────
   console.log('\n[4/12] Seeding faculty members and accounts...');
 
@@ -563,16 +572,8 @@ async function seed(): Promise<void> {
 
   for (const stud of STUDENT_LIST) {
     const feesToCreate = [
-      { type: 'Tuition Fee', amount: 80000.00, dueDate: '2026-07-15' },
-      { type: 'Examination Fee', amount: 2500.00, dueDate: '2026-08-01' },
-      { type: 'Miscellaneous Fee', amount: 5000.00, dueDate: '2026-06-30' }
+      { type: 'Tuition Fee', amount: 106000.00, dueDate: '2026-07-15' }
     ];
-
-    // Add Lab fee if they take lab courses
-    const hasLab = SUBJECTS_LIST.some(s => s.progCode === PROGRAMS.find(p => p.id === stud.progId)!.code && s.semester === stud.semester && s.type === 'lab');
-    if (hasLab) {
-      feesToCreate.push({ type: 'Laboratory Fee', amount: 7500.00, dueDate: '2026-07-15' });
-    }
 
     const payStatusSelector = stud.performanceClass;
     let paymentStatus: 'Paid' | 'Partially Paid' | 'Pending' = 'Paid';
@@ -586,10 +587,8 @@ async function seed(): Promise<void> {
       
       if (paymentStatus === 'Paid') {
         paid = item.amount;
-      } else if (paymentStatus === 'Partially Paid' && item.type === 'Tuition Fee') {
-        paid = item.amount / 2;
       } else if (paymentStatus === 'Partially Paid') {
-        paid = item.amount; // Small fees paid fully in partial scenario
+        paid = 50000.00; // Partial payment amount is dynamic (₹50,000)
       }
 
       const pending = item.amount - paid;
@@ -728,12 +727,13 @@ async function seed(): Promise<void> {
 
   console.log('\n────────────────────────────────────────────────────────');
   console.log('College ERP Comprehensive Seeding Complete!');
-  console.log(`  Total Users Created:       ${(1 + FACULTY_LIST.length + STUDENT_LIST.length).toString().padEnd(6)}`);
+  console.log(`  Total Users Created:       ${(2 + FACULTY_LIST.length + STUDENT_LIST.length).toString().padEnd(6)}`);
   console.log(`  Total Subjects Catalogued: ${SUBJECTS_LIST.length.toString().padEnd(6)}`);
   console.log(`  Total Attendance Records:  ${attendanceRows.length.toString().padEnd(6)}`);
   console.log(`  Total Grade Result Logs:   ${resultsRows.length.toString().padEnd(6)}`);
   console.log(`  Logins:`);
   console.log(`    Admin:   admin@college.erp  /  Admin@12345`);
+  console.log(`    Accountant: accountant@college.erp / Accountant@12345`);
   console.log(`    Faculty: amit.sharma@college.erp  /  Faculty@12345`);
   console.log(`    Student: 23ve1a0501@college.erp  /  Student@12345 (4th Year CSE)`);
   console.log('────────────────────────────────────────────────────────\n');

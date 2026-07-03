@@ -26,3 +26,9 @@ export const hodDashboard = asyncHandler(async (req: Request, res: Response) => 
   const stats = await dashboardService.getHODDashboardStats(req.user!.id);
   sendSuccess(res, stats);
 });
+
+// GET /api/dashboard/accountant
+export const accountantDashboard = asyncHandler(async (_req: Request, res: Response) => {
+  const stats = await dashboardService.getAccountantDashboardStats();
+  sendSuccess(res, stats);
+});

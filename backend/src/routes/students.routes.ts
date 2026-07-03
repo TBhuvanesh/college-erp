@@ -58,11 +58,11 @@ router.delete(
 );
 
 // ── Read operations ────────────────────────────────────────────────────────────
-// List: admin and faculty only (students see their own via /me)
+// List: admin, faculty and accountant only (students see their own via /me)
 router.get(
   '/',
   authenticate,
-  requireRole('admin', 'faculty'),
+  requireRole('admin', 'faculty', 'accountant'),
   validate({ query: listStudentsQuerySchema }),
   studentController.listStudents
 );

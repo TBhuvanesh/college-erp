@@ -6,7 +6,7 @@ import { useSimulation } from "./SimulationContext";
 export interface UserProfile {
   id: string;
   email: string;
-  role: "admin" | "faculty" | "student";
+  role: "admin" | "faculty" | "student" | "accountant";
   designation?: string;
   departmentId?: string;
 }
@@ -30,7 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const { setCurrentRole, setCurrentStudentId, setCurrentFacultyId } = useSimulation();
 
-  const syncSimulationState = useCallback((role: "admin" | "faculty" | "student", designation?: string) => {
+  const syncSimulationState = useCallback((role: "admin" | "faculty" | "student" | "accountant", designation?: string) => {
     if (role === "admin") {
       setCurrentRole("Admin");
     } else if (role === "faculty") {
@@ -43,6 +43,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else if (role === "student") {
       setCurrentRole("Student");
       setCurrentStudentId("stud-rahul");
+    } else if (role === "accountant") {
+      setCurrentRole("Accountant");
     }
   }, [setCurrentRole, setCurrentStudentId, setCurrentFacultyId]);
 

@@ -26,6 +26,7 @@ const MIGRATION_FILES = [
   '018_opportunity_hub.sql',
   '019_notification_calendar.sql',
   '020_add_hod_designation.sql',
+  '021_add_accountant_role.sql',
 ];
 
 async function runMigrations(): Promise<void> {
@@ -79,6 +80,27 @@ async function runMigrations(): Promise<void> {
           'INSERT INTO schema_migrations (version) VALUES ($1)',
           [file]
         );
+      } else if (file === '021_add_accountant_role.sql') {
+        try {
+          // Execute enum alteration first
+          await client.query("ALTER TYPE user_role ADD VALUE 'accountant'");
+          console.log('  Enum value "accountant" added successfully.');
+        } catch (err: any) {
+          if (err.message && err.message.includes('already exists')) {
+            console.log('  Enum value "accountant" already exists, skipping alteration.');
+          } else {
+            throw err;
+          }
+        }
+        
+        // Execute the rest of the SQL file (truncations/inserts) in a separate transaction
+        await client.query('BEGIN');
+        await client.query(sql);
+        await client.query(
+          'INSERT INTO schema_migrations (version) VALUES ($1)',
+          [file]
+        );
+        await client.query('COMMIT');
       } else {
         await client.query('BEGIN');
         await client.query(sql);
