@@ -280,8 +280,8 @@ export default function AdminStudents() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
-          <h2 className="font-display font-bold text-2xl text-white">Student Registry</h2>
-          <p className="text-xs text-neutral-400 mt-1">
+          <h2 className="font-display font-bold text-2xl text-text-primary">Student Registry</h2>
+          <p className="text-xs text-text-muted mt-1">
             Review active student registers, academic standings, and outstanding fee invoices.
           </p>
         </div>
@@ -298,30 +298,30 @@ export default function AdminStudents() {
       </div>
 
       {/* Directory Filter controls */}
-      <div className="glass-card border border-neutral-800 rounded-xl p-4 mb-6 flex flex-col md:flex-row gap-3">
+      <div className="bg-surface border border-border-subtle rounded-xl p-4 mb-6 flex flex-col md:flex-row gap-3">
         {/* Search */}
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-neutral-500" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-text-muted" />
           <input
             type="text"
             placeholder="Search by name, email, or roll number..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-neutral-700"
+            className="w-full pl-9 pr-4 py-2 text-xs bg-background border border-border-subtle rounded text-text-primary focus:outline-none focus:border-neutral-700"
           />
         </div>
 
         {/* Dept Filter */}
-        <div className="w-full md:w-48 flex items-center gap-2 bg-neutral-950 border border-neutral-800 rounded px-2 text-xs text-white">
-          <Filter size={12} className="text-neutral-500" />
-          <span className="text-neutral-500">Dept:</span>
+        <div className="w-full md:w-48 flex items-center gap-2 bg-background border border-border-subtle rounded px-2 text-xs text-text-primary">
+          <Filter size={12} className="text-text-muted" />
+          <span className="text-text-muted">Dept:</span>
           <select
             value={deptFilter}
             onChange={(e) => {
               setDeptFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-transparent text-white cursor-pointer py-2 flex-1 focus:outline-none"
+            className="bg-transparent text-text-primary cursor-pointer py-2 flex-1 focus:outline-none"
           >
             <option value="ALL">All Departments</option>
             {departments.map((dept) => (
@@ -333,16 +333,16 @@ export default function AdminStudents() {
         </div>
 
         {/* Semester Filter */}
-        <div className="w-full md:w-48 flex items-center gap-2 bg-neutral-950 border border-neutral-800 rounded px-2 text-xs text-white">
-          <Filter size={12} className="text-neutral-500" />
-          <span className="text-neutral-500">Sem:</span>
+        <div className="w-full md:w-48 flex items-center gap-2 bg-background border border-border-subtle rounded px-2 text-xs text-text-primary">
+          <Filter size={12} className="text-text-muted" />
+          <span className="text-text-muted">Sem:</span>
           <select
             value={semFilter}
             onChange={(e) => {
               setSemFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-transparent text-white cursor-pointer py-2 flex-1 focus:outline-none"
+            className="bg-transparent text-text-primary cursor-pointer py-2 flex-1 focus:outline-none"
           >
             <option value="ALL">All Semesters</option>
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((sem) => (
@@ -354,16 +354,16 @@ export default function AdminStudents() {
         </div>
 
         {/* Status Filter */}
-        <div className="w-full md:w-48 flex items-center gap-2 bg-neutral-950 border border-neutral-800 rounded px-2 text-xs text-white">
-          <Filter size={12} className="text-neutral-500" />
-          <span className="text-neutral-500">Status:</span>
+        <div className="w-full md:w-48 flex items-center gap-2 bg-background border border-border-subtle rounded px-2 text-xs text-text-primary">
+          <Filter size={12} className="text-text-muted" />
+          <span className="text-text-muted">Status:</span>
           <select
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-transparent text-white cursor-pointer py-2 flex-1 focus:outline-none"
+            className="bg-transparent text-text-primary cursor-pointer py-2 flex-1 focus:outline-none"
           >
             <option value="ALL">All Statuses</option>
             <option value="ACTIVE">Active</option>
@@ -377,9 +377,9 @@ export default function AdminStudents() {
       {/* Main Table Grid split (70% table / 30% detail drawer overlay) */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* Data List Table */}
-        <div className="flex-1 w-full glass-card border border-neutral-800 rounded-xl overflow-hidden">
+        <div className="flex-1 w-full bg-surface border border-border-subtle rounded-xl overflow-hidden">
           {error && (
-            <div className="p-4 bg-rose-500/10 border-b border-neutral-800 text-rose-400 text-xs font-semibold font-mono">
+            <div className="p-4 bg-rose-500/10 border-b border-border-subtle text-rose-400 text-xs font-semibold font-mono">
               Error: {error}
             </div>
           )}
@@ -413,14 +413,14 @@ export default function AdminStudents() {
             )}
 
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="sticky top-0 z-10 bg-neutral-900/90 backdrop-blur border-b border-neutral-800 shadow-sm">
-                <tr className="text-neutral-400 font-semibold">
+              <thead className="sticky top-0 z-10 bg-surface/90 backdrop-blur border-b border-border-subtle shadow-sm">
+                <tr className="text-text-muted font-semibold">
                   <th className="px-4 py-3 w-10">
                     <input
                       type="checkbox"
                       checked={studentsList.length > 0 && selectedStudentIds.size === studentsList.length}
                       onChange={handleSelectAll}
-                      className="rounded bg-neutral-950 border-neutral-700 text-blue-500 focus:ring-0 cursor-pointer"
+                      className="rounded bg-background border-neutral-700 text-blue-500 focus:ring-0 cursor-pointer"
                     />
                   </th>
                   <th className="px-4 py-3 font-mono">Student ID</th>
@@ -434,10 +434,10 @@ export default function AdminStudents() {
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-900 text-neutral-300">
+              <tbody className="divide-y divide-border-subtle text-text-secondary">
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-12 text-neutral-500">
+                    <td colSpan={9} className="text-center py-12 text-text-muted">
                       <Loader2 className="animate-spin text-blue-500 mx-auto mb-2" size={20} />
                       <span className="font-mono text-[10px]">Accessing student registry...</span>
                     </td>
@@ -447,9 +447,9 @@ export default function AdminStudents() {
                     <tr
                       key={student.id}
                       tabIndex={0}
-                      className={`hover:bg-neutral-900/40 transition cursor-pointer outline-none focus:bg-neutral-800/50 ${
+                      className={`hover:bg-surface/40 transition cursor-pointer outline-none focus:bg-surface-elevated/50 ${
                         selectedStudentId === student.id ? "bg-blue-600/10 border-l-2 border-l-blue-600" : ""
-                      } ${selectedStudentIds.has(student.id) ? "bg-neutral-900/50" : ""}`}
+                      } ${selectedStudentIds.has(student.id) ? "bg-surface/50" : ""}`}
                       onClick={() => setSelectedStudentId(student.id)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") setSelectedStudentId(student.id);
@@ -460,19 +460,19 @@ export default function AdminStudents() {
                           type="checkbox"
                           checked={selectedStudentIds.has(student.id)}
                           onChange={(e) => handleSelectOne(student.id, e.target.checked)}
-                          className="rounded bg-neutral-950 border-neutral-700 text-blue-500 focus:ring-0 cursor-pointer"
+                          className="rounded bg-background border-neutral-700 text-blue-500 focus:ring-0 cursor-pointer"
                         />
                       </td>
-                      <td className="px-4 py-3 font-mono text-[10px] text-neutral-500 select-all" title={student.id}>
+                      <td className="px-4 py-3 font-mono text-[10px] text-text-muted select-all" title={student.id}>
                         {student.id.substring(0, 8)}...
                       </td>
                       <td className="px-4 py-3 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center font-bold text-blue-400 shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-surface-elevated border border-neutral-700 flex items-center justify-center font-bold text-blue-400 shrink-0">
                           {student.fullName.charAt(0)}
                         </div>
                         <div>
-                          <span className="font-semibold text-white block">{student.fullName}</span>
-                          <span className="text-[10px] text-neutral-500">{student.email}</span>
+                          <span className="font-semibold text-text-primary block">{student.fullName}</span>
+                          <span className="text-[10px] text-text-muted">{student.email}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3 font-mono">{student.rollNumber}</td>
@@ -487,7 +487,7 @@ export default function AdminStudents() {
                               ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                               : student.status === "suspended"
                               ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                              : "bg-neutral-500/10 text-neutral-400 border-neutral-500/20"
+                              : "bg-neutral-500/10 text-text-muted border-neutral-500/20"
                           }`}
                         >
                           {student.status}
@@ -498,7 +498,7 @@ export default function AdminStudents() {
                           <button
                             onClick={() => setSelectedStudentId(student.id)}
                             title="View Profile Details"
-                            className="p-1.5 rounded bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-400 hover:text-white cursor-pointer"
+                            className="p-1.5 rounded bg-surface-elevated hover:bg-neutral-700 border border-neutral-700 text-text-muted hover:text-text-primary cursor-pointer"
                           >
                             <Eye size={12} />
                           </button>
@@ -508,7 +508,7 @@ export default function AdminStudents() {
                               setFormDrawerOpen(true);
                             }}
                             title="Edit Student"
-                            className="p-1.5 rounded bg-neutral-800 hover:bg-neutral-750 border border-neutral-700 text-neutral-400 hover:text-white cursor-pointer"
+                            className="p-1.5 rounded bg-surface-elevated hover:bg-surface-hover border border-neutral-700 text-text-muted hover:text-text-primary cursor-pointer"
                           >
                             <Edit size={12} />
                           </button>
@@ -518,7 +518,7 @@ export default function AdminStudents() {
                               setDeleteConfirmOpen(true);
                             }}
                             title="Deactivate Student"
-                            className="p-1.5 rounded bg-neutral-800 hover:bg-neutral-750 border border-neutral-700 text-rose-500 hover:text-rose-400 cursor-pointer"
+                            className="p-1.5 rounded bg-surface-elevated hover:bg-surface-hover border border-neutral-700 text-rose-500 hover:text-rose-400 cursor-pointer"
                           >
                             <Trash2 size={12} />
                           </button>
@@ -528,7 +528,7 @@ export default function AdminStudents() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={10} className="text-center py-12 text-neutral-500 font-mono">
+                    <td colSpan={10} className="text-center py-12 text-text-muted font-mono">
                       No matching student profiles found in registry.
                     </td>
                   </tr>
@@ -538,9 +538,9 @@ export default function AdminStudents() {
           </div>
 
           {/* Mobile Card View */}
-          <div className="block md:hidden divide-y divide-neutral-900">
+          <div className="block md:hidden divide-y divide-border-subtle">
             {loading ? (
-              <div className="text-center py-12 text-neutral-500">
+              <div className="text-center py-12 text-text-muted">
                 <Loader2 className="animate-spin text-blue-500 mx-auto mb-2" size={20} />
                 <span className="font-mono text-[10px]">Accessing student registry...</span>
               </div>
@@ -548,19 +548,19 @@ export default function AdminStudents() {
               studentsList.map((student) => (
                 <div
                   key={student.id}
-                  className={`p-4 hover:bg-neutral-900/10 transition cursor-pointer flex flex-col gap-2.5 ${
+                  className={`p-4 hover:bg-surface/10 transition cursor-pointer flex flex-col gap-2.5 ${
                     selectedStudentId === student.id ? "bg-blue-600/5 border-l-2 border-l-blue-600" : ""
                   }`}
                   onClick={() => setSelectedStudentId(student.id)}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center font-bold text-blue-400 shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-surface-elevated border border-neutral-700 flex items-center justify-center font-bold text-blue-400 shrink-0">
                         {student.fullName.charAt(0)}
                       </div>
                       <div>
-                        <span className="font-semibold text-white block">{student.fullName}</span>
-                        <span className="text-[10px] text-neutral-500">{student.email}</span>
+                        <span className="font-semibold text-text-primary block">{student.fullName}</span>
+                        <span className="text-[10px] text-text-muted">{student.email}</span>
                       </div>
                     </div>
                     <span
@@ -576,13 +576,13 @@ export default function AdminStudents() {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-[10px] text-neutral-300 font-mono mt-1">
+                  <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-[10px] text-text-secondary font-mono mt-1">
                     <div>
-                      <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider">Student ID</span>
+                      <span className="text-text-muted block text-[9px] uppercase font-bold tracking-wider">Student ID</span>
                       <span className="select-all" title={student.id}>{student.id.substring(0, 8)}...</span>
                     </div>
                     <div>
-                      <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider">Roll Number</span>
+                      <span className="text-text-muted block text-[9px] uppercase font-bold tracking-wider">Roll Number</span>
                       <span>{student.rollNumber}</span>
                     </div>
                     <div>
@@ -598,7 +598,7 @@ export default function AdminStudents() {
                       <span>Sem {student.semester} - {student.section || "N/A"}</span>
                     </div>
                     <div>
-                      <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider">Acad Year</span>
+                      <span className="dark:text-neutral-505 text-text-muted block text-[9px] uppercase font-bold tracking-wider">Acad Year</span>
                       <span>{student.academicYear}</span>
                     </div>
                   </div>
@@ -606,7 +606,7 @@ export default function AdminStudents() {
                   <div className="flex justify-end gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => setSelectedStudentId(student.id)}
-                      className="p-1.5 rounded bg-neutral-850 hover:bg-neutral-800 border border-neutral-800 text-neutral-400 hover:text-white transition flex items-center gap-1 text-[10px]"
+                      className="p-1.5 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 border dark:border-neutral-800 border-border-subtle dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary transition flex items-center gap-1 text-[10px]"
                     >
                       <Eye size={12} />
                       <span>View</span>
@@ -616,7 +616,7 @@ export default function AdminStudents() {
                         setEditingStudentId(student.id);
                         setFormDrawerOpen(true);
                       }}
-                      className="p-1.5 rounded bg-neutral-850 hover:bg-neutral-800 border border-neutral-800 text-neutral-400 hover:text-white transition flex items-center gap-1 text-[10px]"
+                      className="p-1.5 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 border dark:border-neutral-800 border-border-subtle dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary transition flex items-center gap-1 text-[10px]"
                     >
                       <Edit size={12} />
                       <span>Edit</span>
@@ -626,7 +626,7 @@ export default function AdminStudents() {
                         setStudentToDelete({ id: student.id, name: student.fullName });
                         setDeleteConfirmOpen(true);
                       }}
-                      className="p-1.5 rounded bg-neutral-850 hover:bg-neutral-800 border border-neutral-800 text-rose-500 hover:text-rose-400 transition flex items-center gap-1 text-[10px]"
+                      className="p-1.5 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 border dark:border-neutral-800 border-border-subtle text-rose-500 hover:text-rose-600 transition flex items-center gap-1 text-[10px]"
                     >
                       <Trash2 size={12} />
                       <span>Deactivate</span>
@@ -635,7 +635,7 @@ export default function AdminStudents() {
                 </div>
               ))
             ) : (
-              <div className="text-center py-12 text-neutral-500 font-mono text-xs">
+              <div className="text-center py-12 dark:text-neutral-500 text-text-muted font-mono text-xs">
                 No matching student profiles found in registry.
               </div>
             )}
@@ -644,66 +644,66 @@ export default function AdminStudents() {
 
         {/* Right Side Slide-out Details Drawer (renders if student selected) */}
         {selectedStudentId && (
-          <div className="w-full lg:w-96 glass-card border border-neutral-800 rounded-xl p-5 shadow-2xl relative animate-scale-up shrink-0">
+          <div className="w-full lg:w-96 glass-card dark:border-neutral-800 border-border-subtle bg-surface rounded-xl p-5 shadow-2xl relative animate-scale-up shrink-0">
             {loadingDetail ? (
-              <div className="py-20 flex flex-col items-center justify-center text-neutral-500">
+              <div className="py-20 flex flex-col items-center justify-center dark:text-neutral-500 text-text-muted">
                 <Loader2 className="animate-spin text-blue-500 mb-2" size={20} />
                 <span className="font-mono text-[9px]">Fetching record...</span>
               </div>
             ) : selectedStudent && metrics ? (
               <>
                 {/* Header close */}
-                <div className="flex items-center justify-between border-b border-neutral-800 pb-3 mb-4">
-                  <h3 className="font-display font-bold text-white text-base">Academic Record File</h3>
+                <div className="flex items-center justify-between border-b dark:border-neutral-800 border-border-subtle pb-3 mb-4">
+                  <h3 className="font-display font-bold dark:text-white text-text-primary text-base">Academic Record File</h3>
                   <button
                     onClick={() => setSelectedStudentId(null)}
-                    className="p-1 rounded bg-neutral-850 hover:bg-neutral-800 text-neutral-400 hover:text-white cursor-pointer"
+                    className="p-1 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary cursor-pointer border dark:border-neutral-800 border-border-subtle"
                   >
                     <X size={14} />
                   </button>
                 </div>
 
                 {/* Profile Brief */}
-                <div className="flex items-center gap-4 mb-5 p-3 rounded-lg bg-neutral-950/50 border border-neutral-900">
+                <div className="flex items-center gap-4 mb-5 p-3 rounded-lg dark:bg-neutral-955/50 bg-background border dark:border-neutral-900 border-border-subtle">
                   <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/25 flex items-center justify-center font-bold text-blue-400 text-lg">
                     {selectedStudent.fullName.charAt(0)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-sm font-bold text-white truncate">{selectedStudent.fullName}</h4>
-                    <p className="text-[10px] text-neutral-500 font-mono mt-0.5">
+                    <h4 className="text-sm font-bold dark:text-white text-text-primary truncate">{selectedStudent.fullName}</h4>
+                    <p className="text-[10px] dark:text-neutral-500 text-text-secondary font-mono mt-0.5">
                       {selectedStudent.rollNumber} / {selectedStudent.department.code}
                     </p>
-                    <p className="text-[10px] text-neutral-500 font-mono truncate">{selectedStudent.email}</p>
-                    <span className="text-[9px] text-neutral-600 font-mono mt-0.5 block">
+                    <p className="text-[10px] dark:text-neutral-500 text-text-secondary font-mono truncate">{selectedStudent.email}</p>
+                    <span className="text-[9px] dark:text-neutral-605 text-text-muted font-mono mt-0.5 block">
                       Registered: {new Date(selectedStudent.createdAt).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
 
                 {/* Academic Details Block */}
-                <div className="p-3.5 bg-neutral-950/40 border border-neutral-900 rounded-lg space-y-2 mb-5">
+                <div className="p-3.5 dark:bg-neutral-950/40 bg-background border dark:border-neutral-900 border-border-subtle rounded-lg space-y-2 mb-5">
                   <div className="flex justify-between text-xs">
-                    <span className="text-neutral-500">Student ID:</span>
-                    <span className="text-white font-mono text-[10px] select-all truncate max-w-[180px]" title={selectedStudent.id}>
+                    <span className="dark:text-neutral-500 text-text-secondary">Student ID:</span>
+                    <span className="dark:text-white text-text-primary font-mono text-[10px] select-all truncate max-w-[180px]" title={selectedStudent.id}>
                       {selectedStudent.id}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-neutral-500">Program:</span>
-                    <strong className="text-white text-right truncate max-w-[180px]" title={selectedStudent.program.name}>
+                    <span className="dark:text-neutral-500 text-text-secondary">Program:</span>
+                    <strong className="dark:text-white text-text-primary text-right truncate max-w-[180px]" title={selectedStudent.program.name}>
                       {selectedStudent.program.name} ({selectedStudent.program.code})
                     </strong>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-neutral-500">Semester & Sec:</span>
-                    <strong className="text-white">Semester {selectedStudent.semester} - Section {selectedStudent.section || "N/A"}</strong>
+                    <span className="dark:text-neutral-500 text-text-secondary">Semester & Sec:</span>
+                    <strong className="dark:text-white text-text-primary">Semester {selectedStudent.semester} - Section {selectedStudent.section || "N/A"}</strong>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-neutral-500">Academic Year:</span>
-                    <strong className="text-white font-mono">{selectedStudent.academicYear}</strong>
+                    <span className="dark:text-neutral-500 text-text-secondary">Academic Year:</span>
+                    <strong className="dark:text-white text-text-primary font-mono">{selectedStudent.academicYear}</strong>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-neutral-500">Account Status:</span>
+                    <span className="dark:text-neutral-500 text-text-secondary">Account Status:</span>
                     <span className={`px-2 py-0.5 rounded text-[9px] font-bold border capitalize ${
                       selectedStudent.status === "active"
                         ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
@@ -716,8 +716,8 @@ export default function AdminStudents() {
 
                 {/* Metrics cards */}
                 <div className="grid grid-cols-2 gap-3 mb-5">
-                  <div className="p-3 bg-neutral-950/40 border border-neutral-900 rounded-lg text-center">
-                    <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wide block">
+                  <div className="p-3 dark:bg-neutral-950/40 bg-background border dark:border-neutral-900 border-border-subtle rounded-lg text-center">
+                    <span className="text-[10px] dark:text-neutral-500 text-text-secondary uppercase font-bold tracking-wide block">
                       Attendance
                     </span>
                     <span
@@ -728,8 +728,8 @@ export default function AdminStudents() {
                       {metrics.attendancePct}%
                     </span>
                   </div>
-                  <div className="p-3 bg-neutral-950/40 border border-neutral-900 rounded-lg text-center">
-                    <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wide block">
+                  <div className="p-3 dark:bg-neutral-950/40 bg-background border dark:border-neutral-900 border-border-subtle rounded-lg text-center">
+                    <span className="text-[10px] dark:text-neutral-500 text-text-secondary uppercase font-bold tracking-wide block">
                       Outstanding
                     </span>
                     <span
@@ -746,7 +746,7 @@ export default function AdminStudents() {
                 <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
                   {/* Courses & Grades list */}
                   <div>
-                    <h5 className="text-[10px] uppercase font-bold text-neutral-400 flex items-center gap-1.5 mb-2">
+                    <h5 className="text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary flex items-center gap-1.5 mb-2">
                       <BookOpen size={12} className="text-blue-400" />
                       <span>Internal Assessment ({metrics.grades.length})</span>
                     </h5>
@@ -755,11 +755,11 @@ export default function AdminStudents() {
                         metrics.grades.map((g) => (
                           <div
                             key={g.id}
-                            className="p-2 rounded bg-neutral-950/20 border border-neutral-900 flex items-center justify-between text-xs"
+                            className="p-2 rounded dark:bg-neutral-950/20 bg-background border dark:border-neutral-900 border-border-subtle flex items-center justify-between text-xs"
                           >
                             <div>
-                              <p className="font-semibold text-white leading-none">{g.subjectName}</p>
-                              <span className="text-[9px] text-neutral-500 mt-1 block">
+                              <p className="font-semibold dark:text-white text-text-primary leading-none">{g.subjectName}</p>
+                              <span className="text-[9px] dark:text-neutral-500 text-text-muted mt-1 block">
                                 {g.type} Evaluation
                               </span>
                             </div>
@@ -774,7 +774,7 @@ export default function AdminStudents() {
                           </div>
                         ))
                       ) : (
-                        <p className="text-[10px] text-neutral-600 font-mono italic">
+                        <p className="text-[10px] dark:text-neutral-600 text-text-muted font-mono italic">
                           No exam gradebooks submitted yet.
                         </p>
                       )}
@@ -783,7 +783,7 @@ export default function AdminStudents() {
 
                   {/* Billing ledger invoices */}
                   <div>
-                    <h5 className="text-[10px] uppercase font-bold text-neutral-400 flex items-center gap-1.5 mb-2">
+                    <h5 className="text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary flex items-center gap-1.5 mb-2">
                       <CreditCard size={12} className="text-emerald-400" />
                       <span>Academic Invoices ({metrics.invoices.length})</span>
                     </h5>
@@ -792,16 +792,16 @@ export default function AdminStudents() {
                         metrics.invoices.map((inv) => (
                           <div
                             key={inv.id}
-                            className="p-2 rounded bg-neutral-950/20 border border-neutral-900 flex items-center justify-between text-xs"
+                            className="p-2 rounded dark:bg-neutral-950/20 bg-background border dark:border-neutral-900 border-border-subtle flex items-center justify-between text-xs"
                           >
                             <div>
-                              <p className="font-semibold text-white leading-none">{inv.type}</p>
-                              <span className="text-[9px] text-neutral-500 mt-1 block">
+                              <p className="font-semibold dark:text-white text-text-primary leading-none">{inv.type}</p>
+                              <span className="text-[9px] dark:text-neutral-500 text-text-muted mt-1 block">
                                 Due: {inv.dueDate}
                               </span>
                             </div>
                             <div className="text-right">
-                              <span className="font-bold text-white font-sans">
+                              <span className="font-bold dark:text-white text-text-primary font-sans">
                                 ₹{inv.amount.toLocaleString("en-IN")}
                               </span>
                               <span
@@ -817,7 +817,7 @@ export default function AdminStudents() {
                           </div>
                         ))
                       ) : (
-                        <p className="text-[10px] text-neutral-600 font-mono italic">
+                        <p className="text-[10px] dark:text-neutral-600 text-text-muted font-mono italic">
                           No invoices billed to account.
                         </p>
                       )}

@@ -39,6 +39,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onMenuClick }) => {
         { name: "Grades", href: "/faculty/grades", icon: GraduationCap }
       ];
     }
+    if (currentRole === "HOD") {
+      return [
+        { name: "Home", href: "/hod/dashboard", icon: LayoutDashboard },
+        { name: "Students", href: "/hod/students", icon: Users },
+        { name: "Faculty", href: "/hod/faculty", icon: GraduationCap },
+        { name: "Attendance", href: "/hod/attendance", icon: Calendar }
+      ];
+    }
     // Student
     return [
       { name: "Home", href: "/student/dashboard", icon: LayoutDashboard },
@@ -52,7 +60,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onMenuClick }) => {
   const links = getLinks();
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-neutral-800 bg-neutral-900/90 backdrop-blur-md flex items-center justify-around px-2 pb-safe z-30">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-border-subtle bg-surface/95 backdrop-blur-md flex items-center justify-around px-2 pb-safe z-30">
       {links.map(link => {
         const isActive = pathname === link.href;
         const Icon = link.icon;
@@ -61,19 +69,19 @@ export const BottomNav: React.FC<BottomNavProps> = ({ onMenuClick }) => {
             key={link.name}
             href={link.href}
             className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all ${
-              isActive ? "text-indigo-400 font-semibold" : "text-neutral-400 hover:text-neutral-200"
+              isActive ? "text-accent-blue font-semibold" : "text-text-muted hover:text-text-secondary"
             }`}
           >
-            <Icon size={20} className={isActive ? "text-indigo-400" : "text-neutral-400"} />
+            <Icon size={20} className={isActive ? "text-accent-blue" : "text-text-muted"} />
             <span className="text-[10px] tracking-tight">{link.name}</span>
           </Link>
         );
       })}
-      
+
       {/* Menu / Switcher Button */}
       <button
         onClick={onMenuClick}
-        className="flex flex-col items-center justify-center flex-1 h-full gap-1 text-neutral-400 hover:text-neutral-200 cursor-pointer"
+        className="flex flex-col items-center justify-center flex-1 h-full gap-1 text-text-muted hover:text-text-secondary cursor-pointer"
       >
         <Menu size={20} />
         <span className="text-[10px] tracking-tight">More</span>

@@ -19,6 +19,8 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
       email: payload.email,
       role: payload.role,
       isActive: true,
+      designation: payload.designation,
+      departmentId: payload.departmentId,
     };
     next();
   } catch (err) {

@@ -138,13 +138,13 @@ export default function StudentFees() {
   const getStatusBadgeStyles = (status: string) => {
     switch (status) {
       case "Paid":
-        return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+        return "dark:bg-emerald-500/10 bg-emerald-50 dark:text-emerald-400 text-emerald-700 dark:border-emerald-500/20 border-emerald-200";
       case "Partially Paid":
-        return "bg-amber-500/10 text-amber-400 border-amber-500/20";
+        return "dark:bg-amber-500/10 bg-amber-50 dark:text-amber-400 text-amber-700 dark:border-amber-500/20 border-amber-200";
       case "Overdue":
-        return "bg-rose-500/10 text-rose-400 border-rose-500/20 animate-pulse";
+        return "dark:bg-rose-500/10 bg-rose-50 dark:text-rose-400 text-rose-700 dark:border-rose-500/20 border-rose-200 animate-pulse";
       default:
-        return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+        return "dark:bg-blue-500/10 bg-blue-50 dark:text-blue-400 text-blue-700 dark:border-blue-500/20 border-blue-200";
     }
   };
 
@@ -165,8 +165,8 @@ export default function StudentFees() {
     <div className="space-y-6 max-w-4xl mx-auto pb-12">
       {/* Page Header */}
       <div>
-        <h2 className="font-display font-bold text-2xl text-white">Academic Fee Ledger</h2>
-        <p className="text-xs text-neutral-400 mt-1">
+        <h2 className="font-display font-bold text-2xl dark:text-white text-text-primary">Academic Fee Ledger</h2>
+        <p className="text-xs dark:text-neutral-400 text-text-secondary mt-1">
           Review active semester fee structures, billing invoices, and transaction history.
         </p>
       </div>
@@ -174,48 +174,48 @@ export default function StudentFees() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Total Billed */}
-        <div className="glass-card rounded-xl p-4 border border-neutral-800 flex items-center justify-between">
+        <div className="glass-card rounded-xl p-4 border border-border-subtle flex items-center justify-between">
           <div>
-            <span className="text-[10px] uppercase font-bold text-neutral-500">Total Billed</span>
-            <h3 className="text-xl font-bold font-sans text-white mt-1">₹{totalBilled.toLocaleString("en-IN")}</h3>
+            <span className="text-[10px] uppercase font-bold text-text-muted">Total Billed</span>
+            <h3 className="text-xl font-bold font-sans dark:text-white text-text-primary mt-1">₹{totalBilled.toLocaleString("en-IN")}</h3>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-neutral-800 border border-neutral-700 flex items-center justify-center text-neutral-400">
+          <div className="w-8 h-8 rounded-lg dark:bg-neutral-800 bg-surface-elevated border dark:border-neutral-700 border-border-subtle flex items-center justify-center dark:text-neutral-400 text-text-secondary">
             <CreditCard size={16} />
           </div>
         </div>
 
         {/* Total Paid */}
-        <div className="glass-card rounded-xl p-4 border border-neutral-800 flex items-center justify-between">
+        <div className="glass-card rounded-xl p-4 border border-border-subtle flex items-center justify-between">
           <div>
-            <span className="text-[10px] uppercase font-bold text-neutral-500">Total Settled</span>
-            <h3 className="text-xl font-bold font-sans text-emerald-400 mt-1">₹{totalPaid.toLocaleString("en-IN")}</h3>
+            <span className="text-[10px] uppercase font-bold text-text-muted">Total Settled</span>
+            <h3 className="text-xl font-bold font-sans dark:text-emerald-400 text-emerald-700 mt-1">₹{totalPaid.toLocaleString("en-IN")}</h3>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+          <div className="w-8 h-8 rounded-lg dark:bg-emerald-500/10 bg-emerald-50 dark:border-emerald-500/20 border-emerald-200 flex items-center justify-center dark:text-emerald-400 text-emerald-700">
             <CheckCircle2 size={16} />
           </div>
         </div>
 
         {/* Outstanding Dues */}
-        <div className="glass-card rounded-xl p-4 border border-rose-950/30 flex items-center justify-between bg-rose-500/[0.01]">
+        <div className="glass-card rounded-xl p-4 border dark:border-rose-950/30 border-rose-500/20 flex items-center justify-between bg-rose-500/[0.01]">
           <div>
-            <span className="text-[10px] uppercase font-bold text-neutral-500">Outstanding Dues</span>
-            <h3 className="text-xl font-bold font-sans text-rose-500 mt-1">₹{totalPending.toLocaleString("en-IN")}</h3>
+            <span className="text-[10px] uppercase font-bold text-text-muted">Outstanding Dues</span>
+            <h3 className="text-xl font-bold font-sans dark:text-rose-500 text-rose-700 mt-1">₹{totalPending.toLocaleString("en-IN")}</h3>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+          <div className="w-8 h-8 rounded-lg dark:bg-rose-500/10 bg-rose-50 dark:border-rose-500/20 border-rose-200 flex items-center justify-center dark:text-rose-450 text-rose-700">
             <AlertTriangle size={16} />
           </div>
         </div>
       </div>
 
       {/* Interactive Filters Panel */}
-      <div className="glass-card border border-neutral-800 rounded-xl p-4 flex flex-col sm:flex-row gap-3">
+      <div className="glass-card border border-border-subtle rounded-xl p-4 flex flex-col sm:flex-row gap-3">
         {/* Academic Year Filter */}
         <div className="flex-1">
-          <label className="block text-[9px] uppercase font-bold text-neutral-500 mb-1.5">Academic Year</label>
+          <label className="block text-[9px] uppercase font-bold text-text-muted mb-1.5">Academic Year</label>
           <select
             value={academicYearFilter}
             onChange={(e) => setAcademicYearFilter(e.target.value)}
-            className="w-full bg-neutral-950 border border-neutral-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-600 transition"
+            className="w-full dark:bg-neutral-950 bg-surface border border-border-subtle rounded px-2.5 py-1.5 text-xs dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
           >
             <option value="ALL">All Academic Years</option>
             <option value="2023-2024">2023-2024</option>
@@ -227,11 +227,11 @@ export default function StudentFees() {
 
         {/* Semester Filter */}
         <div className="flex-1">
-          <label className="block text-[9px] uppercase font-bold text-neutral-500 mb-1.5">Semester</label>
+          <label className="block text-[9px] uppercase font-bold text-text-muted mb-1.5">Semester</label>
           <select
             value={semesterFilter}
             onChange={(e) => setSemesterFilter(e.target.value)}
-            className="w-full bg-neutral-950 border border-neutral-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-600 transition"
+            className="w-full dark:bg-neutral-950 bg-surface border border-border-subtle rounded px-2.5 py-1.5 text-xs dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
           >
             <option value="ALL">All Semesters</option>
             {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
@@ -244,11 +244,11 @@ export default function StudentFees() {
 
         {/* Fee Type Filter */}
         <div className="flex-1">
-          <label className="block text-[9px] uppercase font-bold text-neutral-500 mb-1.5">Fee Category</label>
+          <label className="block text-[9px] uppercase font-bold text-text-muted mb-1.5">Fee Category</label>
           <select
             value={feeTypeFilter}
             onChange={(e) => setFeeTypeFilter(e.target.value)}
-            className="w-full bg-neutral-950 border border-neutral-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-600 transition"
+            className="w-full dark:bg-neutral-950 bg-surface border border-border-subtle rounded px-2.5 py-1.5 text-xs dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
           >
             <option value="ALL">All Fee Types</option>
             <option value="Tuition Fee">Tuition Fee</option>
@@ -261,28 +261,28 @@ export default function StudentFees() {
 
       {/* Main List Section */}
       <div className="space-y-4">
-        <h3 className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">Fee Records</h3>
+        <h3 className="text-[10px] uppercase font-bold text-text-secondary tracking-wider">Fee Records</h3>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 glass-card border border-neutral-850 rounded-xl">
+          <div className="flex flex-col items-center justify-center py-12 glass-card border border-border-subtle rounded-xl">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            <p className="text-xs text-neutral-500 mt-2 font-mono">Syncing financial ledger accounts...</p>
+            <p className="text-xs text-text-muted mt-2 font-mono">Syncing financial ledger accounts...</p>
           </div>
         ) : error ? (
-          <div className="p-6 text-center glass-card border border-rose-950/20 bg-rose-500/[0.02] rounded-xl">
+          <div className="p-6 text-center glass-card border dark:border-rose-955/20 border-rose-500/20 bg-rose-505/[0.02] rounded-xl">
             <AlertTriangle className="w-8 h-8 mx-auto text-rose-500 mb-2" />
-            <p className="text-xs text-rose-400 font-semibold">{error}</p>
+            <p className="text-xs dark:text-rose-400 text-rose-700 font-semibold">{error}</p>
             <button
               onClick={fetchFees}
-              className="mt-3 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-neutral-800 hover:bg-neutral-750 text-white rounded transition"
+              className="mt-3 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider dark:bg-neutral-800 bg-surface-elevated hover:bg-surface-hover dark:text-white text-text-primary border dark:border-transparent border-border-subtle rounded transition"
             >
               Retry Sync
             </button>
           </div>
         ) : fees.length === 0 ? (
-          <div className="p-8 text-center glass-card border border-neutral-800 rounded-xl">
-            <Info className="w-8 h-8 mx-auto text-neutral-600 mb-2" />
-            <p className="text-xs text-neutral-500 font-mono">No academic fee invoices logged in system.</p>
+          <div className="p-8 text-center glass-card border border-border-subtle rounded-xl">
+            <Info className="w-8 h-8 mx-auto text-text-muted mb-2" />
+            <p className="text-xs text-text-muted font-mono">No academic fee invoices logged in system.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
@@ -296,10 +296,10 @@ export default function StudentFees() {
                   key={fee.id}
                   className={`glass-card border rounded-xl overflow-hidden transition-all duration-200 ${
                     fee.paymentStatus === "Overdue"
-                      ? "border-rose-950/50 hover:border-rose-900 bg-rose-500/[0.005]"
+                      ? "dark:border-rose-950/50 border-rose-300 hover:border-rose-400 bg-rose-505/[0.005]"
                       : fee.paymentStatus === "Paid"
-                      ? "border-neutral-850 hover:border-neutral-800"
-                      : "border-neutral-800 hover:border-neutral-750"
+                      ? "dark:border-neutral-850 border-border-subtle hover:border-neutral-800 hover:border-border-strong"
+                      : "dark:border-neutral-800 border-border-subtle hover:border-neutral-750 hover:border-border-strong"
                   }`}
                 >
                   {/* Card Main Block */}
@@ -309,7 +309,7 @@ export default function StudentFees() {
                   >
                     <div className="space-y-1.5 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[9px] uppercase font-bold tracking-wider font-mono text-neutral-500">
+                        <span className="text-[9px] uppercase font-bold tracking-wider font-mono text-text-muted">
                           #{fee.id.substring(0, 8)}
                         </span>
                         <span
@@ -320,92 +320,92 @@ export default function StudentFees() {
                           {fee.paymentStatus}
                         </span>
                       </div>
-                      <h4 className="text-base font-bold text-white leading-tight">{fee.feeType}</h4>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-neutral-400 font-mono">
+                      <h4 className="text-base font-bold dark:text-white text-text-primary leading-tight">{fee.feeType}</h4>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] dark:text-neutral-400 text-text-secondary font-mono">
                         <span>AY: {fee.academicYear}</span>
-                        <span className="text-neutral-700">•</span>
+                        <span className="dark:text-neutral-700 text-text-muted">•</span>
                         <span>Semester: {fee.semester}</span>
-                        <span className="text-neutral-700">•</span>
+                        <span className="dark:text-neutral-700 text-text-muted">•</span>
                         <span className="flex items-center gap-1">
-                          <Calendar size={11} className="text-neutral-500" />
+                          <Calendar size={11} className="dark:text-neutral-500 text-text-muted" />
                           <span>Due: {fee.dueDate}</span>
                         </span>
                       </div>
                     </div>
 
                     {/* Financial Figures */}
-                    <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-neutral-900 pt-3 md:pt-0">
+                    <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 dark:border-neutral-900 border-border-subtle pt-3 md:pt-0">
                       <div className="text-left md:text-right">
-                        <span className="text-[9px] text-neutral-500 uppercase font-bold tracking-wide block">
+                        <span className="text-[9px] dark:text-neutral-500 text-text-muted uppercase font-bold tracking-wide block">
                           Outstanding
                         </span>
                         <span
                           className={`text-lg font-bold font-sans block ${
-                            fee.pendingAmount > 0 ? "text-white" : "text-emerald-400"
+                            fee.pendingAmount > 0 ? "dark:text-white text-text-primary" : "dark:text-emerald-400 text-emerald-700"
                           }`}
                         >
                           ₹{fee.pendingAmount.toLocaleString("en-IN")}
                         </span>
                       </div>
                       <div className="text-right">
-                        <span className="text-[9px] text-neutral-500 uppercase font-bold tracking-wide block">
+                        <span className="text-[9px] dark:text-neutral-500 text-text-muted uppercase font-bold tracking-wide block">
                           Total Billed
                         </span>
-                        <span className="text-sm font-semibold text-neutral-400 font-sans block">
+                        <span className="text-sm font-semibold dark:text-neutral-400 text-text-secondary font-sans block">
                           ₹{fee.totalAmount.toLocaleString("en-IN")}
                         </span>
                       </div>
-                      <div className="text-neutral-400 hover:text-white transition">
+                      <div className="dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary transition">
                         {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       </div>
                     </div>
                   </div>
 
                   {/* Progress Indicator */}
-                  <div className="h-[2px] bg-neutral-950 w-full relative">
+                  <div className="h-[2px] dark:bg-neutral-950 bg-neutral-100 w-full relative">
                     <div
-                      className={`h-full transition-all duration-500 ${getProgressColorClass(fee.paymentStatus)}`}
+                      className={`h-full transition-all duration-505 ${getProgressColorClass(fee.paymentStatus)}`}
                       style={{ width: `${paidPercent}%` }}
                     />
                   </div>
 
                   {/* Expanded payment entries / details */}
                   {isExpanded && (
-                    <div className="bg-neutral-950/60 border-t border-neutral-900 p-5 space-y-4 font-sans text-xs">
+                    <div className="dark:bg-neutral-950/60 bg-surface-elevated border-t dark:border-neutral-900 border-border-subtle p-5 space-y-4 font-sans text-xs">
                       {loadingDetailId === fee.id ? (
                         <div className="flex justify-center py-4">
-                          <Loader2 className="w-5 h-5 animate-spin text-neutral-500" />
+                          <Loader2 className="w-5 h-5 animate-spin text-text-muted" />
                         </div>
                       ) : details ? (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                           {/* Details Metadata */}
-                          <div className="md:col-span-1 space-y-3 pr-0 md:pr-4 border-b md:border-b-0 md:border-r border-neutral-900 pb-4 md:pb-0">
-                            <h5 className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">
+                          <div className="md:col-span-1 space-y-3 pr-0 md:pr-4 border-b md:border-b-0 md:border-r dark:border-neutral-900 border-border-subtle pb-4 md:pb-0">
+                            <h5 className="text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary tracking-wider">
                               Breakdown Details
                             </h5>
-                            <div className="space-y-1.5 text-neutral-300">
+                            <div className="space-y-1.5 dark:text-neutral-300 text-text-secondary">
                               <div className="flex justify-between">
-                                <span className="text-neutral-500">Paid Amount:</span>
-                                <span className="font-mono text-emerald-400 font-semibold">
+                                <span className="dark:text-neutral-500 text-text-muted">Paid Amount:</span>
+                                <span className="font-mono dark:text-emerald-400 text-emerald-705 font-semibold">
                                   ₹{details.paidAmount.toLocaleString("en-IN")}
                                 </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-neutral-500">Pending Amount:</span>
-                                <span className="font-mono text-neutral-300">
+                                <span className="dark:text-neutral-500 text-text-muted">Pending Amount:</span>
+                                <span className="font-mono dark:text-neutral-300 text-text-secondary">
                                   ₹{details.pendingAmount.toLocaleString("en-IN")}
                                 </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-neutral-500">Created Date:</span>
-                                <span className="text-neutral-400">
+                                <span className="dark:text-neutral-500 text-text-muted">Created Date:</span>
+                                <span className="dark:text-neutral-400 text-text-secondary">
                                   {new Date(details.createdAt).toLocaleDateString()}
                                 </span>
                               </div>
                               {details.remarks && (
                                 <div className="pt-2">
-                                  <span className="text-neutral-500 block mb-1">Remarks / Details:</span>
-                                  <p className="p-2 rounded bg-neutral-900 text-neutral-400 italic text-[11px] leading-normal">
+                                  <span className="dark:text-neutral-500 text-text-muted block mb-1">Remarks / Details:</span>
+                                  <p className="p-2 rounded dark:bg-neutral-900 bg-surface dark:text-neutral-400 text-text-muted italic text-[11px] leading-normal border dark:border-transparent border-border-subtle">
                                     {details.remarks}
                                   </p>
                                 </div>
@@ -415,11 +415,11 @@ export default function StudentFees() {
 
                           {/* Receipts / Payment Entries */}
                           <div className="md:col-span-2 space-y-3">
-                            <h5 className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">
+                            <h5 className="text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary tracking-wider">
                               Payment Log & Receipts
                             </h5>
                             {details.payments.length === 0 ? (
-                              <div className="p-4 bg-neutral-900/50 rounded-lg text-center text-neutral-500 italic font-mono text-[11px]">
+                              <div className="p-4 dark:bg-neutral-900/50 bg-surface border border-border-subtle rounded-lg text-center dark:text-neutral-500 text-text-muted italic font-mono text-[11px]">
                                 No payment transaction logs recorded for this ledger entry.
                               </div>
                             ) : (
@@ -427,35 +427,35 @@ export default function StudentFees() {
                                 {details.payments.map((payment) => (
                                   <div
                                     key={payment.id}
-                                    className="p-3 bg-neutral-900/60 border border-neutral-850 rounded-lg flex flex-col sm:flex-row justify-between gap-3"
+                                    className="p-3 dark:bg-neutral-900/60 bg-surface border dark:border-neutral-850 border-border-subtle rounded-lg flex flex-col sm:flex-row justify-between gap-3"
                                   >
                                     <div className="space-y-1">
                                       <div className="flex items-center gap-1.5">
-                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-bold border border-neutral-700 bg-neutral-800 text-neutral-300 font-mono">
+                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-bold border dark:border-neutral-700 border-border-subtle dark:bg-neutral-800 bg-surface-elevated dark:text-neutral-300 text-text-secondary font-mono">
                                           {payment.paymentMode}
                                         </span>
                                         {payment.transactionRef && (
-                                          <span className="text-[10px] text-neutral-400 font-mono">
+                                          <span className="text-[10px] dark:text-neutral-400 text-text-secondary font-mono">
                                             Ref: {payment.transactionRef}
                                           </span>
                                         )}
                                       </div>
-                                      <div className="text-[10px] text-neutral-500 font-mono flex items-center gap-1 mt-1">
+                                      <div className="text-[10px] dark:text-neutral-500 text-text-muted font-mono flex items-center gap-1 mt-1">
                                         <span>Date: {payment.paymentDate}</span>
                                         <span>•</span>
                                         <span>Logged by: {payment.recordedByName}</span>
                                       </div>
                                       {payment.remarks && (
-                                        <p className="text-[10px] text-neutral-400 italic mt-1 leading-normal">
+                                        <p className="text-[10px] dark:text-neutral-400 text-text-secondary italic mt-1 leading-normal">
                                           &quot;{payment.remarks}&quot;
                                         </p>
                                       )}
                                     </div>
                                     <div className="text-left sm:text-right shrink-0">
-                                      <span className="text-[9px] text-neutral-500 uppercase font-bold block">
+                                      <span className="text-[9px] dark:text-neutral-500 text-text-muted uppercase font-bold block">
                                         Amount Credited
                                       </span>
-                                      <span className="text-xs font-bold text-emerald-400 font-mono">
+                                      <span className="text-xs font-bold dark:text-emerald-400 text-emerald-700 font-mono">
                                         + ₹{payment.amount.toLocaleString("en-IN")}
                                       </span>
                                     </div>
@@ -466,7 +466,7 @@ export default function StudentFees() {
                           </div>
                         </div>
                       ) : (
-                        <p className="text-neutral-500 font-mono italic text-center py-2">
+                        <p className="dark:text-neutral-500 text-text-muted font-mono italic text-center py-2">
                           Error loading breakdown details.
                         </p>
                       )}
@@ -480,15 +480,15 @@ export default function StudentFees() {
       </div>
 
       {/* Info Block */}
-      <div className="p-4 rounded-xl border border-blue-500/15 bg-blue-500/5 space-y-2">
-        <div className="flex items-center gap-2 text-blue-400">
+      <div className="p-4 rounded-xl border dark:border-blue-500/15 border-blue-200 dark:bg-blue-500/5 bg-blue-50/50 space-y-2">
+        <div className="flex items-center gap-2 dark:text-blue-400 text-blue-700">
           <Info size={15} />
           <h4 className="text-xs font-bold font-display">University Cashier Notice</h4>
         </div>
-        <p className="text-[10px] text-neutral-400 leading-normal">
+        <p className="text-[10px] dark:text-neutral-400 text-text-secondary leading-normal">
           Direct online payment gateways (Stripe/Razorpay/UPI) are disabled. Dues must be paid physically at the college accounts office.
         </p>
-        <p className="text-[10px] text-neutral-500 leading-normal font-sans">
+        <p className="text-[10px] dark:text-neutral-500 text-text-muted leading-normal font-sans">
           Provide your roll number and the invoice number to the accounts officer. Once they record the payment in the admin portal, it will instantly reconcile and reflect here as a cleared receipt.
         </p>
       </div>

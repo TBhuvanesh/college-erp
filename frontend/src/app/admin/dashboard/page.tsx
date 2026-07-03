@@ -424,129 +424,69 @@ export default function AdminDashboard() {
       {/* Top Banner Message */}
       <div className="p-4 rounded-xl border border-blue-500/20 bg-blue-500/5 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-blue-400">Institutional ERP Administration Module</h2>
-          <p className="text-xs text-neutral-400 mt-1 max-w-xl">
+          <h2 className="text-sm font-semibold dark:text-blue-400 text-blue-700">Institutional ERP Administration Module</h2>
+          <p className="text-xs text-text-secondary mt-1 max-w-xl">
             You are operating the administrative backend engine. Navigate sidebar routes or use the quick links below to manage student directories, faculty workload rosters, curricula, tuition billing, and exam schedules.
           </p>
         </div>
-        <div className="flex items-center gap-1.5 bg-neutral-900 border border-neutral-800 rounded-md px-2 py-1 text-[10px] text-blue-400 font-mono">
+        <div className="flex items-center gap-1.5 bg-surface-elevated border border-border-subtle rounded-md px-2 py-1 text-[10px] dark:text-blue-400 text-blue-700 font-mono">
           <Activity size={10} className="animate-pulse" />
           <span>ACADEMIC YEAR: 2026-27</span>
         </div>
       </div>
 
       {loading && (
-        <div className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-mono rounded-lg flex items-center gap-2">
+        <div className="p-3 bg-blue-500/10 border border-blue-500/20 dark:text-blue-400 text-blue-700 text-xs font-mono rounded-lg flex items-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin" />
           <span>Syncing real-time database records...</span>
         </div>
       )}
 
-      {/* Stats Cards Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatsCard
-          title="Total Students"
-          value={loading ? "..." : totalStudents}
-          icon={Users}
-          description="Enrolled student catalog"
-          iconClass="bg-blue-500/10 text-blue-400 border border-blue-500/20"
-        />
-        <StatsCard
-          title="Total Faculty"
-          value={loading ? "..." : activeFaculty}
-          icon={GraduationCap}
-          description="Academic staff roster"
-          iconClass="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-        />
-        <StatsCard
-          title="Syllabus Subjects"
-          value={loading ? "..." : totalSubjects}
-          icon={BookOpen}
-          description="Courses catalogue list"
-          iconClass="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
-        />
-        <StatsCard
-          title="Average Attendance"
-          value={loading ? "..." : `${avgAttendance}%`}
-          icon={Percent}
-          description="Daily campus attendance"
-          iconClass="bg-amber-500/10 text-amber-400 border border-amber-500/20"
-        />
-        <StatsCard
-          title="Outstanding Fees"
-          value={loading ? "..." : `₹${outstandingFees.toLocaleString('en-IN')}`}
-          icon={DollarSign}
-          description={`Target: ₹${totalTarget.toLocaleString('en-IN')}`}
-          iconClass="bg-rose-500/10 text-rose-400 border border-rose-500/20"
-        />
+      {/* Compact Metrics Strip */}
+      <div className="rounded-2xl border border-border-subtle bg-surface overflow-hidden divide-y sm:divide-y-0 sm:divide-x divide-border-subtle flex flex-col sm:flex-row">
+        {[
+          { label: "Students", value: loading ? "—" : totalStudents, icon: Users, cls: "dark:text-blue-400 text-blue-700" },
+          { label: "Faculty", value: loading ? "—" : activeFaculty, icon: GraduationCap, cls: "dark:text-emerald-400 text-emerald-700" },
+          { label: "Subjects", value: loading ? "—" : totalSubjects, icon: BookOpen, cls: "dark:text-indigo-400 text-indigo-700" },
+          { label: "Avg Attendance", value: loading ? "—" : `${avgAttendance}%`, icon: Percent, cls: "dark:text-amber-400 text-amber-700" },
+          { label: "Outstanding", value: loading ? "—" : `₹${outstandingFees.toLocaleString("en-IN")}`, icon: DollarSign, cls: "dark:text-rose-400 text-rose-700" },
+        ].map(({ label, value, icon: Icon, cls }) => (
+          <div key={label} className="flex-1 flex items-center gap-3 px-5 py-4">
+            <div className={`w-8 h-8 rounded-lg bg-surface-elevated border border-border-subtle flex items-center justify-center shrink-0 ${cls}`}>
+              <Icon size={15} strokeWidth={2} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-text-muted truncate">{label}</p>
+              <p className="font-display font-black text-lg text-text-primary leading-none mt-0.5">{value}</p>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Quick Action Navigation Grid */}
-      <div className="glass-card border border-neutral-800 rounded-xl p-5">
-        <h3 className="font-display font-bold text-white text-xs uppercase tracking-wider mb-4">Directories & Management Desks</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-          <Link
-            href="/admin/students"
-            className="flex flex-col items-center justify-center p-4 rounded-lg border border-neutral-800 bg-neutral-950/45 hover:bg-neutral-800/10 hover:border-blue-500/25 transition text-center group cursor-pointer"
-          >
-            <Users size={20} className="text-blue-400 group-hover:scale-110 transition-transform mb-2" />
-            <span className="text-xs font-bold text-white">Students</span>
-            <span className="text-[9px] text-neutral-500 mt-0.5">Manage directory</span>
-          </Link>
-
-          <Link
-            href="/admin/faculty"
-            className="flex flex-col items-center justify-center p-4 rounded-lg border border-neutral-800 bg-neutral-950/45 hover:bg-neutral-800/10 hover:border-emerald-500/25 transition text-center group cursor-pointer"
-          >
-            <GraduationCap size={20} className="text-emerald-400 group-hover:scale-110 transition-transform mb-2" />
-            <span className="text-xs font-bold text-white">Faculty</span>
-            <span className="text-[9px] text-neutral-500 mt-0.5">Manage staff rolls</span>
-          </Link>
-
-          <Link
-            href="/admin/courses"
-            className="flex flex-col items-center justify-center p-4 rounded-lg border border-neutral-800 bg-neutral-950/45 hover:bg-neutral-800/10 hover:border-indigo-500/25 transition text-center group cursor-pointer"
-          >
-            <BookOpen size={20} className="text-indigo-400 group-hover:scale-110 transition-transform mb-2" />
-            <span className="text-xs font-bold text-white">Curriculum</span>
-            <span className="text-[9px] text-neutral-500 mt-0.5">Configure subjects</span>
-          </Link>
-
-          <Link
-            href="/admin/fees"
-            className="flex flex-col items-center justify-center p-4 rounded-lg border border-neutral-800 bg-neutral-950/45 hover:bg-neutral-800/10 hover:border-rose-500/25 transition text-center group cursor-pointer"
-          >
-            <DollarSign size={20} className="text-rose-400 group-hover:scale-110 transition-transform mb-2" />
-            <span className="text-xs font-bold text-white">Manage Fees</span>
-            <span className="text-[9px] text-neutral-500 mt-0.5">Billing accounts</span>
-          </Link>
-
-          <Link
-            href="/admin/calendar"
-            className="flex flex-col items-center justify-center p-4 rounded-lg border border-neutral-800 bg-neutral-950/45 hover:bg-neutral-800/10 hover:border-amber-500/25 transition text-center group cursor-pointer"
-          >
-            <CalendarDays size={20} className="text-amber-400 group-hover:scale-110 transition-transform mb-2" />
-            <span className="text-xs font-bold text-white">Calendar</span>
-            <span className="text-[9px] text-neutral-500 mt-0.5">Manage schedules</span>
-          </Link>
-
-          <Link
-            href="/admin/announcements"
-            className="flex flex-col items-center justify-center p-4 rounded-lg border border-neutral-800 bg-neutral-950/45 hover:bg-neutral-800/10 hover:border-rose-500/25 transition text-center group cursor-pointer"
-          >
-            <Bell size={20} className="text-rose-400 group-hover:scale-110 transition-transform mb-2" />
-            <span className="text-xs font-bold text-white">Notices Desk</span>
-            <span className="text-[9px] text-neutral-500 mt-0.5">Post bulletins</span>
-          </Link>
-
-          <Link
-            href="/admin/lms"
-            className="flex flex-col items-center justify-center p-4 rounded-lg border border-neutral-800 bg-neutral-950/45 hover:bg-neutral-800/10 hover:border-indigo-500/25 transition text-center group cursor-pointer"
-          >
-            <BookOpen size={20} className="text-indigo-450 group-hover:scale-110 transition-transform mb-2" />
-            <span className="text-xs font-bold text-white">LMS Portal</span>
-            <span className="text-[9px] text-neutral-500 mt-0.5">View Courseware</span>
-          </Link>
+      {/* Module Quick Navigation — horizontal chips */}
+      <div className="flex flex-col gap-3">
+        <p className="text-[10px] font-black uppercase tracking-[0.12em] text-text-muted px-1">Management Desks</p>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { href: "/admin/students",      icon: Users,          label: "Students",     cls: "dark:text-blue-400 text-blue-700 dark:bg-blue-500/8 bg-blue-500/10 dark:border-blue-500/20 border-blue-500/30 hover:bg-blue-500/15" },
+            { href: "/admin/faculty",       icon: GraduationCap,  label: "Faculty",      cls: "dark:text-emerald-400 text-emerald-700 dark:bg-emerald-500/8 bg-emerald-500/10 dark:border-emerald-500/20 border-emerald-500/30 hover:bg-emerald-500/15" },
+            { href: "/admin/courses",       icon: BookOpen,       label: "Curriculum",   cls: "dark:text-indigo-400 text-indigo-700 dark:bg-indigo-500/8 bg-indigo-500/10 dark:border-indigo-500/20 border-indigo-500/30 hover:bg-indigo-500/15" },
+            { href: "/admin/fees",          icon: DollarSign,     label: "Fees",         cls: "dark:text-rose-400 text-rose-700 dark:bg-rose-500/8 bg-rose-500/10 dark:border-rose-500/20 border-rose-500/30 hover:bg-rose-500/15" },
+            { href: "/admin/attendance",    icon: CheckCircle,    label: "Attendance",   cls: "dark:text-amber-400 text-amber-700 dark:bg-amber-500/8 bg-amber-500/10 dark:border-amber-500/20 border-amber-500/30 hover:bg-amber-500/15" },
+            { href: "/admin/examinations",  icon: FileSpreadsheet,label: "Exams",        cls: "dark:text-purple-400 text-purple-700 dark:bg-purple-500/8 bg-purple-500/10 dark:border-purple-500/20 border-purple-500/30 hover:bg-purple-500/15" },
+            { href: "/admin/calendar",      icon: CalendarDays,   label: "Calendar",     cls: "dark:text-sky-400 text-sky-700 dark:bg-sky-500/8 bg-sky-500/10 dark:border-sky-500/20 border-sky-500/30 hover:bg-sky-500/15" },
+            { href: "/admin/announcements", icon: Bell,           label: "Notices",      cls: "dark:text-orange-400 text-orange-700 dark:bg-orange-500/8 bg-orange-500/10 dark:border-orange-500/20 border-orange-500/30 hover:bg-orange-500/15" },
+            { href: "/admin/lms",           icon: BookOpen,       label: "LMS",          cls: "dark:text-teal-400 text-teal-700 dark:bg-teal-500/8 bg-teal-500/10 dark:border-teal-500/20 border-teal-500/30 hover:bg-teal-500/15" },
+          ].map(({ href, icon: Icon, label, cls }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors ${cls}`}
+            >
+              <Icon size={13} strokeWidth={2} />
+              {label}
+            </Link>
+          ))}
         </div>
       </div>
 
@@ -570,19 +510,17 @@ export default function AdminDashboard() {
         {/* Center/Right Column: Live Activity Feed, Notifications, LMS & charts */}
         <div className="space-y-6 lg:col-span-2">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <NotificationWidget
-              notifications={apiNotifications}
-              loading={loading}
-              onMarkRead={handleMarkNotificationRead}
-              role="admin"
-            />
-            <AssignmentWidget
-              facultyData={facultyAssignmentData}
-              loading={loading}
-              role="admin"
-            />
-          </div>
+          <NotificationWidget
+            notifications={apiNotifications}
+            loading={loading}
+            onMarkRead={handleMarkNotificationRead}
+            role="admin"
+          />
+          <AssignmentWidget
+            facultyData={facultyAssignmentData}
+            loading={loading}
+            role="admin"
+          />
 
           <ActivityFeed
             activities={activitiesList}
@@ -592,62 +530,62 @@ export default function AdminDashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Quick Registration Actions */}
-            <div className="glass-card rounded-xl border border-neutral-800 p-5 space-y-4">
-              <h3 className="font-display font-bold text-white text-base">Quick Workflows</h3>
+            <div className="bg-surface rounded-xl border border-border-subtle p-5 space-y-4">
+              <h3 className="font-display font-bold text-text-primary text-base">Quick Workflows</h3>
               <div className="space-y-3">
                 <button
                   onClick={() => setStudentModalOpen(true)}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-lg border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 transition text-left cursor-pointer group"
+                  className="w-full flex items-center gap-3 p-3.5 rounded-lg border dark:border-blue-500/20 border-blue-500/30 dark:bg-blue-500/5 bg-blue-500/10 hover:bg-blue-500/15 dark:text-blue-400 text-blue-700 transition text-left cursor-pointer group"
                 >
                   <PlusCircle size={20} className="group-hover:scale-110 transition-transform" />
                   <div>
-                    <h4 className="text-xs font-bold text-white leading-tight">Onboard Student</h4>
-                    <p className="text-[9px] text-neutral-400 mt-0.5">Register new profile</p>
+                    <h4 className="text-xs font-bold text-text-primary leading-tight">Onboard Student</h4>
+                    <p className="text-[9px] text-text-muted mt-0.5">Register new profile</p>
                   </div>
                 </button>
 
                 <button
                   onClick={() => setFacultyModalOpen(true)}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400 transition text-left cursor-pointer group"
+                  className="w-full flex items-center gap-3 p-3.5 rounded-lg border dark:border-emerald-500/20 border-emerald-500/30 dark:bg-emerald-500/5 bg-emerald-500/10 hover:bg-emerald-500/15 dark:text-emerald-400 text-emerald-700 transition text-left cursor-pointer group"
                 >
                   <PlusCircle size={20} className="group-hover:scale-110 transition-transform" />
                   <div>
-                    <h4 className="text-xs font-bold text-white leading-tight">Onboard Faculty</h4>
-                    <p className="text-[9px] text-neutral-400 mt-0.5">Onboard staff & allocate</p>
+                    <h4 className="text-xs font-bold text-text-primary leading-tight">Onboard Faculty</h4>
+                    <p className="text-[9px] text-text-muted mt-0.5">Onboard staff & allocate</p>
                   </div>
                 </button>
 
                 <button
                   onClick={() => setInvoiceModalOpen(true)}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-400 transition text-left cursor-pointer group"
+                  className="w-full flex items-center gap-3 p-3.5 rounded-lg border dark:border-amber-500/20 border-amber-500/30 dark:bg-amber-500/5 bg-amber-500/10 hover:bg-amber-500/15 dark:text-amber-400 text-amber-700 transition text-left cursor-pointer group"
                 >
                   <PlusCircle size={20} className="group-hover:scale-110 transition-transform" />
                   <div>
-                    <h4 className="text-xs font-bold text-white leading-tight">Issue Fee Invoice</h4>
-                    <p className="text-[9px] text-neutral-400 mt-0.5">Generate student bill</p>
+                    <h4 className="text-xs font-bold text-text-primary leading-tight">Issue Fee Invoice</h4>
+                    <p className="text-[9px] text-text-muted mt-0.5">Generate student bill</p>
                   </div>
                 </button>
               </div>
             </div>
 
             {/* Fee Collection Chart & Checker queue */}
-            <div className="glass-card rounded-xl border border-neutral-800 p-5 space-y-4">
+            <div className="bg-surface rounded-xl border border-border-subtle p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-display font-bold text-white text-base">Collections Summary</h3>
-                <span className="text-[9px] text-neutral-450 font-mono">Billed: ₹{totalTarget.toLocaleString('en-IN')}</span>
+                <h3 className="font-display font-bold text-text-primary text-base">Collections Summary</h3>
+                <span className="text-[9px] text-text-muted font-mono">Billed: ₹{totalTarget.toLocaleString('en-IN')}</span>
               </div>
               
-              <div className="w-full h-24 bg-neutral-950/50 rounded-lg p-2 flex items-end justify-between border border-neutral-900">
+              <div className="w-full h-24 bg-surface-hover/50 rounded-lg p-2 flex items-end justify-between border border-border-subtle">
                 <div className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
                   <div 
-                    className="w-8 bg-neutral-800 rounded-t relative group cursor-help transition-all"
+                    className="w-8 bg-surface-elevated rounded-t relative group cursor-help transition-all"
                     style={{ height: `${(totalTarget > 0 ? (totalTarget / totalTarget) * 100 : 0) * 0.6}%` }}
                   >
-                    <span className="absolute hidden group-hover:block bottom-full left-1/2 transform -translate-x-1/2 mb-1 bg-neutral-900 border border-neutral-800 text-[8px] font-mono p-1 rounded text-white whitespace-nowrap z-10">
+                    <span className="absolute hidden group-hover:block bottom-full left-1/2 transform -translate-x-1/2 mb-1 bg-surface-elevated border border-border-strong text-[8px] font-mono p-1 rounded text-text-primary whitespace-nowrap z-10">
                       Target: ₹{totalTarget.toLocaleString('en-IN')}
                     </span>
                   </div>
-                  <span className="text-[8px] font-mono text-neutral-500">Target</span>
+                  <span className="text-[8px] font-mono text-text-muted">Target</span>
                 </div>
 
                 <div className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
@@ -655,11 +593,11 @@ export default function AdminDashboard() {
                     className="w-8 bg-emerald-600 rounded-t relative group cursor-help transition-all shadow shadow-emerald-600/15"
                     style={{ height: `${(totalTarget > 0 ? (totalCollected / totalTarget) * 100 : 0) * 0.6}%` }}
                   >
-                    <span className="absolute hidden group-hover:block bottom-full left-1/2 transform -translate-x-1/2 mb-1 bg-neutral-900 border border-neutral-800 text-[8px] font-mono p-1 rounded text-white whitespace-nowrap z-10">
+                    <span className="absolute hidden group-hover:block bottom-full left-1/2 transform -translate-x-1/2 mb-1 bg-surface-elevated border border-border-strong text-[8px] font-mono p-1 rounded text-text-primary whitespace-nowrap z-10">
                       Received: ₹{totalCollected.toLocaleString('en-IN')}
                     </span>
                   </div>
-                  <span className="text-[8px] font-mono text-emerald-450 font-bold">Received</span>
+                  <span className="text-[8px] font-mono text-emerald-500 font-bold">Received</span>
                 </div>
 
                 <div className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
@@ -667,19 +605,19 @@ export default function AdminDashboard() {
                     className="w-8 bg-rose-600 rounded-t relative group cursor-help transition-all shadow shadow-rose-600/15"
                     style={{ height: `${(totalTarget > 0 ? (outstandingFees / totalTarget) * 100 : 0) * 0.6}%` }}
                   >
-                    <span className="absolute hidden group-hover:block bottom-full left-1/2 transform -translate-x-1/2 mb-1 bg-neutral-900 border border-neutral-800 text-[8px] font-mono p-1 rounded text-white whitespace-nowrap z-10">
+                    <span className="absolute hidden group-hover:block bottom-full left-1/2 transform -translate-x-1/2 mb-1 bg-surface-elevated border border-border-strong text-[8px] font-mono p-1 rounded text-text-primary whitespace-nowrap z-10">
                       Unpaid: ₹{outstandingFees.toLocaleString('en-IN')}
                     </span>
                   </div>
-                  <span className="text-[8px] font-mono text-rose-440 font-bold">Unpaid</span>
+                  <span className="text-[8px] font-mono text-rose-500 font-bold">Unpaid</span>
                 </div>
               </div>
 
               {/* Pending authorization alerts */}
-              <div className="border-t border-neutral-900 pt-3">
-                <div className="flex items-center gap-1 text-[11px] text-neutral-400">
+              <div className="border-t border-border-subtle pt-3">
+                <div className="flex items-center gap-1 text-[11px] text-text-secondary">
                   <ClipboardList size={12} className="text-amber-500" />
-                  <span className="font-bold text-white">Checker Approvals:</span>
+                  <span className="font-bold text-text-primary">Checker Approvals:</span>
                   {pendingApprovals.length > 0 ? (
                     <span className="text-amber-500 font-semibold">{pendingApprovals.length} pending authorization</span>
                   ) : (
@@ -699,37 +637,37 @@ export default function AdminDashboard() {
       {/* 1. Onboard Student Modal */}
       {studentModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md bg-neutral-900 border border-neutral-850 rounded-xl p-5 shadow-2xl animate-scale-up">
-            <h3 className="font-display font-bold text-lg text-white mb-3 text-left">Onboard Student Profile</h3>
+          <div className="w-full max-w-md bg-surface border border-border-subtle rounded-xl p-5 shadow-2xl animate-scale-up">
+            <h3 className="font-display font-bold text-lg text-text-primary mb-3 text-left">Onboard Student Profile</h3>
             <form onSubmit={handleAddStudent} className="space-y-3">
               <div>
-                <label className="text-[10px] uppercase font-bold text-neutral-400 block text-left">Student Name</label>
+                <label className="text-[10px] uppercase font-bold text-text-muted block text-left">Student Name</label>
                 <input
                   type="text"
                   placeholder="e.g. Rahul Sharma"
                   value={studentForm.name}
                   onChange={e => setStudentForm({ ...studentForm, name: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 text-white rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-left">
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-neutral-400 block">Roll Number</label>
+                  <label className="text-[10px] uppercase font-bold text-text-muted block">Roll Number</label>
                   <input
                     type="text"
                     placeholder="e.g. 2026CSE004"
                     value={studentForm.rollNo}
                     onChange={e => setStudentForm({ ...studentForm, rollNo: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 text-white rounded focus:border-blue-500 focus:outline-none"
+                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-neutral-400 block">Department</label>
+                  <label className="text-[10px] uppercase font-bold text-text-muted block">Department</label>
                   <select
                     value={studentForm.department}
                     onChange={e => setStudentForm({ ...studentForm, department: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 text-white rounded focus:border-blue-500 focus:outline-none"
+                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                   >
                     <option value="CSE">CSE (Computer Science)</option>
                     <option value="ECE">ECE (Electronics)</option>
@@ -738,33 +676,33 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-[10px] uppercase font-bold text-neutral-400 block text-left">Email Address</label>
+                <label className="text-[10px] uppercase font-bold text-text-muted block text-left">Email Address</label>
                 <input
                   type="email"
                   placeholder="name@sreyas.ac.in"
                   value={studentForm.email}
                   onChange={e => setStudentForm({ ...studentForm, email: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 text-white rounded focus:border-blue-500 focus:outline-none"
+                  className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] uppercase font-bold text-neutral-400 block text-left">Semester Batch</label>
+                <label className="text-[10px] uppercase font-bold text-text-muted block text-left">Semester Batch</label>
                 <select
                   value={studentForm.semester}
                   onChange={e => setStudentForm({ ...studentForm, semester: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 text-white rounded focus:border-blue-500 focus:outline-none"
+                  className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                 >
                   <option value="Semester 1">Semester 1 (Autumn)</option>
                   <option value="Semester 3">Semester 3 (Autumn)</option>
                 </select>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-neutral-850">
+              <div className="flex justify-end gap-2 pt-3 border-t border-border-subtle">
                 <button
                   type="button"
                   onClick={() => setStudentModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-neutral-400 bg-neutral-800 hover:bg-neutral-750 rounded transition cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold text-text-secondary bg-surface-elevated hover:bg-surface-hover rounded transition cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -783,15 +721,15 @@ export default function AdminDashboard() {
       {/* 2. Issue Invoice Modal */}
       {invoiceModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md bg-neutral-900 border border-neutral-850 rounded-xl p-5 shadow-2xl animate-scale-up">
-            <h3 className="font-display font-bold text-lg text-white mb-3 text-left">Issue Tuition Invoice</h3>
+          <div className="w-full max-w-md bg-surface border border-border-subtle rounded-xl p-5 shadow-2xl animate-scale-up">
+            <h3 className="font-display font-bold text-lg text-text-primary mb-3 text-left">Issue Tuition Invoice</h3>
             <form onSubmit={handleGenerateInvoice} className="space-y-3">
               <div>
-                <label className="text-[10px] uppercase font-bold text-neutral-400 block text-left">Select Enrolled Student</label>
+                <label className="text-[10px] uppercase font-bold text-text-muted block text-left">Select Enrolled Student</label>
                 <select
                   value={invoiceForm.studentId}
                   onChange={e => setInvoiceForm({ ...invoiceForm, studentId: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 text-white rounded focus:border-blue-500 focus:outline-none"
+                  className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                 >
                   <option value="">-- Choose Student --</option>
                   {apiStudents.map(s => (
@@ -810,43 +748,43 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-2 gap-3 text-left">
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-neutral-400 block">Invoice Type</label>
+                  <label className="text-[10px] uppercase font-bold text-text-muted block">Invoice Type</label>
                   <select
                     value={invoiceForm.type}
                     onChange={e => setInvoiceForm({ ...invoiceForm, type: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 text-white rounded focus:border-blue-500 focus:outline-none"
+                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                   >
                     <option value="Academic Tuition Fee">Academic Tuition Fee</option>
                     <option value="Lab Fee">Lab Fee</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-neutral-400 block">Billing Amount (₹)</label>
+                  <label className="text-[10px] uppercase font-bold text-text-muted block">Billing Amount (₹)</label>
                   <input
                     type="number"
                     placeholder="106000"
                     value={invoiceForm.amount}
                     onChange={e => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 text-white rounded focus:border-blue-500 focus:outline-none"
+                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] uppercase font-bold text-neutral-400 block text-left">Due Date</label>
+                <label className="text-[10px] uppercase font-bold text-text-muted block text-left">Due Date</label>
                 <input
                   type="date"
                   value={invoiceForm.dueDate}
                   onChange={e => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 text-white rounded focus:border-blue-500 focus:outline-none"
+                  className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-neutral-850">
+              <div className="flex justify-end gap-2 pt-3 border-t border-border-subtle">
                 <button
                   type="button"
                   onClick={() => setInvoiceModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-neutral-400 bg-neutral-800 hover:bg-neutral-750 rounded transition cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold text-text-secondary bg-surface-elevated hover:bg-surface-hover rounded transition cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -865,37 +803,37 @@ export default function AdminDashboard() {
       {/* 3. Onboard Faculty Modal */}
       {facultyModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md bg-neutral-900 border border-neutral-850 rounded-xl p-5 shadow-2xl animate-scale-up">
-            <h3 className="font-display font-bold text-lg text-white mb-3 text-left">Onboard Faculty & Allocation</h3>
+          <div className="w-full max-w-md bg-surface border border-border-subtle rounded-xl p-5 shadow-2xl animate-scale-up">
+            <h3 className="font-display font-bold text-lg text-text-primary mb-3 text-left">Onboard Faculty & Allocation</h3>
             <form onSubmit={handleAddFaculty} className="space-y-3">
               <div>
-                <label className="text-[10px] uppercase font-bold text-neutral-400 block text-left">Faculty Name</label>
+                <label className="text-[10px] uppercase font-bold text-text-muted block text-left">Faculty Name</label>
                 <input
                   type="text"
                   placeholder="e.g. Dr. Robert Finch"
                   value={facultyForm.name}
                   onChange={e => setFacultyForm({ ...facultyForm, name: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 text-white rounded focus:border-blue-500 focus:outline-none"
+                  className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-left">
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-neutral-400 block">Employee ID</label>
+                  <label className="text-[10px] uppercase font-bold text-text-muted block">Employee ID</label>
                   <input
                     type="text"
                     placeholder="e.g. EMP-CS509"
                     value={facultyForm.employeeId}
                     onChange={e => setFacultyForm({ ...facultyForm, employeeId: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 text-white rounded focus:border-blue-500 focus:outline-none"
+                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-neutral-400 block">Department</label>
+                  <label className="text-[10px] uppercase font-bold text-text-muted block">Department</label>
                   <select
                     value={facultyForm.department}
                     onChange={e => setFacultyForm({ ...facultyForm, department: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 text-white rounded focus:border-blue-500 focus:outline-none"
+                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                   >
                     <option value="CSE">CSE (Computer Science)</option>
                     <option value="ECE">ECE (Electronics)</option>
@@ -904,45 +842,45 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-[10px] uppercase font-bold text-neutral-400 block text-left">Email Address</label>
+                <label className="text-[10px] uppercase font-bold text-text-muted block text-left">Email Address</label>
                 <input
                   type="email"
                   placeholder="name@sreyas.ac.in"
                   value={facultyForm.email}
                   onChange={e => setFacultyForm({ ...facultyForm, email: e.target.value })}
-                  className="w-full mt-1 px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 text-white rounded focus:border-blue-500 focus:outline-none"
+                  className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-left">
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-neutral-400 block">Allocated Subject</label>
+                  <label className="text-[10px] uppercase font-bold text-text-muted block">Allocated Subject</label>
                   <select
                     value={facultyForm.subjectId}
                     onChange={e => setFacultyForm({ ...facultyForm, subjectId: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 text-white rounded focus:border-blue-500 focus:outline-none"
+                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                   >
                     <option value="cs-301">CS-301 Database Systems</option>
                     <option value="cs-302">CS-302 Design & Algorithms</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-neutral-400 block">Semester Batch</label>
+                  <label className="text-[10px] uppercase font-bold text-text-muted block">Semester Batch</label>
                   <select
                     value={facultyForm.semester}
                     onChange={e => setFacultyForm({ ...facultyForm, semester: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 text-white rounded focus:border-blue-500 focus:outline-none"
+                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                   >
                     <option value="Semester 3">Semester 3</option>
                   </select>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-neutral-850">
+              <div className="flex justify-end gap-2 pt-3 border-t border-border-subtle">
                 <button
                   type="button"
                   onClick={() => setFacultyModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-neutral-400 bg-neutral-800 hover:bg-neutral-750 rounded transition cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold text-text-secondary bg-surface-elevated hover:bg-surface-hover rounded transition cursor-pointer"
                 >
                   Cancel
                 </button>

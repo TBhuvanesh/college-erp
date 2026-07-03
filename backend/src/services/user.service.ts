@@ -9,6 +9,8 @@ export interface UserProfile {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  designation?: string;
+  departmentId?: string;
 }
 
 interface UserRow {
@@ -18,6 +20,8 @@ interface UserRow {
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
+  designation?: string;
+  department_id?: string;
 }
 
 /**
@@ -27,9 +31,11 @@ interface UserRow {
  */
 export async function getProfile(userId: string): Promise<UserProfile> {
   const { rows } = await query<UserRow>(
-    `SELECT id, email, role, is_active, created_at, updated_at
-     FROM users
-     WHERE id = $1 AND deleted_at IS NULL`,
+    `SELECT u.id, u.email, u.role, u.is_active, u.created_at, u.updated_at,
+            f.designation, f.department_id
+     FROM users u
+     LEFT JOIN faculty f ON f.user_id = u.id AND f.deleted_at IS NULL
+     WHERE u.id = $1 AND u.deleted_at IS NULL`,
     [userId]
   );
 
@@ -46,5 +52,7 @@ export async function getProfile(userId: string): Promise<UserProfile> {
     isActive: r.is_active,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    designation: r.designation || undefined,
+    departmentId: r.department_id || undefined,
   };
 }

@@ -174,6 +174,18 @@ export async function createFaculty(
     );
     const userId = userRows[0].id;
 
+    // Validate only one HOD per department
+    if (data.designation === 'hod') {
+      const { rows: existingHOD } = await client.query<{ id: string }>(
+        `SELECT id FROM faculty 
+         WHERE department_id = $1 AND designation = 'hod' AND deleted_at IS NULL`,
+        [data.departmentId]
+      );
+      if (existingHOD[0]) {
+        throw AppError.badRequest('This department already has an assigned HOD.');
+      }
+    }
+
     // Create faculty profile
     const { rows: facultyRows } = await client.query<{ id: string }>(
       `INSERT INTO faculty
@@ -218,6 +230,24 @@ export async function updateFaculty(
   if (data.fullName !== undefined) set('full_name', data.fullName);
   if (data.departmentId !== undefined) set('department_id', data.departmentId);
   if (data.designation !== undefined) set('designation', data.designation);
+
+  // Validate only one HOD per department on update
+  if (data.designation === 'hod' || (data.designation === undefined && data.departmentId !== undefined)) {
+    const current = await getFacultyById(id);
+    const finalDesig = data.designation ?? current.designation;
+    const finalDept = data.departmentId ?? current.department.id;
+
+    if (finalDesig === 'hod') {
+      const { rows: existingHOD } = await query<{ id: string }>(
+        `SELECT id FROM faculty 
+         WHERE department_id = $1 AND designation = 'hod' AND id != $2 AND deleted_at IS NULL`,
+        [finalDept, id]
+      );
+      if (existingHOD[0]) {
+        throw AppError.badRequest('This department already has an assigned HOD.');
+      }
+    }
+  }
 
   params.push(id);
   const { rowCount } = await query(

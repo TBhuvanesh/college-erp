@@ -168,11 +168,11 @@ export default function StudentOpportunitiesDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="font-display font-bold text-2xl text-white flex items-center gap-2">
+          <h2 className="font-display font-bold text-2xl dark:text-white text-text-primary flex items-center gap-2">
             <Briefcase className="text-blue-500" />
             <span>Opportunity Hub</span>
           </h2>
-          <p className="text-xs text-neutral-400 mt-1">
+          <p className="text-xs dark:text-neutral-400 text-text-secondary mt-1">
             Discover internships, jobs, hackathons, competitions, workshops, seminars, and placement drives.
           </p>
         </div>
@@ -195,13 +195,13 @@ export default function StudentOpportunitiesDashboard() {
       />
 
       {loading ? (
-        <div className="text-center py-20 text-neutral-400">
+        <div className="text-center py-20 dark:text-neutral-400 text-text-secondary">
           <Loader2 className="animate-spin text-blue-500 mx-auto mb-3" size={30} />
           <span className="font-mono text-xs">Querying institutional opportunity registry...</span>
         </div>
       ) : filteredList.length === 0 ? (
-        <div className="text-center py-16 glass-card border border-neutral-800 rounded-xl text-neutral-500 font-mono text-xs flex flex-col items-center justify-center gap-2">
-          <Inbox size={24} className="text-neutral-600" />
+        <div className="text-center py-16 glass-card border dark:border-neutral-800 border-border-subtle rounded-xl dark:text-neutral-500 text-text-muted font-mono text-xs flex flex-col items-center justify-center gap-2">
+          <Inbox size={24} className="dark:text-neutral-600 text-text-muted" />
           <span>No eligible opportunities found matching your filters.</span>
         </div>
       ) : (
@@ -210,7 +210,7 @@ export default function StudentOpportunitiesDashboard() {
           {/* Section 1: Featured Opportunities */}
           {featuredOpps.length > 0 && (
             <div className="space-y-4">
-              <h3 className="font-display font-bold text-white text-sm uppercase tracking-wider flex items-center gap-2 border-b border-neutral-900 pb-2">
+              <h3 className="font-display font-bold dark:text-white text-text-primary text-sm uppercase tracking-wider flex items-center gap-2 border-b dark:border-neutral-900 border-border-subtle pb-2">
                 <TrendingUp size={16} className="text-blue-400" />
                 <span>Recommended / Featured Opportunities</span>
               </h3>
@@ -230,8 +230,8 @@ export default function StudentOpportunitiesDashboard() {
           {/* Section 2: Upcoming Deadlines */}
           {upcomingDeadlines.length > 0 && (
             <div className="space-y-4">
-              <h3 className="font-display font-bold text-white text-sm uppercase tracking-wider flex items-center gap-2 border-b border-neutral-900 pb-2">
-                <Clock size={16} className="text-rose-450" />
+              <h3 className="font-display font-bold dark:text-white text-text-primary text-sm uppercase tracking-wider flex items-center gap-2 border-b dark:border-neutral-900 border-border-subtle pb-2">
+                <Clock size={16} className="text-rose-455" />
                 <span>Upcoming Deadlines</span>
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -250,7 +250,7 @@ export default function StudentOpportunitiesDashboard() {
           {/* Section 3: Bookmarked Opportunities */}
           {bookmarkedOpps.length > 0 && (
             <div className="space-y-4">
-              <h3 className="font-display font-bold text-white text-sm uppercase tracking-wider flex items-center gap-2 border-b border-neutral-900 pb-2">
+              <h3 className="font-display font-bold dark:text-white text-text-primary text-sm uppercase tracking-wider flex items-center gap-2 border-b dark:border-neutral-900 border-border-subtle pb-2">
                 <Bookmark size={16} className="text-amber-400" />
                 <span>Bookmarked Opportunities</span>
               </h3>
@@ -270,7 +270,7 @@ export default function StudentOpportunitiesDashboard() {
           {/* Section 4: All / New Opportunities */}
           {newOpps.length > 0 && (
             <div className="space-y-4">
-              <h3 className="font-display font-bold text-white text-sm uppercase tracking-wider flex items-center gap-2 border-b border-neutral-900 pb-2">
+              <h3 className="font-display font-bold dark:text-white text-text-primary text-sm uppercase tracking-wider flex items-center gap-2 border-b dark:border-neutral-900 border-border-subtle pb-2">
                 <Sparkles size={16} className="text-emerald-400" />
                 <span>New Opportunities</span>
               </h3>

@@ -211,8 +211,8 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
     
     if (studentSub) {
       return studentSub.status === "Evaluated"
-        ? { label: "Evaluated", style: "bg-emerald-500/10 text-emerald-450 border-emerald-500/20" }
-        : { label: "Submitted", style: "bg-blue-500/10 text-blue-400 border-blue-500/20" };
+        ? { label: "Evaluated", style: "dark:bg-emerald-500/10 bg-emerald-50 dark:text-emerald-400 text-emerald-750 dark:border-emerald-500/20 border-emerald-205" }
+        : { label: "Submitted", style: "dark:bg-blue-500/10 bg-blue-50 dark:text-blue-400 text-blue-750 dark:border-blue-500/20 border-blue-205" };
     }
 
     const due = new Date(assign.dueDate);
@@ -221,22 +221,22 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffTime < 0) {
-      return { label: "Closed", style: "bg-rose-500/10 text-rose-455 border-rose-500/20" };
+      return { label: "Closed", style: "dark:bg-rose-500/10 bg-rose-50 dark:text-rose-400 text-rose-755 dark:border-rose-500/20 border-rose-205" };
     }
     if (diffDays <= 2) {
-      return { label: "Due Soon", style: "bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse" };
+      return { label: "Due Soon", style: "dark:bg-amber-500/10 bg-amber-50 dark:text-amber-400 text-amber-750 dark:border-amber-500/20 border-amber-205 animate-pulse" };
     }
-    return { label: "Open", style: "bg-neutral-800 text-neutral-450 border-neutral-700" };
+    return { label: "Open", style: "dark:bg-neutral-800 bg-surface-elevated dark:text-neutral-400 text-text-secondary dark:border-neutral-700 border-border-subtle" };
   };
 
   const getSubStatusBadge = (status: string) => {
     switch (status) {
       case "Evaluated":
-        return "bg-emerald-500/10 text-emerald-450 border-emerald-500/20";
+        return "dark:bg-emerald-500/10 bg-emerald-50 dark:text-emerald-400 text-emerald-750 dark:border-emerald-500/20 border-emerald-205";
       case "Late Submission":
-        return "bg-amber-500/10 text-amber-450 border-amber-500/20";
+        return "dark:bg-amber-500/10 bg-amber-50 dark:text-amber-400 text-amber-750 dark:border-amber-500/20 border-amber-205";
       default:
-        return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+        return "dark:bg-blue-500/10 bg-blue-50 dark:text-blue-400 text-blue-750 dark:border-blue-500/20 border-blue-205";
     }
   };
 
@@ -293,27 +293,27 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
   return (
     <div className="space-y-6 pb-12">
       {/* Header Banner */}
-      <div className="p-5 rounded-xl border border-neutral-800 bg-neutral-900/60 backdrop-blur-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="p-5 rounded-xl border dark:border-neutral-800 border-border-subtle dark:bg-neutral-900/60 bg-surface backdrop-blur-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="space-y-1">
           <span className="text-[9px] uppercase font-bold text-blue-500 tracking-wider font-mono">
             {subject.code} • Sem {subject.semester}
           </span>
-          <h2 className="font-display font-bold text-xl text-white">
+          <h2 className="font-display font-bold text-xl dark:text-white text-text-primary">
             {subject.name}
           </h2>
-          <p className="text-xs text-neutral-400">
-            Enrolled program: <strong className="text-neutral-350">{subject.programName}</strong>
+          <p className="text-xs dark:text-neutral-400 text-text-secondary">
+            Enrolled program: <strong className="dark:text-neutral-350 text-text-primary">{subject.programName}</strong>
           </p>
         </div>
 
         {/* Tab switch buttons */}
-        <div className="flex bg-neutral-950 border border-neutral-850 rounded-lg p-1 shrink-0 self-stretch sm:self-auto justify-between sm:justify-start">
+        <div className="flex dark:bg-neutral-950 bg-neutral-100 border dark:border-neutral-850 border-border-subtle rounded-lg p-1 shrink-0 self-stretch sm:self-auto justify-between sm:justify-start">
           <button
             onClick={() => setActiveTab("materials")}
             className={`px-3 py-1.5 text-xs font-bold rounded cursor-pointer transition flex items-center gap-1.5 ${
               activeTab === "materials"
                 ? "bg-blue-600 text-white font-extrabold shadow-md shadow-blue-600/15"
-                : "text-neutral-450 hover:text-neutral-200"
+                : "dark:text-neutral-400 text-text-secondary dark:hover:text-neutral-200 hover:text-text-primary"
             }`}
           >
             <FileText size={14} />
@@ -324,7 +324,7 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
             className={`px-3 py-1.5 text-xs font-bold rounded cursor-pointer transition flex items-center gap-1.5 ${
               activeTab === "assignments"
                 ? "bg-blue-600 text-white font-extrabold shadow-md shadow-blue-600/15"
-                : "text-neutral-450 hover:text-neutral-200"
+                : "dark:text-neutral-400 text-text-secondary dark:hover:text-neutral-200 hover:text-text-primary"
             }`}
           >
             <Calendar size={14} />
@@ -342,7 +342,7 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
               className={`px-3 py-1.5 text-xs font-bold rounded cursor-pointer transition flex items-center gap-1.5 ${
                 activeTab === "submissions"
                   ? "bg-blue-600 text-white font-extrabold shadow-md shadow-blue-600/15"
-                  : "text-neutral-450 hover:text-neutral-200"
+                  : "dark:text-neutral-400 text-text-secondary dark:hover:text-neutral-200 hover:text-text-primary"
               }`}
             >
               <ClipboardList size={14} />
@@ -364,16 +364,16 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
       {activeTab === "materials" && (
         <div className="space-y-6">
           {/* Controls Bar */}
-          <div className="glass-card border border-neutral-800 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <div className="glass-card border border-border-subtle rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3">
             {/* Search filter */}
             <div className="w-full sm:flex-1 relative">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-neutral-500" />
+              <Search className="absolute left-3 top-2.5 w-4 h-4 dark:text-neutral-500 text-text-muted" />
               <input
                 type="text"
                 placeholder="Search resources by title..."
                 value={matSearch}
                 onChange={(e) => setMatSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-blue-600 transition"
+                className="w-full pl-9 pr-4 py-2 text-xs dark:bg-neutral-950 bg-surface border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
               />
             </div>
 
@@ -402,26 +402,26 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
               {filteredMaterials.map((mat) => (
                 <div
                   key={mat.id}
-                  className="glass-card border border-neutral-800 rounded-xl p-5 flex flex-col justify-between"
+                  className="glass-card border border-border-subtle rounded-xl p-5 flex flex-col justify-between"
                 >
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-4">
-                      <h4 className="text-sm font-bold text-white leading-tight">
+                      <h4 className="text-sm font-bold dark:text-white text-text-primary leading-tight">
                         {mat.title}
                       </h4>
-                      <span className="text-[9px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded font-bold font-mono uppercase tracking-wider">
+                      <span className="text-[9px] dark:bg-indigo-500/10 bg-indigo-50 dark:text-indigo-400 text-indigo-700 dark:border-indigo-500/20 border-indigo-200 px-2 py-0.5 rounded font-bold font-mono uppercase tracking-wider">
                         {mat.fileType}
                       </span>
                     </div>
                     {mat.description && (
-                      <p className="text-xs text-neutral-400 leading-normal line-clamp-3">
+                      <p className="text-xs dark:text-neutral-400 text-text-secondary leading-normal line-clamp-3">
                         {mat.description}
                       </p>
                     )}
                   </div>
 
-                  <div className="border-t border-neutral-950 pt-4 mt-6 flex justify-between items-center">
-                    <div className="text-[9px] text-neutral-500 space-y-0.5 font-mono">
+                  <div className="border-t dark:border-neutral-950 border-border-subtle pt-4 mt-6 flex justify-between items-center">
+                    <div className="text-[9px] dark:text-neutral-505 text-text-muted space-y-0.5 font-mono">
                       <p>By: {mat.facultyName}</p>
                       <p>Date: {formatDate(mat.createdAt)}</p>
                     </div>
@@ -429,7 +429,7 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleDownloadMaterial(mat)}
-                        className="py-1.5 px-3 rounded bg-neutral-800 hover:bg-neutral-750 text-white text-[10px] font-bold border border-neutral-700 flex items-center gap-1 cursor-pointer transition"
+                        className="py-1.5 px-3 rounded dark:bg-neutral-800 bg-surface border dark:border-neutral-700 border-border-subtle dark:text-white text-text-primary text-[10px] font-bold dark:hover:bg-neutral-755 hover:bg-surface-hover flex items-center gap-1 cursor-pointer transition"
                       >
                         <Download size={12} />
                         <span>Download</span>
@@ -442,7 +442,7 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
                               setSelectedMaterial(mat);
                               setMatModalOpen(true);
                             }}
-                            className="p-1.5 rounded bg-neutral-850 hover:bg-neutral-800 text-neutral-450 hover:text-white transition cursor-pointer border border-neutral-800"
+                            className="p-1.5 rounded dark:bg-neutral-850 bg-surface border dark:border-neutral-800 border-border-subtle dark:text-neutral-450 text-text-secondary dark:hover:text-white hover:text-text-primary transition cursor-pointer"
                             title="Edit metadata"
                           >
                             <Edit2 size={12} />
@@ -462,7 +462,7 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
               ))}
             </div>
           ) : (
-            <div className="p-10 text-center glass-card border border-neutral-800 rounded-xl text-neutral-500 font-mono text-xs">
+            <div className="p-10 text-center glass-card border border-border-subtle rounded-xl dark:text-neutral-500 text-text-muted font-mono text-xs">
               No learning resources uploaded matching filter criteria.
             </div>
           )}
@@ -472,29 +472,28 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
       {/* TAB: ASSIGNMENTS */}
       {activeTab === "assignments" && (
         <div className="space-y-6">
-          {/* Controls Bar */}
-          <div className="glass-card border border-neutral-800 rounded-xl p-4 flex flex-col sm:flex-row gap-3">
+          {/* Controls Bar */}          <div className="glass-card border border-border-subtle rounded-xl p-4 flex flex-col sm:flex-row gap-3">
             {/* Title search */}
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-neutral-500" />
+              <Search className="absolute left-3 top-2.5 w-4 h-4 dark:text-neutral-500 text-text-muted" />
               <input
                 type="text"
                 placeholder="Search assignments by title..."
                 value={assignSearch}
                 onChange={(e) => setAssignSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-blue-600 transition"
+                className="w-full pl-9 pr-4 py-2 text-xs dark:bg-neutral-950 bg-surface border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
               />
             </div>
 
             {/* Status filter (Student view only) */}
             {isStudent && (
-              <div className="w-full sm:w-48 flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-2.5 text-xs text-white">
-                <Filter size={12} className="text-neutral-500" />
-                <span className="text-neutral-500">Status:</span>
+              <div className="w-full sm:w-48 flex items-center gap-2 dark:bg-neutral-955 bg-surface border dark:border-neutral-850 border-border-subtle rounded px-2.5 text-xs dark:text-white text-text-primary">
+                <Filter size={12} className="dark:text-neutral-500 text-text-muted" />
+                <span className="dark:text-neutral-500 text-text-muted">Status:</span>
                 <select
                   value={assignStatusFilter}
                   onChange={(e) => setAssignStatusFilter(e.target.value)}
-                  className="bg-transparent text-white cursor-pointer py-2 flex-1 focus:outline-none"
+                  className="bg-transparent dark:text-white text-text-primary cursor-pointer py-2 flex-1 focus:outline-none"
                 >
                   <option value="ALL">All States</option>
                   <option value="Open">Open</option>
@@ -536,15 +535,15 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
                 return (
                   <div
                     key={assign.id}
-                    className="glass-card border border-neutral-800 rounded-xl p-5 flex flex-col justify-between gap-4"
+                    className="glass-card border border-border-subtle rounded-xl p-5 flex flex-col justify-between gap-4"
                   >
                     <div className="space-y-2">
                       <div className="flex justify-between items-start flex-wrap gap-2">
                         <div>
-                          <h4 className="text-base font-bold text-white leading-tight">
+                          <h4 className="text-base font-bold dark:text-white text-text-primary leading-tight">
                             {assign.title}
                           </h4>
-                          <span className="text-[9px] text-neutral-500 font-mono mt-0.5 block">
+                          <span className="text-[9px] dark:text-neutral-500 text-text-muted font-mono mt-0.5 block">
                             Max marks: {assign.maxMarks} • Uploaded by: {assign.facultyName}
                           </span>
                         </div>
@@ -555,16 +554,16 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
                         </span>
                       </div>
                       {assign.description && (
-                        <p className="text-xs text-neutral-400 leading-normal font-sans whitespace-pre-wrap">
+                        <p className="text-xs dark:text-neutral-400 text-text-secondary leading-normal font-sans whitespace-pre-wrap">
                           {assign.description}
                         </p>
                       )}
                     </div>
 
                     {/* Footer / Actions based on role */}
-                    <div className="border-t border-neutral-950 pt-4 mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div className="text-[10px] text-neutral-500 font-mono flex items-center gap-1">
-                        <Clock size={12} className="text-neutral-600" />
+                    <div className="border-t dark:border-neutral-950 border-border-subtle pt-4 mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="text-[10px] dark:text-neutral-505 text-text-muted font-mono flex items-center gap-1">
+                        <Clock size={12} className="dark:text-neutral-600 text-text-muted" />
                         <span>Deadline: {formatDate(assign.dueDate)}</span>
                       </div>
 
@@ -574,8 +573,8 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
                           <>
                             {studentSub && (
                               <div className="text-xs mr-2 font-mono">
-                                <span className="text-neutral-500">Grade: </span>
-                                <strong className="text-white">
+                                <span className="dark:text-neutral-550 text-text-muted">Grade: </span>
+                                <strong className="dark:text-white text-text-primary">
                                   {studentSub.marks !== null
                                     ? `${studentSub.marks}/${assign.maxMarks}`
                                     : "Pending Review"}
@@ -607,7 +606,7 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
                                 setSelectedAssignmentId(assign.id);
                                 setActiveTab("submissions");
                               }}
-                              className="py-1.5 px-3 rounded bg-neutral-800 hover:bg-neutral-750 text-white text-[10px] font-bold border border-neutral-700 flex items-center gap-1 cursor-pointer transition"
+                              className="py-1.5 px-3 rounded dark:bg-neutral-800 bg-surface border dark:border-neutral-700 border-border-subtle dark:text-white text-text-primary text-[10px] font-bold dark:hover:bg-neutral-755 hover:bg-surface-hover flex items-center gap-1 cursor-pointer transition"
                             >
                               <ClipboardList size={12} />
                               <span>View Submissions</span>
@@ -617,7 +616,7 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
                                 setSelectedAssignment(assign);
                                 setAssignModalOpen(true);
                               }}
-                              className="p-1.5 rounded bg-neutral-850 hover:bg-neutral-800 text-neutral-450 hover:text-white transition cursor-pointer border border-neutral-800"
+                              className="p-1.5 rounded dark:bg-neutral-850 bg-surface border dark:border-neutral-800 border-border-subtle dark:text-neutral-450 text-text-secondary dark:hover:text-white hover:text-text-primary transition cursor-pointer"
                               title="Edit assignment details"
                             >
                               <Edit2 size={12} />
@@ -636,21 +635,21 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
 
                     {/* Student Feedback display */}
                     {isStudent && studentSub && (studentSub.feedback || studentSub.marks !== null) && (
-                      <div className="bg-neutral-950/60 border border-neutral-900 rounded-lg p-3 space-y-1.5 mt-1">
-                        <span className="text-[9px] uppercase font-bold text-neutral-500 flex items-center gap-1.5">
+                      <div className="dark:bg-neutral-950/60 bg-surface border dark:border-neutral-900 border-border-subtle rounded-lg p-3 space-y-1.5 mt-1">
+                        <span className="text-[9px] uppercase font-bold dark:text-neutral-500 text-text-muted flex items-center gap-1.5">
                           <FileCheck size={12} className="text-emerald-455" />
                           <span>Faculty Evaluation & Feedback</span>
                         </span>
                         {studentSub.feedback ? (
-                          <p className="text-xs text-neutral-300 leading-normal italic">
+                          <p className="text-xs dark:text-neutral-300 text-text-secondary leading-normal italic">
                             &quot;{studentSub.feedback}&quot;
                           </p>
                         ) : (
-                          <p className="text-xs text-neutral-500 leading-normal italic">
+                          <p className="text-xs dark:text-neutral-500 text-text-muted leading-normal italic">
                             No review comments logged.
                           </p>
                         )}
-                        <span className="text-[8px] text-neutral-500 block font-mono">
+                        <span className="text-[8px] dark:text-neutral-505 text-text-muted block font-mono">
                           Evaluation date: {formatDate(studentSub.updatedAt)}
                         </span>
                       </div>
@@ -660,27 +659,26 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
               })}
             </div>
           ) : (
-            <div className="p-10 text-center glass-card border border-neutral-800 rounded-xl text-neutral-500 font-mono text-xs">
+            <div className="p-10 text-center glass-card border border-border-subtle rounded-xl dark:text-neutral-500 text-text-muted font-mono text-xs">
               No assignments found matching filter criteria.
             </div>
           )}
         </div>
       )}
-
       {/* TAB: SUBMISSIONS (Faculty/Admin only) */}
       {activeTab === "submissions" && !isStudent && (
         <div className="space-y-6 animate-fade-in">
           {/* Submissions Control Options */}
-          <div className="glass-card border border-neutral-800 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="glass-card border border-border-subtle rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Choose Assignment Dropdown */}
             <div className="flex flex-col gap-1">
-              <label className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider">
+              <label className="text-[9px] uppercase font-bold dark:text-neutral-500 text-text-muted tracking-wider">
                 Select Assignment Task
               </label>
               <select
                 value={selectedAssignmentId}
                 onChange={(e) => setSelectedAssignmentId(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-blue-600 transition cursor-pointer"
+                className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-surface border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition cursor-pointer"
               >
                 <option value="">Choose Assignment</option>
                 {assignments.map((a) => (
@@ -693,14 +691,14 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
 
             {/* Filter by Status */}
             <div className="flex flex-col gap-1">
-              <label className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider">
+              <label className="text-[9px] uppercase font-bold dark:text-neutral-500 text-text-muted tracking-wider">
                 Submission Status
               </label>
               <select
                 disabled={!selectedAssignmentId}
                 value={submissionStatusFilter}
                 onChange={(e) => setSubmissionStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-blue-600 transition cursor-pointer disabled:opacity-50"
+                className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-surface border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition cursor-pointer disabled:opacity-50"
               >
                 <option value="ALL">All Submissions</option>
                 <option value="Submitted">Submitted (Pending Review)</option>
@@ -716,14 +714,14 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
               <Loader2 className="animate-spin text-blue-500" size={24} />
             </div>
           ) : !selectedAssignmentId ? (
-            <div className="p-10 text-center glass-card border border-neutral-800 rounded-xl text-neutral-500 font-mono text-xs">
+            <div className="p-10 text-center glass-card border border-border-subtle rounded-xl dark:text-neutral-500 text-text-muted font-mono text-xs">
               Please choose an assignment task above to retrieve student submission sheets.
             </div>
           ) : filteredSubmissions.length > 0 ? (
-            <div className="glass-card border border-neutral-800 rounded-xl overflow-hidden">
+            <div className="glass-card border border-border-subtle rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left text-xs">
-                  <thead className="bg-neutral-950 text-neutral-400 uppercase text-[9px] font-bold font-mono tracking-wider border-b border-neutral-850">
+                  <thead className="dark:bg-neutral-950 bg-neutral-100 dark:text-neutral-400 text-text-secondary uppercase text-[9px] font-bold font-mono tracking-wider border-b dark:border-neutral-850 border-border-subtle">
                     <tr>
                       <th className="p-4">Student</th>
                       <th className="p-4">Roll Number</th>
@@ -734,12 +732,12 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
                       <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-900 bg-neutral-900/30">
+                  <tbody className="divide-y dark:divide-neutral-900 divide-border-subtle dark:bg-neutral-900/30 bg-surface">
                     {filteredSubmissions.map((sub) => (
-                      <tr key={sub.id} className="hover:bg-neutral-800/20 transition-colors">
-                        <td className="p-4 font-bold text-white">{sub.studentName}</td>
-                        <td className="p-4 font-mono text-neutral-400">{sub.studentRollNumber}</td>
-                        <td className="p-4 text-neutral-400 font-mono">{formatDate(sub.submittedAt)}</td>
+                      <tr key={sub.id} className="dark:hover:bg-neutral-800/20 hover:bg-neutral-100/50 transition-colors">
+                        <td className="p-4 font-bold dark:text-white text-text-primary">{sub.studentName}</td>
+                        <td className="p-4 font-mono dark:text-neutral-400 text-text-secondary">{sub.studentRollNumber}</td>
+                        <td className="p-4 dark:text-neutral-400 text-text-secondary font-mono">{formatDate(sub.submittedAt)}</td>
                         <td className="p-4">
                           <button
                             onClick={async () => {
@@ -764,7 +762,7 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
                             {sub.status}
                           </span>
                         </td>
-                        <td className="p-4 font-semibold text-white">
+                        <td className="p-4 font-semibold dark:text-white text-text-primary">
                           {sub.marks !== null ? `${sub.marks}/${sub.assignmentMaxMarks}` : "—"}
                         </td>
                         <td className="p-4 text-right">
@@ -779,7 +777,7 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
                               Grade
                             </button>
                           ) : (
-                            <span className="text-[10px] text-neutral-500 italic">Read-only</span>
+                            <span className="text-[10px] dark:text-neutral-500 text-text-muted italic">Read-only</span>
                           )}
                         </td>
                       </tr>
@@ -789,7 +787,7 @@ export const SubjectLMS: React.FC<SubjectLMSProps> = ({ subjectId }) => {
               </div>
             </div>
           ) : (
-            <div className="p-10 text-center glass-card border border-neutral-800 rounded-xl text-neutral-500 font-mono text-xs">
+            <div className="p-10 text-center glass-card border border-border-subtle rounded-xl dark:text-neutral-500 text-text-muted font-mono text-xs">
               No submissions match filter selection.
             </div>
           )}

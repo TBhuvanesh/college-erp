@@ -25,6 +25,7 @@ const MIGRATION_FILES = [
   '017_lms.sql',
   '018_opportunity_hub.sql',
   '019_notification_calendar.sql',
+  '020_add_hod_designation.sql',
 ];
 
 async function runMigrations(): Promise<void> {
@@ -53,13 +54,40 @@ async function runMigrations(): Promise<void> {
     for (const file of pending) {
       const sql = readFileSync(join(MIGRATIONS_DIR, file), 'utf-8');
       console.log(`Applying ${file}…`);
-      await client.query('BEGIN');
-      await client.query(sql);
-      await client.query(
-        'INSERT INTO schema_migrations (version) VALUES ($1)',
-        [file]
-      );
-      await client.query('COMMIT');
+      if (file === '020_add_hod_designation.sql') {
+        try {
+          // Execute enum alteration first
+          await client.query("ALTER TYPE faculty_designation ADD VALUE 'hod'");
+          console.log('  Enum value "hod" added successfully.');
+        } catch (err: any) {
+          if (err.message && err.message.includes('already exists')) {
+            console.log('  Enum value "hod" already exists, skipping alteration.');
+          } else {
+            throw err;
+          }
+        }
+        
+        // Execute index creation in a separate roundtrip so the enum change is committed
+        await client.query(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_hod_per_dept 
+          ON faculty (department_id) 
+          WHERE designation = 'hod' AND deleted_at IS NULL
+        `);
+        console.log('  Index idx_unique_hod_per_dept created.');
+        
+        await client.query(
+          'INSERT INTO schema_migrations (version) VALUES ($1)',
+          [file]
+        );
+      } else {
+        await client.query('BEGIN');
+        await client.query(sql);
+        await client.query(
+          'INSERT INTO schema_migrations (version) VALUES ($1)',
+          [file]
+        );
+        await client.query('COMMIT');
+      }
       console.log(`  Applied ${file}`);
     }
 

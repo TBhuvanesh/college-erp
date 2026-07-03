@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import * as subjectService from '../services/subject.service';
+import { AppError } from '../errors/AppError';
 import { sendSuccess, sendCreated } from '../utils/response';
 import { asyncHandler } from '../utils/asyncHandler';
 import type {
@@ -17,12 +18,21 @@ export const createSubject = asyncHandler(async (req: Request, res: Response) =>
 
 export const listSubjects = asyncHandler(async (req: Request, res: Response) => {
   const filters = req.query as unknown as ListSubjectsQuery;
+  if (req.user?.role === 'faculty' && req.user?.designation === 'hod') {
+    filters.departmentId = req.user.departmentId;
+  }
   const result = await subjectService.listSubjects(filters);
   sendSuccess(res, result);
 });
 
 export const getSubject = asyncHandler(async (req: Request, res: Response) => {
   const subject = await subjectService.getSubjectById(req.params.id);
+
+  // HODs can only view subjects in their own department
+  if (req.user?.role === 'faculty' && req.user?.designation === 'hod' && subject.department.id !== req.user.departmentId) {
+    throw AppError.forbidden('HODs can only view subjects in their own department');
+  }
+
   sendSuccess(res, { subject });
 });
 

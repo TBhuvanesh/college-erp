@@ -91,14 +91,14 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({
 
   if (success) {
     return (
-      <div className="glass-card rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-6 text-center space-y-4">
-        <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center mx-auto">
+      <div className="glass-card rounded-xl border dark:border-emerald-500/20 border-emerald-200 dark:bg-emerald-500/5 bg-emerald-50 p-6 text-center space-y-4">
+        <div className="w-12 h-12 rounded-full dark:bg-emerald-500/10 bg-emerald-100 dark:text-emerald-400 text-emerald-750 dark:border-emerald-500/20 border-emerald-200 flex items-center justify-center mx-auto">
           <ShieldCheck size={24} />
         </div>
-        <h3 className="font-display font-bold text-white text-base">
+        <h3 className="font-display font-bold dark:text-white text-text-primary text-base">
           Password Updated Successfully
         </h3>
-        <p className="text-xs text-neutral-400 max-w-sm mx-auto leading-normal">
+        <p className="text-xs dark:text-neutral-400 text-text-secondary max-w-sm mx-auto leading-normal">
           Your credentials have been updated, invalidating all other active sessions. You will be logged out to sign in with your new password.
         </p>
         <div className="text-xs font-mono text-emerald-400 font-bold">
@@ -109,15 +109,15 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({
   }
 
   return (
-    <div className="glass-card rounded-xl border border-neutral-850 p-6">
-      <h3 className="font-display font-bold text-white text-sm uppercase tracking-wider mb-4 border-b border-neutral-900 pb-2 flex items-center gap-2">
+    <div className="glass-card rounded-xl border dark:border-neutral-850 border-border-subtle p-6">
+      <h3 className="font-display font-bold dark:text-white text-text-primary text-sm uppercase tracking-wider mb-4 border-b dark:border-neutral-900 border-border-subtle pb-2 flex items-center gap-2">
         <KeyRound size={16} className="text-blue-400" />
         <span>Change Account Password</span>
       </h3>
 
       {/* Notifications */}
       {error && (
-        <div className="p-3 mb-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold">
+        <div className="p-3 mb-4 rounded-lg dark:bg-rose-500/10 bg-rose-50 border dark:border-rose-500/20 border-rose-205 dark:text-rose-455 text-rose-700 text-xs font-semibold">
           {error}
         </div>
       )}
@@ -125,7 +125,7 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Current Password */}
         <div>
-          <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">
+          <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">
             Current Password <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
@@ -134,13 +134,13 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({
               required
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full px-3 py-2 pr-9 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+              className="w-full px-3 py-2 pr-9 text-xs dark:bg-neutral-950 bg-surface border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
               placeholder="••••••••"
             />
             <button
               type="button"
               onClick={() => setShowCurrent(!showCurrent)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-300"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center dark:text-neutral-500 text-text-muted hover:text-text-primary"
             >
               {showCurrent ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
@@ -149,7 +149,7 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({
 
         {/* New Password */}
         <div>
-          <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">
+          <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">
             New Password <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
@@ -158,13 +158,13 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({
               required
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full px-3 py-2 pr-9 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+              className="w-full px-3 py-2 pr-9 text-xs dark:bg-neutral-950 bg-surface border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
               placeholder="••••••••"
             />
             <button
               type="button"
               onClick={() => setShowNew(!showNew)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-300"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center dark:text-neutral-500 text-text-muted hover:text-text-primary"
             >
               {showNew ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
@@ -172,8 +172,8 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({
         </div>
 
         {/* Password Strength Validation Checklist */}
-        <div className="p-3 bg-neutral-950/50 border border-neutral-900 rounded space-y-2">
-          <span className="block text-[9px] uppercase font-bold text-neutral-500">
+        <div className="p-3 dark:bg-neutral-950/50 bg-neutral-100 border dark:border-neutral-900 border-border-subtle rounded space-y-2">
+          <span className="block text-[9px] uppercase font-bold dark:text-neutral-500 text-text-muted">
             Password Requirements
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1.5 gap-x-4">
@@ -181,9 +181,9 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({
               {hasMinLength ? (
                 <Check size={12} className="text-emerald-400" />
               ) : (
-                <X size={12} className="text-neutral-600" />
+                <X size={12} className="dark:text-neutral-600 text-text-muted" />
               )}
-              <span className={hasMinLength ? "text-neutral-300" : "text-neutral-500"}>
+              <span className={hasMinLength ? "dark:text-neutral-300 text-text-secondary" : "dark:text-neutral-500 text-text-muted"}>
                 At least 8 characters
               </span>
             </div>
@@ -191,9 +191,9 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({
               {hasUppercase ? (
                 <Check size={12} className="text-emerald-400" />
               ) : (
-                <X size={12} className="text-neutral-600" />
+                <X size={12} className="dark:text-neutral-600 text-text-muted" />
               )}
-              <span className={hasUppercase ? "text-neutral-300" : "text-neutral-500"}>
+              <span className={hasUppercase ? "dark:text-neutral-300 text-text-secondary" : "dark:text-neutral-500 text-text-muted"}>
                 At least 1 uppercase letter
               </span>
             </div>
@@ -201,9 +201,9 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({
               {hasLowercase ? (
                 <Check size={12} className="text-emerald-400" />
               ) : (
-                <X size={12} className="text-neutral-600" />
+                <X size={12} className="dark:text-neutral-600 text-text-muted" />
               )}
-              <span className={hasLowercase ? "text-neutral-300" : "text-neutral-500"}>
+              <span className={hasLowercase ? "dark:text-neutral-300 text-text-secondary" : "dark:text-neutral-500 text-text-muted"}>
                 At least 1 lowercase letter
               </span>
             </div>
@@ -211,9 +211,9 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({
               {hasNumber ? (
                 <Check size={12} className="text-emerald-400" />
               ) : (
-                <X size={12} className="text-neutral-600" />
+                <X size={12} className="dark:text-neutral-600 text-text-muted" />
               )}
-              <span className={hasNumber ? "text-neutral-300" : "text-neutral-500"}>
+              <span className={hasNumber ? "dark:text-neutral-300 text-text-secondary" : "dark:text-neutral-500 text-text-muted"}>
                 At least 1 number
               </span>
             </div>
@@ -222,7 +222,7 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({
 
         {/* Confirm Password */}
         <div>
-          <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">
+          <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">
             Confirm New Password <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
@@ -231,13 +231,13 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({
               required
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-3 py-2 pr-9 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+              className="w-full px-3 py-2 pr-9 text-xs dark:bg-neutral-950 bg-surface border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
               placeholder="••••••••"
             />
             <button
               type="button"
               onClick={() => setShowConfirm(!showConfirm)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-300"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center dark:text-neutral-500 text-text-muted hover:text-text-primary"
             >
               {showConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
@@ -264,7 +264,7 @@ export const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({
         <button
           type="submit"
           disabled={submitting || !isValidPassword || !passwordsMatch || (newPassword === currentPassword)}
-          className="w-full py-2.5 text-xs font-semibold rounded bg-blue-600 hover:bg-blue-500 disabled:bg-neutral-800 disabled:text-neutral-500 disabled:border-neutral-850 disabled:cursor-not-allowed text-white cursor-pointer transition text-center flex items-center justify-center gap-1.5 mt-2"
+          className="w-full py-2.5 text-xs font-semibold rounded bg-blue-600 hover:bg-blue-500 dark:disabled:bg-neutral-800 disabled:bg-neutral-200 dark:disabled:text-neutral-500 disabled:text-text-muted dark:disabled:border-neutral-850 disabled:border-border-subtle disabled:cursor-not-allowed text-white cursor-pointer transition text-center flex items-center justify-center gap-1.5 mt-2"
         >
           {submitting && <Loader2 size={14} className="animate-spin" />}
           <span>Update Password</span>

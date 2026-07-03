@@ -358,8 +358,8 @@ export default function AdminCalendar() {
       {/* Header section */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
-          <h2 className="font-display font-bold text-2xl text-white">Academic Calendar Desk</h2>
-          <p className="text-xs text-neutral-400 mt-1">
+          <h2 className="font-display font-bold text-2xl text-text-primary">Academic Calendar Desk</h2>
+          <p className="text-xs text-text-muted mt-1">
             Publish semester instruction cycles, exams, JNTUH holidays, and general institutional fee deadlines.
           </p>
         </div>
@@ -367,7 +367,7 @@ export default function AdminCalendar() {
         <div className="flex items-center gap-2 self-start md:self-auto">
           <button
             onClick={() => setUploadModalOpen(true)}
-            className="px-4 py-2 text-xs font-semibold rounded border border-neutral-700 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 hover:text-white cursor-pointer transition flex items-center gap-1.5"
+            className="px-4 py-2 text-xs font-semibold rounded border border-neutral-700 bg-surface hover:bg-surface-elevated text-text-secondary hover:text-text-primary cursor-pointer transition flex items-center gap-1.5"
           >
             <Upload size={14} />
             <span>PDF Upload Desk</span>
@@ -376,13 +376,13 @@ export default function AdminCalendar() {
       </div>
 
       {/* Roster tab navigation switches */}
-      <div className="flex border-b border-neutral-800 mb-6">
+      <div className="flex border-b border-border-subtle mb-6">
         <button
           onClick={() => setActiveTab("live")}
           className={`px-4 py-2.5 text-xs font-semibold transition border-b-2 cursor-pointer ${
             activeTab === "live"
-              ? "border-blue-500 text-white font-bold"
-              : "border-transparent text-neutral-450 hover:text-neutral-250"
+              ? "border-blue-500 text-text-primary font-bold"
+              : "border-transparent text-text-muted hover:text-text-secondary"
           }`}
         >
           <span className="flex items-center gap-2">
@@ -394,15 +394,15 @@ export default function AdminCalendar() {
           onClick={() => setActiveTab("candidates")}
           className={`px-4 py-2.5 text-xs font-semibold transition border-b-2 cursor-pointer ${
             activeTab === "candidates"
-              ? "border-blue-500 text-white font-bold"
-              : "border-transparent text-neutral-450 hover:text-neutral-250"
+              ? "border-blue-500 text-text-primary font-bold"
+              : "border-transparent text-text-muted hover:text-text-secondary"
           }`}
         >
           <span className="flex items-center gap-2">
             <FileText size={14} />
             <span>Candidate Events Roster</span>
             {candidates.filter(c => c.status === "Pending").length > 0 && (
-              <span className="bg-amber-500/10 text-amber-500 border border-amber-500/25 px-1.5 py-0.2 rounded-full text-[9px] font-bold">
+              <span className="dark:bg-amber-500/10 bg-amber-500/20 dark:text-amber-500 text-amber-705 border dark:border-amber-500/25 border-amber-500/30 px-1.5 py-0.2 rounded-full text-[9px] font-bold">
                 {candidates.filter(c => c.status === "Pending").length} new
               </span>
             )}
@@ -427,30 +427,30 @@ export default function AdminCalendar() {
         <div className="space-y-6">
           
           {/* Candidate filters */}
-          <div className="glass-card border border-neutral-800 rounded-xl p-4 flex flex-col md:flex-row gap-3">
+          <div className="bg-surface border border-border-subtle rounded-xl p-4 flex flex-col md:flex-row gap-3">
             {/* Search */}
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-neutral-500" />
+              <Search className="absolute left-3 top-2.5 w-4 h-4 text-text-muted" />
               <input
                 type="text"
                 placeholder="Filter candidates by name or keywords..."
                 value={candSearchQuery}
                 onChange={(e) => setCandSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-neutral-700"
+                className="w-full pl-9 pr-4 py-2 text-xs bg-background border border-border-subtle rounded text-text-primary focus:outline-none focus:border-neutral-700"
               />
             </div>
 
             {/* Status Filter */}
-            <div className="w-full md:w-48 flex items-center gap-2 bg-neutral-950 border border-neutral-800 rounded px-2 text-xs text-white">
-              <Filter size={12} className="text-neutral-500 shrink-0" />
-              <span className="text-neutral-500">Status:</span>
+            <div className="w-full md:w-48 flex items-center gap-2 bg-background border border-border-subtle rounded px-2 text-xs text-text-primary">
+              <Filter size={12} className="text-text-muted shrink-0" />
+              <span className="text-text-muted">Status:</span>
               <select
                 value={candStatusFilter}
                 onChange={(e) => {
                   setCandStatusFilter(e.target.value);
                   setCandPage(1);
                 }}
-                className="bg-transparent text-white cursor-pointer py-2 flex-1 focus:outline-none text-[11px]"
+                className="bg-transparent text-text-primary cursor-pointer py-2 flex-1 focus:outline-none text-[11px]"
               >
                 <option value="ALL">All Statuses</option>
                 <option value="Pending">Pending Review</option>
@@ -461,16 +461,16 @@ export default function AdminCalendar() {
             </div>
 
             {/* Event Type Filter */}
-            <div className="w-full md:w-48 flex items-center gap-2 bg-neutral-950 border border-neutral-800 rounded px-2 text-xs text-white">
-              <Filter size={12} className="text-neutral-500 shrink-0" />
-              <span className="text-neutral-500">Type:</span>
+            <div className="w-full md:w-48 flex items-center gap-2 bg-background border border-border-subtle rounded px-2 text-xs text-text-primary">
+              <Filter size={12} className="text-text-muted shrink-0" />
+              <span className="text-text-muted">Type:</span>
               <select
                 value={candTypeFilter}
                 onChange={(e) => {
                   setCandTypeFilter(e.target.value);
                   setCandPage(1);
                 }}
-                className="bg-transparent text-white cursor-pointer py-2 flex-1 focus:outline-none text-[11px]"
+                className="bg-transparent text-text-primary cursor-pointer py-2 flex-1 focus:outline-none text-[11px]"
               >
                 <option value="ALL">All Types</option>
                 <option value="Class Commencement">Class Commencement</option>
@@ -485,17 +485,17 @@ export default function AdminCalendar() {
           </div>
 
           {/* Roster grid table */}
-          <div className="glass-card border border-neutral-800 rounded-xl overflow-hidden relative">
+          <div className="bg-surface border border-border-subtle rounded-xl overflow-hidden relative">
             
             {candError && (
-              <div className="p-4 bg-rose-500/10 border-b border-neutral-800 text-rose-450 text-xs font-semibold font-mono">
+              <div className="p-4 bg-rose-500/10 border-b border-border-subtle text-rose-450 text-xs font-semibold font-mono">
                 Error: {candError}
               </div>
             )}
 
             {/* Bulk actions float bar */}
             {selectedCandidateIds.size > 0 && (
-              <div className="sticky top-0 left-0 right-0 z-20 bg-blue-600/90 backdrop-blur-md border-b border-blue-500/50 p-2.5 flex items-center justify-between animate-fade-in shadow-xl">
+              <div className="sticky top-0 left-0 right-0 z-20 dark:bg-blue-600/90 bg-blue-700/90 backdrop-blur-md border-b dark:border-blue-500/50 border-blue-550 p-2.5 flex items-center justify-between animate-fade-in shadow-xl">
                 <span className="text-xs font-bold text-white ml-2 flex items-center gap-2">
                   <CheckCircle2 size={14} className="animate-pulse" />
                   {selectedCandidateIds.size} candidate event{selectedCandidateIds.size > 1 ? "s" : ""} selected
@@ -504,21 +504,21 @@ export default function AdminCalendar() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setSelectedCandidateIds(new Set())}
-                    className="px-3 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-[10px] font-semibold transition cursor-pointer"
+                    className="px-3 py-1.5 rounded bg-blue-800 hover:bg-blue-900 text-white text-[10px] font-semibold transition cursor-pointer"
                   >
                     Clear
                   </button>
                   <button
                     onClick={() => handleBulkStatusChange("Approved")}
                     disabled={bulkProcessing}
-                    className="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                    className="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                   >
                     Approve
                   </button>
                   <button
                     onClick={() => handleBulkStatusChange("Rejected")}
                     disabled={bulkProcessing}
-                    className="px-3 py-1.5 rounded bg-rose-700 hover:bg-rose-600 disabled:opacity-50 text-white text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                    className="px-3 py-1.5 rounded bg-rose-700 hover:bg-rose-800 disabled:opacity-50 text-white text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                   >
                     Reject
                   </button>
@@ -541,14 +541,14 @@ export default function AdminCalendar() {
             {/* Desktop Table view */}
             <div className="hidden md:block overflow-x-auto max-h-[600px] overflow-y-auto">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="sticky top-0 z-10 bg-neutral-900 border-b border-neutral-800 shadow-sm">
-                  <tr className="text-neutral-450 font-semibold">
+                <thead className="sticky top-0 z-10 bg-surface border-b border-border-subtle shadow-sm">
+                  <tr className="text-text-muted font-semibold">
                     <th className="px-4 py-3 w-10">
                       <input
                         type="checkbox"
                         checked={candidates.length > 0 && selectedCandidateIds.size === candidates.length}
                         onChange={handleSelectAllCandidates}
-                        className="rounded bg-neutral-950 border-neutral-700 text-blue-500 focus:ring-0 cursor-pointer"
+                        className="rounded bg-background border-neutral-700 text-blue-500 focus:ring-0 cursor-pointer"
                       />
                     </th>
                     <th className="px-4 py-3">Milestone Duration</th>
@@ -560,10 +560,10 @@ export default function AdminCalendar() {
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-900 text-neutral-300">
+                <tbody className="divide-y divide-neutral-900 text-text-secondary">
                   {candLoading ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-12 text-neutral-500 font-mono text-[11px]">
+                      <td colSpan={8} className="text-center py-12 text-text-muted font-mono text-[11px]">
                         <Loader2 className="animate-spin text-blue-500 mx-auto mb-2" size={20} />
                         <span>Scanning document extractions...</span>
                       </td>
@@ -572,8 +572,8 @@ export default function AdminCalendar() {
                     searchFilteredCandidates.map((c) => (
                       <tr
                         key={c.id}
-                        className={`hover:bg-neutral-900/40 transition cursor-pointer select-none ${
-                          selectedCandidateIds.has(c.id) ? "bg-neutral-900/50" : ""
+                        className={`hover:bg-surface/40 transition cursor-pointer select-none ${
+                          selectedCandidateIds.has(c.id) ? "bg-surface/50" : ""
                         }`}
                         onClick={() => handleSelectOneCandidate(c.id, !selectedCandidateIds.has(c.id))}
                       >
@@ -582,32 +582,32 @@ export default function AdminCalendar() {
                             type="checkbox"
                             checked={selectedCandidateIds.has(c.id)}
                             onChange={(e) => handleSelectOneCandidate(c.id, e.target.checked)}
-                            className="rounded bg-neutral-950 border-neutral-700 text-blue-500 focus:ring-0 cursor-pointer"
+                            className="rounded bg-background border-neutral-700 text-blue-500 focus:ring-0 cursor-pointer"
                           />
                         </td>
                         <td className="px-4 py-3 font-mono text-[10px] whitespace-nowrap">
-                          <strong className="text-white block">{c.startDate}</strong>
+                          <strong className="text-text-primary block">{c.startDate}</strong>
                           {c.endDate && c.endDate !== c.startDate && (
-                            <span className="text-neutral-500 block">to {c.endDate}</span>
+                            <span className="text-text-muted block">to {c.endDate}</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-neutral-400 font-medium">
+                        <td className="px-4 py-3 text-text-muted font-medium">
                           {c.eventType}
                         </td>
                         <td className="px-4 py-3">
-                          <span className="font-semibold text-white block leading-tight">{c.title}</span>
+                          <span className="font-semibold text-text-primary block leading-tight">{c.title}</span>
                           {c.description && (
-                            <span className="text-[10px] text-neutral-500 block leading-normal mt-0.5 line-clamp-1 max-w-sm" title={c.description}>
+                            <span className="text-[10px] text-text-muted block leading-normal mt-0.5 line-clamp-1 max-w-sm" title={c.description}>
                               {c.description}
                             </span>
                           )}
-                          <span className="text-[9px] text-neutral-600 block mt-1 truncate max-w-sm" title={c.documentTitle}>
+                          <span className="text-[9px] dark:text-neutral-600 text-text-muted block mt-1 truncate max-w-sm" title={c.documentTitle}>
                             Source PDF: {c.documentTitle}
                           </span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span className="block">{c.departmentName ? c.departmentName.split(" ")[0] : "General"}</span>
-                          <span className="text-[9px] text-neutral-500 font-mono">
+                          <span className="text-[9px] text-text-muted font-mono">
                             {c.semester ? `Semester ${c.semester}` : "All Semesters"}
                           </span>
                         </td>
@@ -616,12 +616,12 @@ export default function AdminCalendar() {
                           <span
                             className={`px-2 py-0.5 rounded text-[9px] font-bold border capitalize font-mono ${
                               c.status === "Approved"
-                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                                 : c.status === "Edited"
-                                ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
                                 : c.status === "Rejected"
-                                ? "bg-rose-500/10 text-rose-450 border-rose-500/20"
-                                : "bg-amber-500/10 text-amber-500 border-amber-500/20 animate-pulse"
+                                ? "bg-rose-500/10 text-rose-600 dark:text-rose-450 border-rose-500/20"
+                                : "bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20 animate-pulse"
                             }`}
                           >
                             {c.status}
@@ -632,7 +632,7 @@ export default function AdminCalendar() {
                             <button
                               onClick={() => openEditCandidateModal(c)}
                               title="Edit Candidate Fields"
-                              className="p-1.5 rounded bg-neutral-900 border border-neutral-850 hover:bg-neutral-800 text-neutral-400 hover:text-white transition cursor-pointer"
+                              className="p-1.5 rounded bg-surface border border-border-subtle hover:bg-surface-elevated text-text-muted hover:text-text-primary transition cursor-pointer"
                             >
                               <Edit size={11} />
                             </button>
@@ -640,7 +640,7 @@ export default function AdminCalendar() {
                               <button
                                 onClick={() => handleSingleApprove(c.id)}
                                 title="Approve Milestone"
-                                className="p-1.5 rounded bg-neutral-900 border border-neutral-850 hover:bg-neutral-800 text-emerald-500 hover:text-emerald-400 transition cursor-pointer"
+                                className="p-1.5 rounded bg-surface border border-border-subtle hover:bg-surface-elevated text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 transition cursor-pointer"
                               >
                                 <CheckCircle size={11} />
                               </button>
@@ -649,7 +649,7 @@ export default function AdminCalendar() {
                               <button
                                 onClick={() => handleSingleReject(c.id)}
                                 title="Reject Milestone"
-                                className="p-1.5 rounded bg-neutral-900 border border-neutral-850 hover:bg-neutral-800 text-rose-500 hover:text-rose-450 transition cursor-pointer"
+                                className="p-1.5 rounded bg-surface border border-border-subtle hover:bg-surface-elevated text-rose-600 dark:text-rose-500 hover:text-rose-700 transition cursor-pointer"
                               >
                                 <XCircle size={11} />
                               </button>
@@ -657,7 +657,7 @@ export default function AdminCalendar() {
                             <button
                               onClick={() => handleDeleteCandidate(c.id)}
                               title="Delete Candidate"
-                              className="p-1.5 rounded bg-neutral-900 border border-neutral-850 hover:bg-neutral-850 text-neutral-500 hover:text-rose-400 transition cursor-pointer"
+                              className="p-1.5 rounded bg-surface border border-border-subtle hover:bg-surface-elevated text-text-muted hover:text-rose-600 transition cursor-pointer"
                             >
                               <Trash2 size={11} />
                             </button>
@@ -693,70 +693,70 @@ export default function AdminCalendar() {
                     onClick={() => handleSelectOneCandidate(c.id, !selectedCandidateIds.has(c.id))}
                   >
                     <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedCandidateIds.has(c.id)}
-                          onChange={(e) => handleSelectOneCandidate(c.id, e.target.checked)}
-                          className="rounded bg-neutral-950 border-neutral-700 text-blue-500 focus:ring-0 cursor-pointer w-4 h-4"
-                        />
-                        <span className="font-mono text-[9px] text-neutral-500">SELECT ME</span>
-                      </div>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[8px] font-bold border capitalize font-mono ${
-                          c.status === "Approved"
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                            : c.status === "Edited"
-                            ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                            : c.status === "Rejected"
-                            ? "bg-rose-500/10 text-rose-450 border-rose-500/20"
-                            : "bg-amber-500/10 text-amber-500 border-amber-500/20 animate-pulse"
-                        }`}
-                      >
-                        {c.status}
-                      </span>
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedCandidateIds.has(c.id)}
+                        onChange={(e) => handleSelectOneCandidate(c.id, e.target.checked)}
+                        className="rounded dark:bg-neutral-950 bg-background border dark:border-neutral-700 border-border-subtle text-blue-500 focus:ring-0 cursor-pointer w-4 h-4"
+                      />
+                      <span className="font-mono text-[9px] dark:text-neutral-500 text-text-muted">SELECT ME</span>
                     </div>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[8px] font-bold border capitalize font-mono ${
+                        c.status === "Approved"
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                          : c.status === "Edited"
+                          ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                          : c.status === "Rejected"
+                          ? "bg-rose-500/10 text-rose-650 dark:text-rose-450 border-rose-500/20"
+                          : "bg-amber-500/10 text-amber-600 dark:text-amber-505 border-amber-500/20 animate-pulse"
+                      }`}
+                    >
+                      {c.status}
+                    </span>
+                  </div>
 
+                  <div>
+                    <h4 className="font-bold dark:text-white text-text-primary text-xs">{c.title}</h4>
+                    {c.description && (
+                      <p className="text-[10px] dark:text-neutral-400 text-text-secondary leading-normal mt-1">{c.description}</p>
+                    )}
+                    <span className="text-[9px] dark:text-neutral-600 text-text-muted block mt-1 italic">
+                      File: {c.documentTitle}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-y-2 text-[10px] font-mono dark:text-neutral-300 text-text-secondary border-t dark:border-neutral-900 border-border-subtle pt-2.5">
                     <div>
-                      <h4 className="font-bold text-white text-xs">{c.title}</h4>
-                      {c.description && (
-                        <p className="text-[10px] text-neutral-400 leading-normal mt-1">{c.description}</p>
-                      )}
-                      <span className="text-[9px] text-neutral-600 block mt-1 italic">
-                        File: {c.documentTitle}
-                      </span>
+                      <span className="dark:text-neutral-600 text-text-muted block text-[8px] uppercase font-bold">Duration</span>
+                      <span>{c.startDate} {c.endDate && c.endDate !== c.startDate ? `to ${c.endDate}` : ""}</span>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-y-2 text-[10px] font-mono text-neutral-300 border-t border-neutral-900 pt-2.5">
-                      <div>
-                        <span className="text-neutral-600 block text-[8px] uppercase font-bold">Duration</span>
-                        <span>{c.startDate} {c.endDate && c.endDate !== c.startDate ? `to ${c.endDate}` : ""}</span>
-                      </div>
-                      <div>
-                        <span className="text-neutral-600 block text-[8px] uppercase font-bold">Type (Enum)</span>
-                        <span>{c.eventType}</span>
-                      </div>
-                      <div>
-                        <span className="text-neutral-600 block text-[8px] uppercase font-bold">Scope / Semester</span>
-                        <span>{c.departmentName ? c.departmentName.split(" ")[0] : "All"} / {c.semester ? `Sem ${c.semester}` : "All"}</span>
-                      </div>
-                      <div>
-                        <span className="text-neutral-600 block text-[8px] uppercase font-bold">Audience</span>
-                        <span>{c.targetAudience}</span>
-                      </div>
+                    <div>
+                      <span className="dark:text-neutral-600 text-text-muted block text-[8px] uppercase font-bold">Type (Enum)</span>
+                      <span>{c.eventType}</span>
                     </div>
+                    <div>
+                      <span className="dark:text-neutral-600 text-text-muted block text-[8px] uppercase font-bold">Scope / Semester</span>
+                      <span>{c.departmentName ? c.departmentName.split(" ")[0] : "All"} / {c.semester ? `Sem ${c.semester}` : "All"}</span>
+                    </div>
+                    <div>
+                      <span className="dark:text-neutral-600 text-text-muted block text-[8px] uppercase font-bold">Audience</span>
+                      <span>{c.targetAudience}</span>
+                    </div>
+                  </div>
 
-                    <div className="flex justify-end gap-2 border-t border-neutral-900/50 pt-2 mt-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-end gap-2 border-t dark:border-neutral-900/50 border-border-subtle pt-2 mt-1" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => openEditCandidateModal(c)}
-                        className="px-2.5 py-1 bg-neutral-900 hover:bg-neutral-800 border border-neutral-850 rounded text-neutral-300 text-[10px] transition cursor-pointer"
+                        className="px-2.5 py-1 dark:bg-neutral-900 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 border dark:border-neutral-850 border-border-subtle rounded dark:text-neutral-300 text-text-primary text-[10px] transition cursor-pointer"
                       >
                         Edit
                       </button>
                       {c.status !== "Approved" && (
                         <button
                           onClick={() => handleSingleApprove(c.id)}
-                          className="px-2.5 py-1 bg-neutral-900 hover:bg-neutral-800 border border-neutral-850 rounded text-emerald-400 text-[10px] transition cursor-pointer"
+                          className="px-2.5 py-1 dark:bg-neutral-900 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 border dark:border-neutral-850 border-border-subtle rounded text-emerald-600 dark:text-emerald-400 text-[10px] transition cursor-pointer"
                         >
                           Approve
                         </button>
@@ -764,14 +764,14 @@ export default function AdminCalendar() {
                       {c.status !== "Rejected" && (
                         <button
                           onClick={() => handleSingleReject(c.id)}
-                          className="px-2.5 py-1 bg-neutral-900 hover:bg-neutral-800 border border-neutral-850 rounded text-rose-450 text-[10px] transition cursor-pointer"
+                          className="px-2.5 py-1 dark:bg-neutral-900 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 border dark:border-neutral-850 border-border-subtle rounded text-rose-600 dark:text-rose-455 text-[10px] transition cursor-pointer"
                         >
                           Reject
                         </button>
                       )}
                       <button
                         onClick={() => handleDeleteCandidate(c.id)}
-                        className="p-1.5 bg-neutral-900 hover:bg-neutral-850 border border-neutral-850 rounded text-neutral-500 hover:text-rose-400 transition cursor-pointer"
+                        className="p-1.5 dark:bg-neutral-900 bg-neutral-100 dark:hover:bg-neutral-850 hover:bg-neutral-200 border dark:border-neutral-850 border-border-subtle rounded dark:text-neutral-500 text-text-muted hover:text-rose-600 transition cursor-pointer"
                       >
                         <Trash2 size={12} />
                       </button>
@@ -788,22 +788,22 @@ export default function AdminCalendar() {
 
           {/* Pagination controls for candidates */}
           {candTotalPages > 1 && (
-            <div className="flex items-center justify-between pt-4 border-t border-neutral-900 bg-neutral-950/20 px-4 py-3 rounded-lg border border-neutral-800">
-              <span className="text-[10px] font-mono text-neutral-500">
+            <div className="flex items-center justify-between pt-4 border-t dark:border-neutral-900 border-border-subtle dark:bg-neutral-950/20 bg-surface px-4 py-3 rounded-lg border dark:border-neutral-800 border-border-subtle">
+              <span className="text-[10px] font-mono dark:text-neutral-500 text-text-muted">
                 Milestones: Showing {(candPage - 1) * candLimit + 1} to {Math.min(candPage * candLimit, candTotalCount)} of {candTotalCount}
               </span>
               <div className="flex items-center gap-1.5">
                 <button
                   disabled={candPage <= 1}
                   onClick={() => setCandPage(candPage - 1)}
-                  className="px-2.5 py-1.5 bg-neutral-900 hover:bg-neutral-850 text-neutral-450 hover:text-white disabled:opacity-55 border border-neutral-850 text-[10px] font-bold rounded transition cursor-pointer"
+                  className="px-2.5 py-1.5 dark:bg-neutral-900 bg-neutral-100 dark:hover:bg-neutral-850 hover:bg-neutral-200 dark:text-neutral-400 text-text-secondary disabled:opacity-55 border dark:border-neutral-850 border-border-subtle text-[10px] font-bold rounded transition cursor-pointer"
                 >
                   Previous Page
                 </button>
                 <button
                   disabled={candPage >= candTotalPages}
                   onClick={() => setCandPage(candPage + 1)}
-                  className="px-2.5 py-1.5 bg-neutral-900 hover:bg-neutral-850 text-neutral-450 hover:text-white disabled:opacity-55 border border-neutral-850 text-[10px] font-bold rounded transition cursor-pointer"
+                  className="px-2.5 py-1.5 dark:bg-neutral-900 bg-neutral-100 dark:hover:bg-neutral-850 hover:bg-neutral-200 dark:text-neutral-400 text-text-secondary disabled:opacity-55 border dark:border-neutral-850 border-border-subtle text-[10px] font-bold rounded transition cursor-pointer"
                 >
                   Next Page
                 </button>

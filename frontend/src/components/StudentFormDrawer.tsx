@@ -245,16 +245,16 @@ export const StudentFormDrawer: React.FC<StudentFormDrawerProps> = ({
       <div className="absolute inset-0 cursor-default" onClick={onClose}></div>
 
       {/* Drawer Panel */}
-      <div className="relative w-full max-w-md h-full bg-neutral-900 border-l border-neutral-800 p-6 flex flex-col shadow-2xl z-10 overflow-y-auto">
+      <div className="relative w-full max-w-md h-full dark:bg-neutral-900 bg-surface border-l dark:border-neutral-800 border-border-subtle p-6 flex flex-col shadow-2xl z-10 overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-neutral-800 pb-4 mb-4">
-          <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
+        <div className="flex items-center justify-between border-b dark:border-neutral-800 border-border-subtle pb-4 mb-4">
+          <h3 className="font-display font-bold dark:text-white text-text-primary text-lg flex items-center gap-2">
             <Sparkles size={18} className="text-blue-500" />
             <span>{studentId ? "Edit Student Profile" : "Register Student"}</span>
           </h3>
           <button
             onClick={onClose}
-            className="p-1 rounded bg-neutral-850 hover:bg-neutral-800 text-neutral-400 hover:text-white cursor-pointer"
+            className="p-1 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary cursor-pointer border dark:border-neutral-800 border-border-subtle"
           >
             <X size={18} />
           </button>
@@ -268,7 +268,7 @@ export const StudentFormDrawer: React.FC<StudentFormDrawerProps> = ({
         )}
 
         {loading || fetchingData ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-neutral-400 text-xs font-mono">
+          <div className="flex-1 flex flex-col items-center justify-center dark:text-neutral-400 text-text-secondary text-xs font-mono">
             <Loader2 className="animate-spin text-blue-500 mb-2" size={24} />
             <span>Loading form dependencies...</span>
           </div>
@@ -278,66 +278,66 @@ export const StudentFormDrawer: React.FC<StudentFormDrawerProps> = ({
               {/* If Add Mode: Account credentials */}
               {!studentId && (
                 <>
-                  <h4 className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider">Account Credentials</h4>
+                  <h4 className="text-[10px] uppercase font-bold dark:text-neutral-500 text-text-muted tracking-wider">Account Credentials</h4>
                   
                   <div>
-                    <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Email Address <span className="text-rose-500">*</span></label>
+                    <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Email Address <span className="text-rose-500">*</span></label>
                     <input
                       type="email"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
-                      placeholder="e.g. name@college.erp"
+                      className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
+                      placeholder="name@college.erp"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Password <span className="text-rose-500">*</span></label>
+                    <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Password <span className="text-rose-500">*</span></label>
                     <input
                       type="password"
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+                      className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                       placeholder="Min 8 chars, 1 upper, 1 lower, 1 digit"
                     />
                   </div>
                 </>
               )}
 
-              <h4 className="text-[10px] uppercase font-bold text-neutral-500 tracking-wider">Student Profile details</h4>
+              <h4 className="text-[10px] uppercase font-bold dark:text-neutral-500 text-text-muted tracking-wider">Student Profile details</h4>
 
               {/* Full Name */}
               <div>
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Full Name <span className="text-rose-500">*</span></label>
+                <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Full Name <span className="text-rose-500">*</span></label>
                 <input
                   type="text"
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+                  className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                   placeholder="e.g. Rahul Sharma"
                 />
               </div>
 
               {/* Roll Number (Readonly in Edit Mode, since Zod schema doesn't permit rollNumber edit) */}
               <div>
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Roll Number <span className="text-rose-500">*</span></label>
+                <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Roll Number <span className="text-rose-500">*</span></label>
                 <input
                   type="text"
                   required
                   disabled={!!studentId}
                   value={rollNumber}
                   onChange={(e) => setRollNumber(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white disabled:opacity-50 focus:outline-none focus:border-blue-600 transition"
+                  className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary disabled:opacity-50 focus:outline-none focus:border-blue-600 transition"
                   placeholder="e.g. S2026-0045"
                 />
               </div>
 
               {/* Department */}
               <div>
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Department <span className="text-rose-500">*</span></label>
+                <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Department <span className="text-rose-500">*</span></label>
                 <select
                   required
                   value={departmentId}
@@ -345,7 +345,7 @@ export const StudentFormDrawer: React.FC<StudentFormDrawerProps> = ({
                     setDepartmentId(e.target.value);
                     setProgramId(""); // Reset program select
                   }}
-                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition cursor-pointer"
+                  className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition cursor-pointer"
                 >
                   <option value="">Select Department</option>
                   {departments.map((dept) => (
@@ -358,13 +358,13 @@ export const StudentFormDrawer: React.FC<StudentFormDrawerProps> = ({
 
               {/* Program */}
               <div>
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Program <span className="text-rose-500">*</span></label>
+                <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Program <span className="text-rose-500">*</span></label>
                 <select
                   required
                   disabled={!departmentId}
                   value={programId}
                   onChange={(e) => setProgramId(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white disabled:opacity-50 focus:outline-none focus:border-blue-600 transition cursor-pointer"
+                  className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary disabled:opacity-50 focus:outline-none focus:border-blue-600 transition cursor-pointer"
                 >
                   <option value="">Select Program</option>
                   {programs.map((prog) => (
@@ -378,7 +378,7 @@ export const StudentFormDrawer: React.FC<StudentFormDrawerProps> = ({
               {/* Semester & Section */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Semester <span className="text-rose-500">*</span></label>
+                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Semester <span className="text-rose-500">*</span></label>
                   <input
                     type="number"
                     required
@@ -386,16 +386,16 @@ export const StudentFormDrawer: React.FC<StudentFormDrawerProps> = ({
                     max={12}
                     value={semester}
                     onChange={(e) => setSemester(Number(e.target.value))}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Section</label>
+                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Section</label>
                   <input
                     type="text"
                     value={section}
                     onChange={(e) => setSection(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                     placeholder="e.g. A"
                   />
                 </div>
@@ -403,25 +403,25 @@ export const StudentFormDrawer: React.FC<StudentFormDrawerProps> = ({
 
               {/* Academic Year */}
               <div>
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Academic Year <span className="text-rose-500">*</span></label>
+                <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Academic Year <span className="text-rose-500">*</span></label>
                 <input
                   type="text"
                   required
                   value={academicYear}
                   onChange={(e) => setAcademicYear(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+                  className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                   placeholder="e.g. 2026-2027"
                 />
-                <span className="text-[9px] text-neutral-500 mt-1 block">Must be consecutive years (YYYY-YYYY).</span>
+                <span className="text-[9px] dark:text-neutral-500 text-text-muted mt-1 block">Must be consecutive years (YYYY-YYYY).</span>
               </div>
             </div>
 
             {/* Footer actions */}
-            <div className="flex items-center gap-3 pt-6 border-t border-neutral-800 mt-6">
+            <div className="flex items-center gap-3 pt-6 border-t dark:border-neutral-800 border-border-subtle mt-6">
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-2 text-xs font-semibold rounded bg-neutral-800 hover:bg-neutral-750 text-neutral-300 hover:text-white cursor-pointer transition text-center"
+                className="flex-1 py-2 text-xs font-semibold rounded dark:bg-neutral-800 bg-neutral-100 dark:hover:bg-neutral-750 hover:bg-neutral-200 dark:text-neutral-300 text-text-primary border dark:border-neutral-800 border-border-subtle cursor-pointer transition text-center"
               >
                 Cancel
               </button>

@@ -41,7 +41,7 @@ export default function AdminProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] text-neutral-400 font-mono text-xs">
+      <div className="flex flex-col items-center justify-center min-h-[50vh] dark:text-neutral-400 text-text-secondary font-mono text-xs">
         <Loader2 className="animate-spin text-blue-500 mb-2" size={32} />
         <span>Loading admin profile...</span>
       </div>
@@ -50,7 +50,7 @@ export default function AdminProfilePage() {
 
   if (error || !profile) {
     return (
-      <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold text-center my-10">
+      <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-650 dark:text-rose-400 text-xs font-semibold text-center my-10">
         {error || "Unable to load profile info."}
       </div>
     );
@@ -63,11 +63,11 @@ export default function AdminProfilePage() {
         <span className="text-[9px] uppercase font-bold text-blue-500 tracking-wider font-mono">
           Admin Portal
         </span>
-        <h2 className="font-display font-bold text-xl text-white flex items-center gap-2">
-          <User size={20} className="text-neutral-400" />
+        <h2 className="font-display font-bold text-xl dark:text-white text-text-primary flex items-center gap-2">
+          <User size={20} className="dark:text-neutral-400 text-text-secondary" />
           <span>My Profile & Settings</span>
         </h2>
-        <p className="text-[10px] text-neutral-400">
+        <p className="text-[10px] dark:text-neutral-400 text-text-secondary">
           Configure admin account settings, contact information and security credentials.
         </p>
       </div>

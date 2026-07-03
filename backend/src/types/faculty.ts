@@ -7,6 +7,7 @@ export const FACULTY_DESIGNATIONS = [
   'associate_professor',
   'assistant_professor',
   'lecturer',
+  'hod',
 ] as const;
 export type FacultyDesignation = (typeof FACULTY_DESIGNATIONS)[number];
 

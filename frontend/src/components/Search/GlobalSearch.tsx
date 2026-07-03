@@ -155,12 +155,12 @@ export const GlobalSearch: React.FC = () => {
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
-          className="w-full pl-9 pr-9 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition"
+          className="w-full pl-9 pr-9 py-2 text-xs dark:bg-neutral-955 bg-surface border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white text-text-primary placeholder-neutral-500 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition"
         />
         {query && (
           <button
             onClick={handleClear}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-white cursor-pointer"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center dark:text-neutral-500 text-text-muted dark:hover:text-white hover:text-text-primary cursor-pointer"
           >
             <X size={14} />
           </button>
@@ -169,11 +169,11 @@ export const GlobalSearch: React.FC = () => {
 
       {/* Floating Dropdown Results Panel */}
       {isOpen && query.trim().length >= 2 && (
-        <div className="absolute left-0 right-0 mt-2 max-h-[420px] overflow-y-auto rounded-xl border border-neutral-850 bg-neutral-900/95 backdrop-blur-md shadow-2xl p-4 z-50 flex flex-col gap-4 scrollbar-thin">
+        <div className="absolute left-0 right-0 mt-2 max-h-[420px] overflow-y-auto rounded-xl border dark:border-neutral-850 border-border-subtle dark:bg-neutral-900/95 bg-surface/95 backdrop-blur-md shadow-2xl p-4 z-50 flex flex-col gap-4 scrollbar-thin">
           
           {/* Loading State */}
           {loading && (
-            <div className="flex flex-col items-center justify-center py-8 text-neutral-400 text-xs font-mono">
+            <div className="flex flex-col items-center justify-center py-8 dark:text-neutral-400 text-text-secondary text-xs font-mono">
               <Loader2 className="animate-spin text-blue-500 mb-2" size={20} />
               <span>Searching ERP Registry...</span>
             </div>
@@ -214,18 +214,18 @@ export const GlobalSearch: React.FC = () => {
                         key={student.id}
                         href={getRoleRedirectUrl("students", student)}
                         onClick={() => setIsOpen(false)}
-                        className="p-2.5 bg-neutral-950/40 hover:bg-neutral-800/40 border border-neutral-900 rounded flex justify-between items-center text-xs group transition-colors"
+                        className="p-2.5 dark:bg-neutral-955 bg-background dark:hover:bg-neutral-800/40 hover:bg-neutral-100/50 border dark:border-neutral-900 border-border-subtle rounded flex justify-between items-center text-xs group transition-colors"
                       >
                         <div className="min-w-0">
-                          <p className="font-bold text-white group-hover:text-blue-400 transition-colors">
+                          <p className="font-bold dark:text-white text-text-primary group-hover:text-blue-500 transition-colors">
                             {student.fullName}
                           </p>
-                          <span className="text-[10px] text-neutral-450 font-mono mt-0.5 block">
+                          <span className="text-[10px] dark:text-neutral-450 text-text-secondary font-mono mt-0.5 block">
                             Roll: {student.rollNumber} • {student.departmentName}
                           </span>
                         </div>
                         <div className="text-right shrink-0">
-                          <span className="text-[9px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded font-semibold font-mono">
+                          <span className="text-[9px] dark:bg-blue-500/10 bg-blue-50 dark:text-blue-400 text-blue-750 border dark:border-blue-500/20 border-blue-200 px-1.5 py-0.5 rounded font-semibold font-mono">
                             Semester {student.semester}
                           </span>
                         </div>
@@ -238,7 +238,7 @@ export const GlobalSearch: React.FC = () => {
               {/* Category: Faculty */}
               {results.faculty && results.faculty.length > 0 && (
                 <div>
-                  <h4 className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider mb-2 border-b border-neutral-850 pb-1 flex items-center gap-1.5">
+                  <h4 className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider mb-2 border-b dark:border-neutral-850 border-border-subtle pb-1 flex items-center gap-1.5">
                     <GraduationCap size={12} className="text-emerald-400" />
                     <span>Faculty ({results.faculty.length})</span>
                   </h4>
@@ -248,17 +248,17 @@ export const GlobalSearch: React.FC = () => {
                         key={fac.id}
                         href={getRoleRedirectUrl("faculty", fac)}
                         onClick={() => setIsOpen(false)}
-                        className="p-2.5 bg-neutral-950/40 hover:bg-neutral-800/40 border border-neutral-900 rounded flex justify-between items-center text-xs group transition-colors"
+                        className="p-2.5 dark:bg-neutral-955 bg-background dark:hover:bg-neutral-800/40 hover:bg-neutral-100/50 border dark:border-neutral-900 border-border-subtle rounded flex justify-between items-center text-xs group transition-colors"
                       >
                         <div className="min-w-0">
-                          <p className="font-bold text-white group-hover:text-emerald-400 transition-colors">
+                          <p className="font-bold dark:text-white text-text-primary group-hover:text-emerald-500 transition-colors">
                             {fac.fullName}
                           </p>
-                          <span className="text-[10px] text-neutral-450 font-mono mt-0.5 block">
+                          <span className="text-[10px] dark:text-neutral-450 text-text-secondary font-mono mt-0.5 block">
                             ID: {fac.employeeNumber} • {fac.departmentName}
                           </span>
                         </div>
-                        <ArrowRight size={12} className="text-neutral-600 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" />
+                        <ArrowRight size={12} className="dark:text-neutral-600 text-text-muted group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all" />
                       </Link>
                     ))}
                   </div>
@@ -268,7 +268,7 @@ export const GlobalSearch: React.FC = () => {
               {/* Category: Subjects */}
               {results.subjects && results.subjects.length > 0 && (
                 <div>
-                  <h4 className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider mb-2 border-b border-neutral-850 pb-1 flex items-center gap-1.5">
+                  <h4 className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider mb-2 border-b dark:border-neutral-850 border-border-subtle pb-1 flex items-center gap-1.5">
                     <BookOpen size={12} className="text-indigo-400" />
                     <span>Subjects ({results.subjects.length})</span>
                   </h4>
@@ -278,18 +278,18 @@ export const GlobalSearch: React.FC = () => {
                         key={sub.id}
                         href={getRoleRedirectUrl("subjects", sub)}
                         onClick={() => setIsOpen(false)}
-                        className="p-2.5 bg-neutral-950/40 hover:bg-neutral-800/40 border border-neutral-900 rounded flex justify-between items-center text-xs group transition-colors"
+                        className="p-2.5 dark:bg-neutral-955 bg-background dark:hover:bg-neutral-800/40 hover:bg-neutral-100/50 border dark:border-neutral-900 border-border-subtle rounded flex justify-between items-center text-xs group transition-colors"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="font-bold text-white group-hover:text-indigo-400 transition-colors">
+                          <p className="font-bold dark:text-white text-text-primary group-hover:text-indigo-500 transition-colors">
                             {sub.name}
                           </p>
-                          <span className="text-[10px] text-neutral-450 font-mono mt-0.5 block">
+                          <span className="text-[10px] dark:text-neutral-450 text-text-secondary font-mono mt-0.5 block">
                             Code: {sub.code}
                           </span>
                         </div>
                         <div className="text-right shrink-0">
-                          <span className="text-[9px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 rounded font-semibold font-mono">
+                          <span className="text-[9px] dark:bg-indigo-500/10 bg-indigo-50 dark:text-indigo-400 text-indigo-750 border dark:border-indigo-500/20 border-indigo-200 px-1.5 py-0.5 rounded font-semibold font-mono">
                             Semester {sub.semester}
                           </span>
                         </div>
@@ -302,7 +302,7 @@ export const GlobalSearch: React.FC = () => {
               {/* Category: Announcements */}
               {results.announcements && results.announcements.length > 0 && (
                 <div>
-                  <h4 className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider mb-2 border-b border-neutral-850 pb-1 flex items-center gap-1.5">
+                  <h4 className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider mb-2 border-b dark:border-neutral-850 border-border-subtle pb-1 flex items-center gap-1.5">
                     <Bell size={12} className="text-amber-400" />
                     <span>Announcements ({results.announcements.length})</span>
                   </h4>
@@ -312,17 +312,17 @@ export const GlobalSearch: React.FC = () => {
                         key={ann.id}
                         href={getRoleRedirectUrl("announcements", ann)}
                         onClick={() => setIsOpen(false)}
-                        className="p-2.5 bg-neutral-950/40 hover:bg-neutral-800/40 border border-neutral-900 rounded flex justify-between items-center text-xs group transition-colors animate-fade-in"
+                        className="p-2.5 dark:bg-neutral-955 bg-background dark:hover:bg-neutral-800/40 hover:bg-neutral-100/50 border dark:border-neutral-900 border-border-subtle rounded flex justify-between items-center text-xs group transition-colors animate-fade-in"
                       >
                         <div className="min-w-0 flex-1 pr-4">
-                          <p className="font-bold text-white group-hover:text-amber-400 transition-colors truncate">
+                          <p className="font-bold dark:text-white text-text-primary group-hover:text-amber-500 transition-colors truncate">
                             {ann.title}
                           </p>
-                          <span className="text-[10px] text-neutral-500 font-mono mt-0.5 block">
+                          <span className="text-[10px] dark:text-neutral-500 text-text-muted font-mono mt-0.5 block">
                             Published: {ann.publishDate}
                           </span>
                         </div>
-                        <ArrowRight size={12} className="text-neutral-600 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+                        <ArrowRight size={12} className="dark:text-neutral-600 text-text-muted group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all shrink-0" />
                       </Link>
                     ))}
                   </div>
@@ -332,7 +332,7 @@ export const GlobalSearch: React.FC = () => {
               {/* Category: Events */}
               {results.events && results.events.length > 0 && (
                 <div>
-                  <h4 className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider mb-2 border-b border-neutral-850 pb-1 flex items-center gap-1.5">
+                  <h4 className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider mb-2 border-b dark:border-neutral-850 border-border-subtle pb-1 flex items-center gap-1.5">
                     <Calendar size={12} className="text-rose-455" />
                     <span>Academic Events ({results.events.length})</span>
                   </h4>
@@ -342,18 +342,18 @@ export const GlobalSearch: React.FC = () => {
                         key={ev.id}
                         href={getRoleRedirectUrl("events", ev)}
                         onClick={() => setIsOpen(false)}
-                        className="p-2.5 bg-neutral-950/40 hover:bg-neutral-800/40 border border-neutral-900 rounded flex justify-between items-center text-xs group transition-colors animate-fade-in"
+                        className="p-2.5 dark:bg-neutral-955 bg-background dark:hover:bg-neutral-800/40 hover:bg-neutral-100/50 border dark:border-neutral-900 border-border-subtle rounded flex justify-between items-center text-xs group transition-colors animate-fade-in"
                       >
                         <div className="min-w-0 flex-1 pr-4">
-                          <p className="font-bold text-white group-hover:text-rose-455 transition-colors truncate">
+                          <p className="font-bold dark:text-white text-text-primary group-hover:text-rose-455 transition-colors truncate">
                             {ev.title}
                           </p>
-                          <span className="text-[10px] text-neutral-500 font-mono mt-0.5 block">
+                          <span className="text-[10px] dark:text-neutral-500 text-text-muted font-mono mt-0.5 block">
                             Date: {ev.startDate}
                           </span>
                         </div>
                         <div className="text-right shrink-0">
-                          <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-1.5 py-0.5 rounded font-semibold font-mono uppercase tracking-wider">
+                          <span className="text-[9px] dark:bg-rose-500/10 bg-rose-50 dark:text-rose-400 text-rose-750 border dark:border-rose-500/20 border-rose-200 px-1.5 py-0.5 rounded font-semibold font-mono uppercase tracking-wider">
                             {ev.eventType}
                           </span>
                         </div>

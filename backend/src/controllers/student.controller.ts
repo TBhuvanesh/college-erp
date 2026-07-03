@@ -18,6 +18,9 @@ export const createStudent = asyncHandler(async (req: Request, res: Response) =>
 
 export const listStudents = asyncHandler(async (req: Request, res: Response) => {
   const filters = req.query as unknown as ListStudentsQuery;
+  if (req.user?.role === 'faculty' && req.user?.designation === 'hod') {
+    filters.departmentId = req.user.departmentId;
+  }
   const result = await studentService.listStudents(filters);
   sendSuccess(res, result);
 });
@@ -28,6 +31,11 @@ export const getStudent = asyncHandler(async (req: Request, res: Response) => {
   // Students can only view their own profile
   if (req.user!.role === 'student' && student.userId !== req.user!.id) {
     throw AppError.forbidden('Students can only view their own profile');
+  }
+
+  // HODs can only view students in their own department
+  if (req.user?.role === 'faculty' && req.user?.designation === 'hod' && student.department.id !== req.user.departmentId) {
+    throw AppError.forbidden('HODs can only view students in their own department');
   }
 
   sendSuccess(res, { student });

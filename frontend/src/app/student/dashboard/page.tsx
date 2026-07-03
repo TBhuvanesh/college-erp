@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSimulation } from "@/context/SimulationContext";
 import { useAuth } from "@/context/AuthContext";
@@ -9,15 +9,12 @@ import {
   CreditCard,
   CalendarDays,
   BookOpen,
-  ShieldCheck,
   Clock,
   Award,
   BookMarked,
-  Briefcase
 } from "lucide-react";
 
 // Import Reusable Dashboard Widgets
-import { StatsCard } from "@/components/Dashboard/StatsCard";
 import { AssignmentWidget, StudentAssignmentData } from "@/components/Dashboard/AssignmentWidget";
 import { OpportunityWidget, OpportunityData } from "@/components/Dashboard/OpportunityWidget";
 import { CalendarWidget } from "@/components/Dashboard/CalendarWidget";
@@ -28,8 +25,8 @@ import { AttendanceRadialChart, CGPATrendChart } from "@/components/Dashboard/Da
 
 export default function StudentDashboard() {
   const { accessToken } = useAuth();
-  const { 
-    students, 
+  const {
+    students,
     currentStudentId
   } = useSimulation();
 
@@ -48,7 +45,7 @@ export default function StudentDashboard() {
   const [apiSubmissions, setApiSubmissions] = useState<any[]>([]);
   const [apiPersonalEntries, setApiPersonalEntries] = useState<any[]>([]);
   const [apiDepartments, setApiDepartments] = useState<any[]>([]);
-  
+
   // Loading states
   const [loadingAttendance, setLoadingAttendance] = useState(false);
   const [loadingResults, setLoadingResults] = useState(false);
@@ -169,7 +166,7 @@ export default function StudentDashboard() {
     return <div className="text-neutral-500 font-mono text-center py-10">No active student profile loaded.</div>;
   }
 
-  // Derived Metrics
+  // ─── Derived Metrics ───────────────────────────────────────────────────────
   const overallAttendancePct = apiAttendance ? Math.round(apiAttendance.overall?.percentage || 0) : 0;
   const unpaidTotalAmount = apiFees.reduce((acc, curr) => acc + (curr.pendingAmount || 0), 0);
 
@@ -206,7 +203,7 @@ export default function StudentDashboard() {
   const activeAssignmentsCount = studentAssignmentData.filter(a => a.submissionStatus === "pending").length;
 
   const studentDeptObj = apiDepartments.find(d => d.code === activeStudent?.department);
-  const studentYearAudience = activeStudent?.semester ? `Year ${Math.ceil(parseInt(activeStudent.semester.replace(/\D/g, "")) / 2)}` : "All"; // Rough approximation
+  const studentYearAudience = activeStudent?.semester ? `Year ${Math.ceil(parseInt(activeStudent.semester.replace(/\D/g, "")) / 2)}` : "All";
 
   const unifiedEvents: UnifiedEvent[] = [
     ...apiEvents.map((ev: any) => ({
@@ -231,113 +228,208 @@ export default function StudentDashboard() {
     eligibleYears: o.eligibleYears, deadline: o.deadline, organizer: o.organizer
   }));
 
+  // CGPA grade label
+  const cgpaValue = parseFloat(computedCGPA);
+  const cgpaGrade = cgpaValue >= 9 ? "Excellent" : cgpaValue >= 8 ? "Distinction" : cgpaValue >= 7 ? "First Class" : "Pass";
+  const cgpaBadgeClass = cgpaValue >= 9
+    ? "dark:text-emerald-400 text-emerald-700 dark:bg-emerald-500/10 bg-emerald-50 dark:border-emerald-500/20 border-emerald-200"
+    : cgpaValue >= 8
+    ? "dark:text-blue-400 text-blue-700 dark:bg-blue-500/10 bg-blue-50 dark:border-blue-500/20 border-blue-200"
+    : cgpaValue >= 7
+    ? "dark:text-amber-400 text-amber-700 dark:bg-amber-500/10 bg-amber-50 dark:border-amber-500/20 border-amber-200"
+    : "dark:text-red-400 text-red-700 dark:bg-red-500/10 bg-red-50 dark:border-red-500/20 border-red-200";
+
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 pb-12 w-full max-w-7xl mx-auto">
-      
-      {/* Dynamic Profile Section */}
-      <div className="bg-[#0A0A0A]/95 border border-neutral-800/60 rounded-[20px] p-6 lg:p-8 shadow-xl shadow-black/40 backdrop-blur-xl relative overflow-hidden flex flex-col md:flex-row gap-8 items-start md:items-center justify-between">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 opacity-80" />
-        
-        <div className="flex items-center gap-6 z-10">
-          <div className="relative">
-            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-neutral-800 to-neutral-900 border-2 border-neutral-700/50 flex items-center justify-center font-display font-bold text-3xl text-neutral-400 shadow-inner">
-              {activeStudent.name.charAt(0)}
+    <div className="space-y-4 pb-12 w-full max-w-7xl mx-auto">
+
+      {/* ── HERO: Profile Banner ─────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-sm">
+        {/* Top accent stripe */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-500 via-violet-500 to-purple-500 opacity-80" />
+        {/* Ambient gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/[0.025] via-transparent to-purple-600/[0.02] pointer-events-none" />
+        <div className="absolute -top-10 right-0 w-64 h-48 bg-gradient-to-bl from-indigo-500/[0.05] to-transparent rounded-full blur-2xl pointer-events-none" />
+
+        <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 p-5 lg:p-6">
+          {/* Identity */}
+          <div className="flex items-center gap-4">
+            <div className="relative shrink-0">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/10 to-violet-500/15 border border-blue-500/20 flex items-center justify-center font-display font-black text-2xl text-accent-blue shadow-inner">
+                {activeStudent.name.charAt(0)}
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-[14px] h-[14px] rounded-full bg-success border-2 border-surface shadow-sm" />
             </div>
-            <div className="absolute -bottom-1 -right-1 bg-emerald-500 p-1.5 rounded-full border-2 border-[#0A0A0A]">
-              <ShieldCheck size={12} className="text-white" />
+            <div>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="font-display font-bold text-xl text-text-primary leading-none">
+                  {activeStudent.name}
+                </h1>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-success bg-success/10 border border-success/15">
+                  <span className="w-1.5 h-1.5 rounded-full bg-success" /> Enrolled
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0 mt-1.5">
+                <span className="font-mono text-[11px] text-text-muted">{activeStudent.rollNo}</span>
+                <span className="text-text-muted opacity-30 select-none">·</span>
+                <span className="text-[11px] font-semibold text-accent-blue">{activeStudent.program}</span>
+                <span className="text-text-muted opacity-30 select-none">·</span>
+                <span className="text-[11px] text-text-secondary">{activeStudent.semester}</span>
+                {activeStudent.department && (
+                  <>
+                    <span className="text-text-muted opacity-30 select-none">·</span>
+                    <span className="text-[11px] text-text-muted">{activeStudent.department}</span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-          
-          <div>
-            <h1 className="font-display font-bold text-2xl md:text-3xl text-white tracking-tight">{activeStudent.name}</h1>
-            <div className="flex flex-wrap items-center gap-2 mt-1">
-              <span className="text-xs font-mono font-medium text-neutral-400">{activeStudent.rollNo}</span>
-              <span className="w-1 h-1 rounded-full bg-neutral-700" />
-              <span className="text-xs font-semibold text-blue-400">{activeStudent.program}</span>
-              <span className="w-1 h-1 rounded-full bg-neutral-700" />
-              <span className="text-xs font-medium text-neutral-400">{activeStudent.semester}</span>
+
+          {/* Quick action chips */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <Link href="/student/results"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-accent-blue bg-accent-blue/8 border border-accent-blue/15 hover:bg-accent-blue/15 transition-colors">
+              <Award size={12} /> Transcripts
+            </Link>
+            <Link href="/student/calendar"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-text-secondary bg-surface-elevated border border-border-subtle hover:bg-surface-hover transition-colors">
+              <CalendarDays size={12} /> Schedule
+            </Link>
+            <Link href="/student/fees"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-text-secondary bg-surface-elevated border border-border-subtle hover:bg-surface-hover transition-colors">
+              <CreditCard size={12} /> Fees
+            </Link>
+            <Link href="/student/lms"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-text-secondary bg-surface-elevated border border-border-subtle hover:bg-surface-hover transition-colors">
+              <BookOpen size={12} /> Canvas
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* ── PRIMARY METRICS ROW (asymmetric 12-col grid) ─────────────────────── */}
+      <div className="grid grid-cols-12 gap-4">
+
+        {/* ATTENDANCE — large horizontal card (5 cols) */}
+        <div className="col-span-12 sm:col-span-6 lg:col-span-5">
+          <div className={`h-full rounded-2xl border p-5 flex items-center gap-5 relative overflow-hidden ${
+            overallAttendancePct >= 75
+              ? "dark:border-emerald-500/20 border-emerald-500/30 bg-gradient-to-br dark:from-emerald-500/[0.05] from-emerald-500/[0.03] to-surface"
+              : "dark:border-red-500/20 border-red-500/30 bg-gradient-to-br dark:from-red-500/[0.05] from-red-500/[0.03] to-surface"
+          }`}>
+            <div className="absolute top-3 right-3 opacity-[0.04] pointer-events-none">
+              <Clock size={60} />
+            </div>
+            <div className="shrink-0">
+              <AttendanceRadialChart percentage={loadingAttendance ? 0 : overallAttendancePct} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-0.5">Attendance</p>
+              <div className="font-display font-black text-4xl text-text-primary leading-none">
+                {loadingAttendance
+                  ? <span className="text-2xl text-text-muted animate-pulse">—</span>
+                  : `${overallAttendancePct}%`
+                }
+              </div>
+              <div className={`inline-flex items-center mt-2 px-2 py-0.5 rounded-full text-[11px] font-bold border ${
+                overallAttendancePct >= 75
+                  ? "dark:text-emerald-500 text-emerald-700 dark:bg-emerald-500/10 bg-emerald-50 dark:border-emerald-500/20 border-emerald-200"
+                  : "dark:text-red-550 text-red-700 dark:bg-red-500/10 bg-red-50 dark:border-red-500/20 border-red-200"
+              }`}>
+                {overallAttendancePct >= 75 ? "✓ Compliant" : "⚠ Below 75%"}
+              </div>
+              {apiAttendance?.overall && (
+                <p className="text-[10px] text-text-muted mt-1 font-medium">
+                  {apiAttendance.overall.presentCount ?? 0}P &middot; {apiAttendance.overall.absentCount ?? 0}A
+                </p>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto z-10 flex-wrap">
-          {/* Floating Action Chips */}
-          <Link href="/student/results" className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 transition-all font-semibold text-xs shadow-sm cursor-pointer">
-            <Award size={14} /> Transcripts
+        {/* CGPA TREND — medium card with sparkline (4 cols) */}
+        <div className="col-span-12 sm:col-span-6 lg:col-span-4">
+          <div className="h-full rounded-2xl border border-border-subtle bg-surface p-5 relative overflow-hidden">
+            <div className="absolute top-3 right-3 opacity-[0.04] pointer-events-none">
+              <Award size={60} />
+            </div>
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Academic CGPA</p>
+                <div className="font-display font-black text-4xl text-text-primary leading-none mt-0.5">
+                  {loadingResults
+                    ? <span className="text-2xl text-text-muted animate-pulse">—</span>
+                    : computedCGPA
+                  }
+                  <span className="text-sm font-normal text-text-muted ml-1">/10</span>
+                </div>
+              </div>
+              <span className={`shrink-0 px-2 py-0.5 rounded-lg text-[10px] font-extrabold border mt-1 ${cgpaBadgeClass}`}>
+                {cgpaGrade}
+              </span>
+            </div>
+            <CGPATrendChart data={cgpaTrend} />
+          </div>
+        </div>
+
+        {/* COMPACT COLUMN: Dues + Tasks stacked (3 cols) */}
+        <div className="col-span-12 lg:col-span-3 grid grid-cols-2 lg:grid-cols-1 gap-3">
+
+          {/* Pending Dues */}
+          <Link href="/student/fees" className={`block rounded-2xl border p-4 transition-colors group ${
+            unpaidTotalAmount > 0
+              ? "dark:border-amber-500/20 border-amber-500/35 bg-gradient-to-br dark:from-amber-500/[0.05] from-amber-500/[0.03] to-surface dark:hover:from-amber-500/[0.08] hover:from-amber-500/[0.05]"
+              : "border-border-subtle bg-surface hover:bg-surface-hover"
+          }`}>
+            <div className="flex items-center justify-between mb-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Dues</p>
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105 ${
+                unpaidTotalAmount > 0 ? "dark:bg-amber-500/10 bg-amber-50 dark:text-amber-500 text-amber-700" : "dark:bg-success/10 bg-emerald-50 dark:text-success text-emerald-700"
+              }`}>
+                <CreditCard size={14} strokeWidth={2} />
+              </div>
+            </div>
+            <div className="font-display font-bold text-xl text-text-primary leading-none">
+              {loadingFees ? "—" : `₹${unpaidTotalAmount.toLocaleString("en-IN")}`}
+            </div>
+            <p className={`text-[10px] font-semibold mt-1.5 ${unpaidTotalAmount > 0 ? "dark:text-amber-500 text-amber-700" : "dark:text-success text-success"}`}>
+              {unpaidTotalAmount > 0 ? "Outstanding →" : "Fully paid ✓"}
+            </p>
           </Link>
-          <Link href="/student/calendar" className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-neutral-800/60 border border-neutral-700/50 text-neutral-300 hover:bg-neutral-800 transition-all font-semibold text-xs shadow-sm cursor-pointer">
-            <CalendarDays size={14} /> Schedule
-          </Link>
-          <Link href="/student/fees" className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-neutral-800/60 border border-neutral-700/50 text-neutral-300 hover:bg-neutral-800 transition-all font-semibold text-xs shadow-sm cursor-pointer">
-            <CreditCard size={14} /> Payments
+
+          {/* Active Tasks */}
+          <Link href="/student/lms" className="block rounded-2xl border border-border-subtle bg-surface p-4 hover:bg-surface-hover transition-colors group">
+            <div className="flex items-center justify-between mb-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Tasks</p>
+              <div className="w-7 h-7 rounded-lg dark:bg-purple-500/10 bg-purple-50 dark:text-purple-500 text-purple-700 flex items-center justify-center transition-transform group-hover:scale-105">
+                <BookMarked size={14} strokeWidth={2} />
+              </div>
+            </div>
+            <div className="font-display font-bold text-xl text-text-primary leading-none">
+              {loadingAssignments ? "—" : activeAssignmentsCount}
+            </div>
+            <p className={`text-[10px] font-semibold mt-1.5 ${activeAssignmentsCount === 0 ? "text-success" : "text-text-muted"}`}>
+              {activeAssignmentsCount === 0 ? "All done ✓" : "Pending"}
+            </p>
           </Link>
         </div>
-        
-        {/* Decorative Grid */}
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/10 via-transparent to-transparent opacity-60 pointer-events-none" />
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatsCard
-          title="Attendance"
-          value={loadingAttendance ? "..." : `${overallAttendancePct}%`}
-          icon={Clock}
-          iconClass={overallAttendancePct >= 75 ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}
-          bgClass="bg-[#0A0A0A]/95 border-neutral-800/60 shadow-lg"
-        >
-          <div className="flex justify-center -mt-2">
-            <AttendanceRadialChart percentage={overallAttendancePct} />
-          </div>
-        </StatsCard>
-        
-        <StatsCard
-          title="CGPA Trend"
-          value={loadingResults ? "..." : computedCGPA}
-          icon={Award}
-          iconClass="bg-blue-500/10 text-blue-500"
-          bgClass="bg-[#0A0A0A]/95 border-neutral-800/60 shadow-lg"
-        >
-          <CGPATrendChart data={cgpaTrend} />
-        </StatsCard>
-        
-        <StatsCard
-          title="Pending Dues"
-          value={loadingFees ? "..." : `₹${unpaidTotalAmount.toLocaleString('en-IN')}`}
-          icon={CreditCard}
-          description={unpaidTotalAmount > 0 ? "Semester outstanding balance" : "Fully paid"}
-          iconClass={unpaidTotalAmount > 0 ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-500"}
-          bgClass="bg-[#0A0A0A]/95 border-neutral-800/60 shadow-lg"
-        />
-        
-        <StatsCard
-          title="Canvas Tasks"
-          value={loadingAssignments ? "..." : activeAssignmentsCount}
-          icon={BookMarked}
-          description="Assignments awaiting submission"
-          iconClass="bg-purple-500/10 text-purple-500"
-          bgClass="bg-[#0A0A0A]/95 border-neutral-800/60 shadow-lg"
-        />
-      </div>
+      {/* ── MAIN CONTENT GRID (8/4 split) ────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-      {/* Dashboard Main Grid Structure */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Left Column (Wider): Timeline & Tasks */}
-        <div className="lg:col-span-8 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <AssignmentWidget
-              studentData={studentAssignmentData}
-              loading={loadingAssignments}
-              role="student"
-            />
-            <UpcomingEventsWidget
-              events={unifiedEvents}
-              loading={loadingEvents}
-              role="student"
-            />
-          </div>
-          
+        {/* Left panel (8 cols): vertically stacked sections */}
+        <div className="lg:col-span-8 space-y-4">
+          <UpcomingEventsWidget
+            events={unifiedEvents}
+            loading={loadingEvents}
+            role="student"
+          />
+          <AssignmentWidget
+            studentData={studentAssignmentData}
+            loading={loadingAssignments}
+            role="student"
+          />
           <NotificationWidget
             notifications={apiNotifications}
             loading={loadingNotifications}
@@ -346,8 +438,8 @@ export default function StudentDashboard() {
           />
         </div>
 
-        {/* Right Column (Narrower): Calendar & Opportunities */}
-        <div className="lg:col-span-4 space-y-6">
+        {/* Right panel (4 cols): calendar + opportunities */}
+        <div className="lg:col-span-4 space-y-4">
           <CalendarWidget
             events={unifiedEvents}
             loading={loadingEvents}

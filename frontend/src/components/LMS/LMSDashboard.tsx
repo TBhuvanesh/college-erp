@@ -147,12 +147,12 @@ export const LMSDashboard: React.FC = () => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffTime < 0) {
-      return { label: "Closed", style: "bg-rose-500/10 text-rose-455 border-rose-500/20" };
+      return { label: "Closed", style: "dark:bg-rose-500/10 bg-rose-50 dark:text-rose-455 text-rose-700 dark:border-rose-500/20 border-rose-200" };
     }
     if (diffDays <= 2) {
-      return { label: "Due Soon", style: "bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse" };
+      return { label: "Due Soon", style: "dark:bg-amber-500/10 bg-amber-50 dark:text-amber-400 text-amber-700 dark:border-amber-500/20 border-amber-200 animate-pulse" };
     }
-    return { label: "Open", style: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" };
+    return { label: "Open", style: "dark:bg-emerald-500/10 bg-emerald-50 dark:text-emerald-400 text-emerald-700 dark:border-emerald-500/20 border-emerald-200" };
   };
 
   const formatDate = (dateStr: string) => {
@@ -176,11 +176,11 @@ export const LMSDashboard: React.FC = () => {
           <span className="text-[9px] uppercase font-bold text-blue-500 tracking-wider font-mono">
             LMS Module
           </span>
-          <h2 className="font-display font-bold text-2xl text-white flex items-center gap-2">
-            <BookOpen size={24} className="text-neutral-400" />
+          <h2 className="font-display font-bold text-2xl text-text-primary flex items-center gap-2">
+            <BookOpen size={24} className="text-text-muted" />
             <span>Learning Management Dashboard</span>
           </h2>
-          <p className="text-xs text-neutral-400">
+          <p className="text-xs text-text-muted">
             Access course syllabi, download learning materials, and submit classroom assignments.
           </p>
         </div>
@@ -197,8 +197,8 @@ export const LMSDashboard: React.FC = () => {
         
         {/* Left Side: Subjects (span 2) */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="glass-card border border-neutral-800 rounded-xl p-5">
-            <h3 className="font-display font-bold text-white text-base mb-4 flex items-center gap-2">
+          <div className="bg-surface border border-border-subtle rounded-xl p-5">
+            <h3 className="font-display font-bold text-text-primary text-base mb-4 flex items-center gap-2">
               <BookOpen size={16} className="text-blue-455" />
               <span>Registered Subject Courseware</span>
             </h3>
@@ -213,25 +213,25 @@ export const LMSDashboard: React.FC = () => {
                   <Link
                     key={sub.id + (sub.section || "")}
                     href={`/${role}/lms/${sub.id}`}
-                    className="p-4 rounded-xl bg-neutral-950/45 hover:bg-neutral-800/40 border border-neutral-900 hover:border-neutral-700 transition flex flex-col justify-between group select-none cursor-pointer"
+                    className="p-4 rounded-xl bg-background/45 hover:bg-surface-hover/60 border border-border-subtle dark:hover:border-neutral-700 hover:border-border-strong transition flex flex-col justify-between group select-none cursor-pointer"
                   >
                     <div className="space-y-2">
                       <div className="flex justify-between items-start">
-                        <span className="text-[10px] text-neutral-500 font-mono">
+                        <span className="text-[10px] text-text-muted font-mono">
                           {sub.code}
                         </span>
                         {sub.section && (
-                          <span className="text-[9px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded font-bold font-mono">
+                          <span className="text-[9px] dark:bg-blue-500/10 bg-blue-50 dark:text-blue-400 text-blue-700 dark:border-blue-500/20 border-blue-200 px-1.5 py-0.5 rounded font-bold font-mono">
                             Sec {sub.section}
                           </span>
                         )}
                       </div>
-                      <h4 className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors leading-tight">
+                      <h4 className="text-sm font-bold text-text-primary group-hover:text-blue-400 transition-colors leading-tight">
                         {sub.name}
                       </h4>
                     </div>
 
-                    <div className="flex items-center justify-between text-[10px] text-neutral-500 font-mono border-t border-neutral-950 pt-3 mt-4">
+                    <div className="flex items-center justify-between text-[10px] text-text-muted font-mono border-t dark:border-background border-border-subtle pt-3 mt-4">
                       <span>Semester {sub.semester}</span>
                       <span className="flex items-center gap-0.5 text-blue-400 group-hover:underline">
                         <span>Open LMS</span>
@@ -242,7 +242,7 @@ export const LMSDashboard: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12 text-neutral-500 font-mono italic">
+              <div className="text-center py-12 text-text-muted font-mono italic">
                 No active subject curriculum assignments found.
               </div>
             )}
@@ -253,8 +253,8 @@ export const LMSDashboard: React.FC = () => {
         <div className="space-y-6">
           
           {/* Upcoming Assignments */}
-          <div className="glass-card border border-neutral-800 rounded-xl p-5">
-            <h3 className="font-display font-bold text-white text-sm mb-4 border-b border-neutral-850 pb-2 flex items-center gap-2">
+          <div className="bg-surface border border-border-subtle rounded-xl p-5">
+            <h3 className="font-display font-bold text-text-primary text-sm mb-4 border-b border-border-subtle pb-2 flex items-center gap-2">
               <Calendar size={14} className="text-amber-500" />
               <span>Assignment Deadlines</span>
             </h3>
@@ -271,10 +271,10 @@ export const LMSDashboard: React.FC = () => {
                     <Link
                       key={assign.id}
                       href={`/${role}/lms/${assign.subjectId}`}
-                      className="block p-3 bg-neutral-950/40 hover:bg-neutral-800/40 border border-neutral-900 rounded-lg space-y-2 group transition-colors cursor-pointer"
+                      className="block p-3 bg-background/40 hover:bg-surface-hover/60 border border-border-subtle rounded-lg space-y-2 group transition-colors cursor-pointer"
                     >
                       <div className="flex justify-between items-start gap-2">
-                        <span className="font-bold text-white group-hover:text-amber-500 text-xs block leading-tight truncate max-w-[150px] transition-colors">
+                        <span className="font-bold text-text-primary group-hover:text-amber-500 text-xs block leading-tight truncate max-w-[150px] transition-colors">
                           {assign.title}
                         </span>
                         <span
@@ -302,8 +302,8 @@ export const LMSDashboard: React.FC = () => {
           </div>
 
           {/* Recent Course Materials */}
-          <div className="glass-card border border-neutral-800 rounded-xl p-5">
-            <h3 className="font-display font-bold text-white text-sm mb-4 border-b border-neutral-850 pb-2 flex items-center gap-2">
+          <div className="glass-card border dark:border-neutral-800 border-border-subtle rounded-xl p-5">
+            <h3 className="font-display font-bold dark:text-white text-text-primary text-sm mb-4 border-b dark:border-neutral-855 border-border-subtle pb-2 flex items-center gap-2">
               <FileText size={14} className="text-indigo-400" />
               <span>Recent Materials</span>
             </h3>
@@ -317,12 +317,12 @@ export const LMSDashboard: React.FC = () => {
                 {materials.map((mat) => (
                   <div
                     key={mat.id}
-                    className="p-3 bg-neutral-950/40 border border-neutral-900 rounded-lg flex items-center justify-between gap-3 text-xs"
+                    className="p-3 dark:bg-neutral-955/40 bg-surface border dark:border-neutral-900 border-border-subtle rounded-lg flex items-center justify-between gap-3 text-xs"
                   >
                     <div className="min-w-0 flex-1">
                       <Link
                         href={`/${role}/lms/${mat.subjectId}`}
-                        className="font-semibold text-white hover:text-indigo-400 block leading-tight truncate transition-colors"
+                        className="font-semibold dark:text-white text-text-primary hover:text-indigo-400 block leading-tight truncate transition-colors"
                       >
                         {mat.title}
                       </Link>
@@ -333,7 +333,7 @@ export const LMSDashboard: React.FC = () => {
 
                     <button
                       onClick={() => handleDownload(mat)}
-                      className="p-1.5 rounded bg-neutral-800 hover:bg-neutral-750 border border-neutral-700 text-neutral-400 hover:text-white transition cursor-pointer"
+                      className="p-1.5 rounded dark:bg-neutral-800 bg-surface-elevated dark:hover:bg-neutral-755 hover:bg-surface-hover border dark:border-neutral-700 border-border-subtle dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary transition cursor-pointer"
                       title="Download resource file"
                     >
                       <Download size={12} />
@@ -350,8 +350,8 @@ export const LMSDashboard: React.FC = () => {
 
           {/* Recent Evaluations Feedback (Student Only) */}
           {role === "student" && (
-            <div className="glass-card border border-neutral-800 rounded-xl p-5">
-              <h3 className="font-display font-bold text-white text-sm mb-4 border-b border-neutral-850 pb-2 flex items-center gap-2">
+            <div className="glass-card border dark:border-neutral-800 border-border-subtle rounded-xl p-5">
+              <h3 className="font-display font-bold dark:text-white text-text-primary text-sm mb-4 border-b dark:border-neutral-855 border-border-subtle pb-2 flex items-center gap-2">
                 <MessageSquare size={14} className="text-emerald-400" />
                 <span>Recent Feedback</span>
               </h3>
@@ -365,17 +365,17 @@ export const LMSDashboard: React.FC = () => {
                   {feedback.map((feed) => (
                     <div
                       key={feed.id}
-                      className="p-3 bg-neutral-950/40 border border-neutral-900 rounded-lg space-y-2 text-xs"
+                      className="p-3 dark:bg-neutral-955/40 bg-surface border dark:border-neutral-900 border-border-subtle rounded-lg space-y-2 text-xs"
                     >
                       <div className="flex justify-between items-start gap-2">
-                        <span className="font-bold text-white block leading-tight truncate max-w-[150px]">
+                        <span className="font-bold dark:text-white text-text-primary block leading-tight truncate max-w-[150px]">
                           {feed.assignmentTitle}
                         </span>
-                        <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-semibold font-mono">
+                        <span className="text-[9px] dark:bg-emerald-500/10 bg-emerald-50 dark:text-emerald-400 text-emerald-700 dark:border-emerald-500/20 border-emerald-200 px-1.5 py-0.5 rounded font-semibold font-mono">
                           {feed.marks}/{feed.assignmentMaxMarks}
                         </span>
                       </div>
-                      <p className="text-[10px] text-neutral-400 leading-normal italic font-sans">
+                      <p className="text-[10px] dark:text-neutral-400 text-text-secondary leading-normal italic font-sans">
                         &quot;{feed.feedback || "No comment remarks entered."}&quot;
                       </p>
                       <span className="text-[8px] text-neutral-500 block font-mono">
@@ -393,7 +393,6 @@ export const LMSDashboard: React.FC = () => {
           )}
 
         </div>
-
       </div>
     </div>
   );

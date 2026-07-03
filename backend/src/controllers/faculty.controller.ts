@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import * as facultyService from '../services/faculty.service';
+import { AppError } from '../errors/AppError';
 import { sendSuccess, sendCreated } from '../utils/response';
 import { asyncHandler } from '../utils/asyncHandler';
 import type {
@@ -17,12 +18,21 @@ export const createFaculty = asyncHandler(async (req: Request, res: Response) =>
 
 export const listFaculty = asyncHandler(async (req: Request, res: Response) => {
   const filters = req.query as unknown as ListFacultyQuery;
+  if (req.user?.role === 'faculty' && req.user?.designation === 'hod') {
+    filters.departmentId = req.user.departmentId;
+  }
   const result = await facultyService.listFaculty(filters);
   sendSuccess(res, result);
 });
 
 export const getFaculty = asyncHandler(async (req: Request, res: Response) => {
   const faculty = await facultyService.getFacultyById(req.params.id);
+
+  // HODs can only view faculty in their own department
+  if (req.user?.role === 'faculty' && req.user?.designation === 'hod' && faculty.department.id !== req.user.departmentId) {
+    throw AppError.forbidden('HODs can only view faculty members in their own department');
+  }
+
   sendSuccess(res, { faculty });
 });
 

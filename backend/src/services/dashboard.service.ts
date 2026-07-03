@@ -996,3 +996,94 @@ export async function getStudentDashboardStats(userId: string) {
     ],
   };
 }
+
+export async function getHODDashboardStats(userId: string) {
+  const { rows: profileRows } = await query<{
+    id: string;
+    full_name: string;
+    employee_number: string;
+    department_name: string;
+    department_id: string;
+    designation: string;
+  }>(`
+    SELECT f.id, f.full_name, f.employee_number, f.designation,
+           d.name AS department_name, d.id AS department_id
+    FROM faculty f
+    JOIN departments d ON d.id = f.department_id
+    WHERE f.user_id = $1 AND f.deleted_at IS NULL
+  `, [userId]);
+
+  if (!profileRows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
+  if (profileRows[0].designation !== 'hod') {
+    throw AppError.forbidden('Only Head of Departments can view this dashboard');
+  }
+
+  const { department_id: departmentId } = profileRows[0];
+
+  const [facCountRes, studCountRes, classCountRes, attStatsRes, noticesRes, pendingRes] = await Promise.all([
+    query<{ count: string }>('SELECT COUNT(*)::text AS count FROM faculty WHERE department_id = $1 AND deleted_at IS NULL', [departmentId]),
+    query<{ count: string }>('SELECT COUNT(*)::text AS count FROM students WHERE department_id = $1 AND deleted_at IS NULL', [departmentId]),
+    query<{ count: string }>(
+      `SELECT COUNT(DISTINCT(fsa.subject_id, fsa.section))::text AS count 
+       FROM faculty_subject_assignments fsa 
+       JOIN faculty f ON f.id = fsa.faculty_id 
+       WHERE f.department_id = $1 AND fsa.is_active = true AND fsa.deleted_at IS NULL`,
+      [departmentId]
+    ),
+    query<{ total: string; present: string }>(
+      `SELECT COUNT(*)::text AS total, COUNT(*) FILTER (WHERE a.status = 'present')::text AS present 
+       FROM attendance a 
+       JOIN students s ON s.id = a.student_id 
+       WHERE s.department_id = $1`,
+      [departmentId]
+    ),
+    query<{ id: string; title: string; priority: string; publish_date: string }>(
+      `SELECT id, title, priority, TO_CHAR(publish_date, 'YYYY-MM-DD') AS publish_date 
+       FROM announcements 
+       WHERE deleted_at IS NULL AND status = 'Published' 
+         AND (target_audience = 'All' OR (target_audience = 'Department Specific' AND department_id = $1)) 
+       ORDER BY publish_date DESC LIMIT 5`,
+      [departmentId]
+    ),
+    query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count 
+       FROM results r 
+       JOIN subjects s ON s.id = r.subject_id 
+       WHERE s.department_id = $1 AND r.publication_status = 'Draft' AND r.deleted_at IS NULL`,
+      [departmentId]
+    ),
+  ]);
+
+  const totalAtt = Number(attStatsRes.rows[0]?.total || 0);
+  const presentAtt = Number(attStatsRes.rows[0]?.present || 0);
+  const attendanceRate = totalAtt > 0 ? Math.round((presentAtt / totalAtt) * 100) : 100;
+
+  return {
+    profile: {
+      id:             profileRows[0].id,
+      fullName:       profileRows[0].full_name,
+      employeeNumber: profileRows[0].employee_number,
+      departmentName: profileRows[0].department_name,
+      designation:    profileRows[0].designation,
+    },
+    metrics: {
+      totalFaculty:   Number(facCountRes.rows[0]?.count || 0),
+      totalStudents:  Number(studCountRes.rows[0]?.count || 0),
+      totalClasses:   Number(classCountRes.rows[0]?.count || 0),
+      attendanceRate,
+      pendingApprovals: Number(pendingRes.rows[0]?.count || 0),
+    },
+    notices: noticesRes.rows.map(r => ({
+      id:          r.id,
+      title:       r.title,
+      priority:    r.priority,
+      publishDate: r.publish_date,
+    })),
+    quickActions: [
+      { label: 'View Students',     route: '/hod/students' },
+      { label: 'View Faculty',      route: '/hod/faculty' },
+      { label: 'View Attendance',   route: '/hod/attendance' },
+      { label: 'Class Schedules',   route: '/hod/classes' },
+    ],
+  };
+}

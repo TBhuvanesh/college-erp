@@ -193,13 +193,13 @@ export default function FacultyOpportunitiesDashboard() {
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case "Active":
-        return "bg-emerald-500/10 text-emerald-450 border-emerald-500/20";
+        return "dark:bg-emerald-500/10 bg-emerald-50 dark:text-emerald-450 text-emerald-700 border dark:border-emerald-500/20 border-emerald-250";
       case "Closed":
-        return "bg-rose-500/10 text-rose-455 border-rose-500/20";
+        return "dark:bg-rose-500/10 bg-rose-50 dark:text-rose-455 text-rose-700 border dark:border-rose-500/20 border-rose-250";
       case "Archived":
-        return "bg-neutral-800 text-neutral-450 border-neutral-750";
+        return "dark:bg-neutral-800 bg-neutral-100 dark:text-neutral-450 text-text-secondary border dark:border-neutral-750 border-border-subtle";
       default:
-        return "bg-neutral-800 text-neutral-400 border-neutral-750";
+        return "dark:bg-neutral-800 bg-neutral-100 dark:text-neutral-400 text-text-muted border dark:border-neutral-750 border-border-subtle";
     }
   };
 
@@ -217,11 +217,11 @@ export default function FacultyOpportunitiesDashboard() {
       {/* Welcome & Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="font-display font-bold text-2xl text-white flex items-center gap-2">
+          <h2 className="font-display font-bold text-2xl dark:text-white text-text-primary flex items-center gap-2">
             <Briefcase className="text-blue-500" />
             <span>Opportunity Management Console</span>
           </h2>
-          <p className="text-xs text-neutral-450 mt-1">
+          <p className="text-xs dark:text-neutral-450 text-text-secondary mt-1">
             Faculty Portal: Publish internships, jobs, hackathons, and seminars for eligible student cohorts.
           </p>
         </div>
@@ -243,11 +243,11 @@ export default function FacultyOpportunitiesDashboard() {
       )}
 
       {/* Tabs Menu */}
-      <div className="flex border-b border-neutral-800 gap-4">
+      <div className="flex border-b border-border-subtle gap-4">
         <button
           onClick={() => setActiveTab("my")}
           className={`pb-3 text-xs font-bold transition-all relative cursor-pointer flex items-center gap-1.5 ${
-            activeTab === "my" ? "text-blue-500" : "text-neutral-400 hover:text-white"
+            activeTab === "my" ? "text-blue-500" : "dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary"
           }`}
         >
           <UserCheck size={14} />
@@ -259,7 +259,7 @@ export default function FacultyOpportunitiesDashboard() {
         <button
           onClick={() => setActiveTab("all")}
           className={`pb-3 text-xs font-bold transition-all relative cursor-pointer flex items-center gap-1.5 ${
-            activeTab === "all" ? "text-blue-500" : "text-neutral-400 hover:text-white"
+            activeTab === "all" ? "text-blue-500" : "dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary"
           }`}
         >
           <Globe size={14} />
@@ -282,16 +282,16 @@ export default function FacultyOpportunitiesDashboard() {
       {/* Desktop Management Table */}
       <div>
         {loading ? (
-          <div className="text-center py-20 text-neutral-400">
+          <div className="text-center py-20 dark:text-neutral-400 text-text-secondary">
             <Loader2 className="animate-spin text-blue-500 mx-auto mb-3" size={30} />
             <span className="font-mono text-xs">Loading campus opportunities data grid...</span>
           </div>
         ) : filteredList.length > 0 ? (
-          <div className="glass-card border border-neutral-800 rounded-xl overflow-hidden bg-neutral-900/40">
+          <div className="glass-card border border-border-subtle rounded-xl overflow-hidden dark:bg-neutral-900/40 bg-surface/50">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-neutral-900/60 border-b border-neutral-800 text-neutral-400 font-semibold">
+                  <tr className="dark:bg-neutral-900/60 bg-neutral-100/50 border-b border-border-subtle dark:text-neutral-400 text-text-secondary font-semibold">
                     <th className="px-4 py-3.5">Title & Type</th>
                     <th className="px-4 py-3.5">Department</th>
                     <th className="px-4 py-3.5">Eligibility</th>
@@ -302,30 +302,30 @@ export default function FacultyOpportunitiesDashboard() {
                     <th className="px-4 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-900 text-neutral-300">
+                <tbody className="divide-y dark:divide-neutral-900 divide-border-subtle dark:text-neutral-300 text-text-secondary">
                   {filteredList.map((opp) => {
                     const isOwnOpportunity = opp.createdBy === user?.id;
                     return (
-                      <tr key={opp.id} className="hover:bg-neutral-900/30 transition">
+                      <tr key={opp.id} className="dark:hover:bg-neutral-900/30 hover:bg-neutral-100/50 transition">
                         <td className="px-4 py-3.5">
-                          <span className="font-bold text-white block text-sm">{opp.title}</span>
-                          <span className="text-[10px] text-blue-400 font-mono mt-0.5 inline-block px-1.5 py-0.5 rounded bg-blue-500/5 border border-blue-500/10">
+                          <span className="font-bold dark:text-white text-text-primary block text-sm">{opp.title}</span>
+                          <span className="text-[10px] dark:text-blue-400 text-blue-700 font-mono mt-0.5 inline-block px-1.5 py-0.5 rounded dark:bg-blue-500/5 bg-blue-50 border dark:border-blue-500/10 border-blue-200">
                             {opp.type}
                           </span>
                         </td>
-                        <td className="px-4 py-3.5 font-medium text-neutral-300">
+                        <td className="px-4 py-3.5 font-medium dark:text-neutral-300 text-text-secondary">
                           {opp.departmentName || "All Departments"}
                         </td>
-                        <td className="px-4 py-3.5 font-mono text-[10px] text-neutral-400">
+                        <td className="px-4 py-3.5 font-mono text-[10px] dark:text-neutral-400 text-text-secondary">
                           {opp.eligibleYears && opp.eligibleYears.length > 0
                             ? opp.eligibleYears.join(", ")
                             : "All Years"}
                         </td>
-                        <td className="px-4 py-3.5 text-neutral-300 flex items-center gap-1.5 mt-2">
-                          <Building2 size={13} className="text-neutral-500" />
+                        <td className="px-4 py-3.5 dark:text-neutral-300 text-text-secondary flex items-center gap-1.5 mt-2">
+                          <Building2 size={13} className="dark:text-neutral-500 text-text-muted" />
                           <span>{opp.organizer || "N/A"}</span>
                         </td>
-                        <td className="px-4 py-3.5 font-mono text-neutral-400">
+                        <td className="px-4 py-3.5 font-mono dark:text-neutral-400 text-text-secondary">
                           {formatDate(opp.deadline)}
                         </td>
                         <td className="px-4 py-3.5">
@@ -333,7 +333,7 @@ export default function FacultyOpportunitiesDashboard() {
                             {opp.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3.5 font-medium text-neutral-400">
+                        <td className="px-4 py-3.5 font-medium dark:text-neutral-400 text-text-secondary">
                           {opp.createdByName}
                         </td>
                         <td className="px-4 py-3.5 text-right">
@@ -342,7 +342,7 @@ export default function FacultyOpportunitiesDashboard() {
                               <>
                                 <button
                                   onClick={() => handleEditOpen(opp)}
-                                  className="p-1.5 rounded bg-neutral-850 hover:bg-neutral-800 text-blue-400 hover:text-blue-300 cursor-pointer border border-neutral-800 transition"
+                                  className="p-1.5 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 text-blue-500 hover:text-blue-600 cursor-pointer border dark:border-neutral-800 border-border-subtle transition"
                                   title="Edit Opportunity"
                                 >
                                   <Edit size={13} />
@@ -350,7 +350,7 @@ export default function FacultyOpportunitiesDashboard() {
                                 {opp.status !== "Archived" && (
                                   <button
                                     onClick={() => handleArchiveOpportunity(opp.id)}
-                                    className="p-1.5 rounded bg-neutral-850 hover:bg-neutral-800 text-rose-450 hover:text-rose-400 cursor-pointer border border-neutral-800 transition"
+                                    className="p-1.5 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 text-rose-500 hover:text-rose-600 cursor-pointer border dark:border-neutral-800 border-border-subtle transition"
                                     title="Archive Opportunity"
                                   >
                                     <Archive size={13} />
@@ -358,7 +358,7 @@ export default function FacultyOpportunitiesDashboard() {
                                 )}
                               </>
                             ) : (
-                              <span className="text-[10px] text-neutral-600 font-mono italic">Read-only</span>
+                              <span className="text-[10px] dark:text-neutral-600 text-text-muted font-mono italic">Read-only</span>
                             )}
                           </div>
                         </td>
@@ -370,8 +370,8 @@ export default function FacultyOpportunitiesDashboard() {
             </div>
           </div>
         ) : (
-          <div className="text-center py-16 glass-card border border-neutral-800 rounded-xl text-neutral-500 font-mono text-xs flex flex-col items-center justify-center gap-2">
-            <Inbox size={20} className="text-neutral-600" />
+          <div className="text-center py-16 glass-card border border-border-subtle rounded-xl dark:text-neutral-500 text-text-muted font-mono text-xs flex flex-col items-center justify-center gap-2">
+            <Inbox size={20} className="dark:text-neutral-650 text-text-muted" />
             <span>No opportunities found matching selected scope.</span>
           </div>
         )}

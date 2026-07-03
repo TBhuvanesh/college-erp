@@ -244,15 +244,15 @@ export default function AdminAttendance() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="font-display font-bold text-2xl text-white">Attendance Registry Logs</h2>
-          <p className="text-xs text-neutral-400 mt-1">
+          <h2 className="font-display font-bold text-2xl dark:text-white text-text-primary">Attendance Registry Logs</h2>
+          <p className="text-xs dark:text-neutral-400 text-text-secondary mt-1">
             Search, review, and authorize student attendance record corrections. Scopes cover all departments and courses.
           </p>
         </div>
         
         <button
           onClick={handleClearFilters}
-          className="px-4 py-2 text-xs font-semibold rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 cursor-pointer transition flex items-center gap-1.5 self-start md:self-auto"
+          className="px-4 py-2 text-xs font-semibold rounded dark:bg-neutral-900 bg-surface dark:hover:bg-neutral-800 hover:bg-neutral-100 border dark:border-neutral-800 border-border-subtle dark:text-neutral-300 text-text-primary cursor-pointer transition flex items-center gap-1.5 self-start md:self-auto"
         >
           <RefreshCw size={12} />
           <span>Clear Filters</span>
@@ -267,22 +267,22 @@ export default function AdminAttendance() {
       )}
 
       {/* Filters Form Block */}
-      <div className="glass-card border border-neutral-800 rounded-xl p-4 space-y-4">
-        <div className="flex items-center gap-1.5 text-xs text-neutral-400 pb-2 border-b border-neutral-900">
+      <div className="glass-card dark:border-neutral-800 border-border-subtle bg-surface rounded-xl p-4 space-y-4">
+        <div className="flex items-center gap-1.5 text-xs dark:text-neutral-400 text-text-secondary pb-2 border-b dark:border-neutral-900 border-border-subtle">
           <SlidersHorizontal size={14} className="text-blue-500" />
-          <span className="font-semibold text-white">Search Filters Panel</span>
+          <span className="font-semibold dark:text-white text-text-primary">Search Filters Panel</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Subject Filter */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-neutral-500">Subject</label>
-            <div className="flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-2.5 text-xs text-white">
-              <BookOpen size={12} className="text-neutral-500 shrink-0" />
+            <label className="text-[10px] uppercase font-bold dark:text-neutral-500 text-text-muted">Subject</label>
+            <div className="flex items-center gap-2 dark:bg-neutral-950 bg-background border dark:border-neutral-850 border-border-subtle rounded px-2.5 text-xs dark:text-white text-text-primary">
+              <BookOpen size={12} className="dark:text-neutral-500 text-text-muted shrink-0" />
               <select
                 value={subjectFilter}
                 onChange={(e) => handleFilterChange(setSubjectFilter, e.target.value)}
-                className="bg-transparent text-white cursor-pointer py-2 flex-1 focus:outline-none"
+                className="bg-transparent dark:text-white text-text-primary cursor-pointer py-2 flex-1 focus:outline-none"
                 disabled={loadingFilters}
               >
                 <option value="ALL">All Subjects</option>
@@ -297,13 +297,13 @@ export default function AdminAttendance() {
 
           {/* Student Filter */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-neutral-500">Student</label>
-            <div className="flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-2.5 text-xs text-white">
-              <User size={12} className="text-neutral-500 shrink-0" />
+            <label className="text-[10px] uppercase font-bold dark:text-neutral-500 text-text-muted">Student</label>
+            <div className="flex items-center gap-2 dark:bg-neutral-950 bg-background border dark:border-neutral-850 border-border-subtle rounded px-2.5 text-xs dark:text-white text-text-primary">
+              <User size={12} className="dark:text-neutral-500 text-text-muted shrink-0" />
               <select
                 value={studentFilter}
                 onChange={(e) => handleFilterChange(setStudentFilter, e.target.value)}
-                className="bg-transparent text-white cursor-pointer py-2 flex-1 focus:outline-none"
+                className="bg-transparent dark:text-white text-text-primary cursor-pointer py-2 flex-1 focus:outline-none"
                 disabled={loadingFilters}
               >
                 <option value="ALL">All Students</option>
@@ -318,13 +318,13 @@ export default function AdminAttendance() {
 
           {/* Faculty Filter */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-neutral-500">Faculty Instructor</label>
-            <div className="flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-2.5 text-xs text-white">
-              <GraduationCap size={12} className="text-neutral-500 shrink-0" />
+            <label className="text-[10px] uppercase font-bold dark:text-neutral-500 text-text-muted">Faculty Instructor</label>
+            <div className="flex items-center gap-2 dark:bg-neutral-950 bg-background border dark:border-neutral-850 border-border-subtle rounded px-2.5 text-xs dark:text-white text-text-primary">
+              <GraduationCap size={12} className="dark:text-neutral-500 text-text-muted shrink-0" />
               <select
                 value={facultyFilter}
                 onChange={(e) => handleFilterChange(setFacultyFilter, e.target.value)}
-                className="bg-transparent text-white cursor-pointer py-2 flex-1 focus:outline-none"
+                className="bg-transparent dark:text-white text-text-primary cursor-pointer py-2 flex-1 focus:outline-none"
                 disabled={loadingFilters}
               >
                 <option value="ALL">All Faculty</option>
@@ -339,19 +339,19 @@ export default function AdminAttendance() {
 
           {/* Section Filter */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-neutral-500">Section</label>
+            <label className="text-[10px] uppercase font-bold dark:text-neutral-500 text-text-muted">Section</label>
             <input
               type="text"
               placeholder="e.g. A, B, C..."
               value={sectionFilter}
               onChange={(e) => handleFilterChange(setSectionFilter, e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-neutral-700"
+              className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-neutral-750"
             />
           </div>
 
           {/* Date Picker */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-neutral-500">Specific Date</label>
+            <label className="text-[10px] uppercase font-bold dark:text-neutral-500 text-text-muted">Specific Date</label>
             <input
               type="date"
               value={dateFilter}
@@ -361,13 +361,13 @@ export default function AdminAttendance() {
                 setDateToFilter("");
                 setPage(1);
               }}
-              className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-neutral-700"
+              className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-neutral-750"
             />
           </div>
 
           {/* Date From Range */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-neutral-500">Date From</label>
+            <label className="text-[10px] uppercase font-bold dark:text-neutral-500 text-text-muted">Date From</label>
             <input
               type="date"
               value={dateFromFilter}
@@ -376,13 +376,13 @@ export default function AdminAttendance() {
                 setDateFilter(""); // Clear single date if range is set
                 setPage(1);
               }}
-              className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-neutral-700"
+              className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-neutral-750"
             />
           </div>
 
           {/* Date To Range */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-neutral-500">Date To</label>
+            <label className="text-[10px] uppercase font-bold dark:text-neutral-500 text-text-muted">Date To</label>
             <input
               type="date"
               value={dateToFilter}
@@ -391,7 +391,7 @@ export default function AdminAttendance() {
                 setDateFilter(""); // Clear single date if range is set
                 setPage(1);
               }}
-              className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-neutral-700"
+              className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-neutral-750"
             />
           </div>
         </div>
@@ -400,37 +400,37 @@ export default function AdminAttendance() {
       {/* Summary Statistics calculated on dynamic loaded records */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Total Records Matches */}
-        <div className="glass-card rounded-xl p-4 border border-neutral-800 text-center">
-          <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider block">Total Logs Found</span>
-          <span className="block text-2xl font-bold text-white mt-1 font-mono">{totalRecords}</span>
+        <div className="glass-card rounded-xl p-4 dark:border-neutral-800 border-border-subtle bg-surface text-center">
+          <span className="text-[10px] dark:text-neutral-500 text-text-secondary uppercase font-bold tracking-wider block">Total Logs Found</span>
+          <span className="block text-2xl font-bold dark:text-white text-text-primary mt-1 font-mono">{totalRecords}</span>
         </div>
 
         {/* Loaded Page Presents */}
-        <div className="glass-card rounded-xl p-4 border border-neutral-800 text-center">
-          <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider block">Page Presents</span>
+        <div className="glass-card rounded-xl p-4 dark:border-neutral-800 border-border-subtle bg-surface text-center">
+          <span className="text-[10px] dark:text-neutral-500 text-text-secondary uppercase font-bold tracking-wider block">Page Presents</span>
           <span className="block text-2xl font-bold text-emerald-400 mt-1 font-mono">{pagePresent}</span>
         </div>
 
         {/* Loaded Page Absents */}
-        <div className="glass-card rounded-xl p-4 border border-neutral-800 text-center">
-          <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider block">Page Absents</span>
+        <div className="glass-card rounded-xl p-4 dark:border-neutral-800 border-border-subtle bg-surface text-center">
+          <span className="text-[10px] dark:text-neutral-500 text-text-secondary uppercase font-bold tracking-wider block">Page Absents</span>
           <span className="block text-2xl font-bold text-rose-400 mt-1 font-mono">{pageAbsent}</span>
         </div>
 
         {/* Presence Rate of Current Page */}
-        <div className="glass-card rounded-xl p-4 border border-neutral-800 text-center">
-          <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider block">Page Presence Rate</span>
+        <div className="glass-card rounded-xl p-4 dark:border-neutral-800 border-border-subtle bg-surface text-center">
+          <span className="text-[10px] dark:text-neutral-500 text-text-secondary uppercase font-bold tracking-wider block">Page Presence Rate</span>
           <span className="block text-2xl font-bold text-blue-400 mt-1 font-mono">{presenceRate}%</span>
         </div>
       </div>
 
       {/* Table grid block */}
-      <div className="glass-card border border-neutral-800 rounded-xl overflow-hidden">
+      <div className="glass-card dark:border-neutral-800 border-border-subtle bg-surface rounded-xl overflow-hidden">
         {/* Desktop View */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-neutral-900/50 border-b border-neutral-800 text-neutral-400 font-semibold">
+              <tr className="dark:bg-neutral-900/50 bg-neutral-100 border-b dark:border-neutral-800 border-border-subtle dark:text-neutral-400 text-text-secondary font-semibold">
                 <th className="px-4 py-3 font-mono">Date</th>
                 <th className="px-4 py-3 font-mono">Roll Number</th>
                 <th className="px-4 py-3">Student Name</th>
@@ -441,27 +441,27 @@ export default function AdminAttendance() {
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-900 text-neutral-300">
+            <tbody className="divide-y dark:divide-neutral-900 divide-border-subtle dark:text-neutral-300 text-text-secondary">
               {loadingList ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-neutral-500">
+                  <td colSpan={8} className="text-center py-12 dark:text-neutral-500 text-text-muted">
                     <Loader2 className="animate-spin text-blue-500 mx-auto mb-2" size={20} />
                     <span className="font-mono text-[10px]">Scanning database logs...</span>
                   </td>
                 </tr>
               ) : records.length > 0 ? (
                 records.map(rec => (
-                  <tr key={rec.id} className="hover:bg-neutral-900/20">
-                    <td className="px-4 py-3 font-mono text-[10px] text-neutral-500 select-all" title={rec.id}>
+                  <tr key={rec.id} className="dark:hover:bg-neutral-900/20 hover:bg-neutral-100/50">
+                    <td className="px-4 py-3 font-mono text-[10px] dark:text-neutral-500 text-text-muted select-all" title={rec.id}>
                       {rec.attendanceDate}
                     </td>
                     <td className="px-4 py-3 font-mono font-semibold">{rec.rollNumber}</td>
-                    <td className="px-4 py-3 text-white font-semibold">{rec.studentName}</td>
+                    <td className="px-4 py-3 dark:text-white text-text-primary font-semibold">{rec.studentName}</td>
                     <td className="px-4 py-3">
-                      <span className="font-medium text-neutral-200">{rec.subjectCode}</span>: {rec.subjectName}
+                      <span className="font-medium dark:text-neutral-200 text-text-primary">{rec.subjectCode}</span>: {rec.subjectName}
                     </td>
                     <td className="px-4 py-3 font-mono">Sec {rec.section}</td>
-                    <td className="px-4 py-3 text-neutral-400">{rec.facultyName}</td>
+                    <td className="px-4 py-3 dark:text-neutral-400 text-text-secondary">{rec.facultyName}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold border capitalize ${
                         rec.status === "present"
@@ -475,7 +475,7 @@ export default function AdminAttendance() {
                       <button
                         onClick={() => handleUpdateStatus(rec.id, rec.status)}
                         disabled={updatingId === rec.id}
-                        className="px-2.5 py-1 text-[10px] font-bold rounded bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-300 hover:text-white cursor-pointer disabled:opacity-40 transition flex items-center gap-1 ml-auto"
+                        className="px-2.5 py-1 text-[10px] font-bold rounded dark:bg-neutral-800 bg-neutral-100 dark:hover:bg-neutral-700 hover:bg-neutral-200 border dark:border-neutral-700 border-border-subtle dark:text-neutral-300 text-text-primary dark:hover:text-white hover:text-text-primary cursor-pointer disabled:opacity-40 transition flex items-center gap-1 ml-auto"
                       >
                         {updatingId === rec.id ? (
                           <Loader2 size={10} className="animate-spin" />
@@ -489,7 +489,7 @@ export default function AdminAttendance() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-neutral-500 font-mono">
+                  <td colSpan={8} className="text-center py-12 dark:text-neutral-500 text-text-muted font-mono">
                     No matching attendance logs found in database registries.
                   </td>
                 </tr>
@@ -499,20 +499,20 @@ export default function AdminAttendance() {
         </div>
 
         {/* Mobile View Cards */}
-        <div className="block md:hidden divide-y divide-neutral-900">
+        <div className="block md:hidden divide-y dark:divide-neutral-900 divide-border-subtle">
           {loadingList ? (
-            <div className="text-center py-12 text-neutral-500">
+            <div className="text-center py-12 dark:text-neutral-500 text-text-muted">
               <Loader2 className="animate-spin text-blue-500 mx-auto mb-2" size={20} />
               <span className="font-mono text-[10px]">Scanning database logs...</span>
             </div>
           ) : records.length > 0 ? (
             records.map(rec => (
-              <div key={rec.id} className="p-4 flex flex-col gap-2.5">
+              <div key={rec.id} className="p-4 hover:bg-neutral-100/50 dark:hover:bg-transparent flex flex-col gap-2.5">
                 <div className="flex items-start justify-between">
                   <div>
-                    <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider">Student</span>
-                    <span className="font-semibold text-white text-xs block">{rec.studentName}</span>
-                    <span className="text-[10px] text-neutral-500 font-mono mt-0.5 block">Roll: {rec.rollNumber}</span>
+                    <span className="dark:text-neutral-500 text-text-secondary block text-[9px] uppercase font-bold tracking-wider">Student</span>
+                    <span className="font-semibold dark:text-white text-text-primary text-xs block">{rec.studentName}</span>
+                    <span className="text-[10px] dark:text-neutral-500 text-text-secondary font-mono mt-0.5 block">Roll: {rec.rollNumber}</span>
                   </div>
                   
                   <span className={`px-2 py-0.5 rounded text-[9px] font-bold border capitalize ${
@@ -524,21 +524,21 @@ export default function AdminAttendance() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-[10px] text-neutral-300 font-mono bg-neutral-950/30 p-2.5 border border-neutral-900 rounded-lg">
+                <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-[10px] dark:text-neutral-300 text-text-secondary font-mono dark:bg-neutral-955/30 bg-background p-2.5 border dark:border-neutral-900 border-border-subtle rounded-lg">
                   <div>
-                    <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider">Date</span>
+                    <span className="dark:text-neutral-500 text-text-muted block text-[9px] uppercase font-bold tracking-wider">Date</span>
                     <span>{rec.attendanceDate}</span>
                   </div>
                   <div>
-                    <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider">Section</span>
+                    <span className="dark:text-neutral-505 text-text-muted block text-[9px] uppercase font-bold tracking-wider">Section</span>
                     <span>Section {rec.section}</span>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider">Subject</span>
+                    <span className="dark:text-neutral-500 text-text-muted block text-[9px] uppercase font-bold tracking-wider">Subject</span>
                     <span>{rec.subjectCode}: {rec.subjectName}</span>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider">Faculty Instructor</span>
+                    <span className="dark:text-neutral-505 text-text-muted block text-[9px] uppercase font-bold tracking-wider">Faculty Instructor</span>
                     <span>{rec.facultyName}</span>
                   </div>
                 </div>
@@ -547,7 +547,7 @@ export default function AdminAttendance() {
                   <button
                     onClick={() => handleUpdateStatus(rec.id, rec.status)}
                     disabled={updatingId === rec.id}
-                    className="p-1.5 rounded bg-neutral-850 hover:bg-neutral-800 border border-neutral-800 text-neutral-400 hover:text-white transition flex items-center gap-1.5 text-[10px] cursor-pointer disabled:opacity-40"
+                    className="p-1.5 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 border dark:border-neutral-800 border-border-subtle dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary transition flex items-center gap-1.5 text-[10px] cursor-pointer disabled:opacity-40"
                   >
                     {updatingId === rec.id ? (
                       <Loader2 size={10} className="animate-spin" />
@@ -560,7 +560,7 @@ export default function AdminAttendance() {
               </div>
             ))
           ) : (
-            <div className="text-center py-12 text-neutral-500 font-mono text-xs">
+            <div className="text-center py-12 dark:text-neutral-500 text-text-muted font-mono text-xs">
               No matching attendance logs found in database registries.
             </div>
           )}
@@ -568,25 +568,25 @@ export default function AdminAttendance() {
 
         {/* Pagination Block */}
         {!loadingList && totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-neutral-850 p-4 bg-neutral-950/30">
-            <div className="text-[10px] font-mono text-neutral-500">
+          <div className="flex items-center justify-between border-t dark:border-neutral-850 border-border-subtle p-4 dark:bg-neutral-950/30 bg-neutral-50">
+            <div className="text-[10px] font-mono dark:text-neutral-500 text-text-muted">
               Showing {(page - 1) * limit + 1} - {Math.min(page * limit, totalRecords)} of {totalRecords} logs
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage(p => Math.max(p - 1, 1))}
                 disabled={page === 1}
-                className="p-1.5 rounded bg-neutral-905 border border-neutral-850 hover:bg-neutral-800 disabled:opacity-40 text-neutral-400 hover:text-white cursor-pointer disabled:cursor-not-allowed transition"
+                className="p-1.5 rounded dark:bg-neutral-900 bg-neutral-100 border dark:border-neutral-850 border-border-subtle hover:bg-neutral-200 disabled:opacity-40 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary cursor-pointer disabled:cursor-not-allowed transition"
               >
                 <ChevronLeft size={14} />
               </button>
-              <span className="text-[10px] font-mono text-white font-bold px-2">
+              <span className="text-[10px] font-mono dark:text-white text-text-primary font-bold px-2">
                 {page} / {totalPages}
               </span>
               <button
                 onClick={() => setPage(p => Math.min(p + 1, totalPages))}
                 disabled={page === totalPages}
-                className="p-1.5 rounded bg-neutral-905 border border-neutral-850 hover:bg-neutral-800 disabled:opacity-40 text-neutral-400 hover:text-white cursor-pointer disabled:cursor-not-allowed transition"
+                className="p-1.5 rounded dark:bg-neutral-900 bg-neutral-100 border dark:border-neutral-850 border-border-subtle hover:bg-neutral-200 disabled:opacity-40 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary cursor-pointer disabled:cursor-not-allowed transition"
               >
                 <ChevronRight size={14} />
               </button>

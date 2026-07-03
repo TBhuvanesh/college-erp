@@ -202,7 +202,7 @@ export default function FacultyDashboard() {
   };
 
   if (!activeFaculty) {
-    return <div className="text-neutral-500 font-mono text-center py-10">No active faculty profile loaded.</div>;
+    return <div className="text-text-muted font-mono text-center py-10">No active faculty profile loaded.</div>;
   }
 
   // 1. Today's Class Schedule Slots (dynamic mappings from workload)
@@ -327,66 +327,66 @@ export default function FacultyDashboard() {
     <div className="space-y-6 pb-12">
       
       {/* Welcome banner */}
-      <div className="p-5 rounded-xl border border-blue-500/20 bg-blue-500/5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div className="p-5 rounded-xl border dark:border-blue-500/20 border-blue-200 dark:bg-blue-500/5 bg-blue-50 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h2 className="font-display font-bold text-xl text-white">Welcome back, {activeFaculty.name}!</h2>
-          <p className="text-xs text-neutral-400 mt-1">
+          <h2 className="font-display font-bold text-xl text-text-primary">Welcome back, {activeFaculty.name}!</h2>
+          <p className="text-xs text-text-muted mt-1">
             Department: {activeFaculty.department} Engineering / Faculty ID: {activeFaculty.employeeId}
           </p>
         </div>
-        <div className="flex items-center gap-1.5 bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-lg text-xs font-semibold text-white">
+        <div className="flex items-center gap-1.5 bg-surface border border-border-subtle px-3 py-1.5 rounded-lg text-xs font-semibold text-text-primary">
           <Clock size={14} className="text-blue-400" />
           <span>Academic Term: 2026-27</span>
         </div>
       </div>
 
       {/* QUICK ACTIONS PANEL */}
-      <div className="glass-card border border-neutral-800 rounded-xl p-5">
-        <h3 className="font-display font-bold text-white text-xs uppercase tracking-wider mb-4">Quick Workload Actions</h3>
+      <div className="bg-surface border border-border-subtle rounded-xl p-5">
+        <h3 className="font-display font-bold text-text-primary text-xs uppercase tracking-wider mb-4">Quick Workload Actions</h3>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <Link
             href="/faculty/attendance"
-            className="flex flex-col items-center justify-center p-4 rounded-lg border border-neutral-800 bg-neutral-950/40 hover:bg-neutral-800/20 hover:border-blue-500/30 transition text-center group cursor-pointer"
+            className="flex flex-col items-center justify-center p-4 rounded-lg border border-border-subtle bg-background/45 hover:bg-surface-elevated/20 dark:hover:border-blue-500/30 hover:border-blue-500/40 transition text-center group cursor-pointer"
           >
             <Users size={20} className="text-blue-400 group-hover:scale-110 transition-transform mb-2" />
-            <span className="text-xs font-semibold text-white">Take Attendance</span>
-            <span className="text-[9px] text-neutral-500 mt-0.5">Register rolls</span>
+            <span className="text-xs font-semibold text-text-primary">Take Attendance</span>
+            <span className="text-[9px] text-text-muted mt-0.5">Register rolls</span>
           </Link>
 
           <Link
             href="/faculty/grades"
-            className="flex flex-col items-center justify-center p-4 rounded-lg border border-neutral-800 bg-neutral-950/40 hover:bg-neutral-800/20 hover:border-emerald-500/30 transition text-center group cursor-pointer"
+            className="flex flex-col items-center justify-center p-4 rounded-lg border border-border-subtle bg-background/45 hover:bg-surface-elevated/20 dark:hover:border-emerald-500/30 hover:border-emerald-500/40 transition text-center group cursor-pointer"
           >
             <FileSpreadsheet size={20} className="text-emerald-400 group-hover:scale-110 transition-transform mb-2" />
-            <span className="text-xs font-semibold text-white">Enter Marks</span>
-            <span className="text-[9px] text-neutral-500 mt-0.5">Upload exam grades</span>
+            <span className="text-xs font-semibold text-text-primary">Enter Marks</span>
+            <span className="text-[9px] text-text-muted mt-0.5">Upload exam grades</span>
           </Link>
 
           <Link
             href="/faculty/examinations"
-            className="flex flex-col items-center justify-center p-4 rounded-lg border border-neutral-800 bg-neutral-950/40 hover:bg-neutral-800/20 hover:border-amber-500/30 transition text-center group cursor-pointer"
+            className="flex flex-col items-center justify-center p-4 rounded-lg border border-border-subtle bg-background/45 hover:bg-surface-elevated/20 dark:hover:border-amber-500/30 hover:border-amber-500/40 transition text-center group cursor-pointer"
           >
             <Calendar size={20} className="text-amber-400 group-hover:scale-110 transition-transform mb-2" />
-            <span className="text-xs font-semibold text-white">Manage Exams</span>
-            <span className="text-[9px] text-neutral-500 mt-0.5">Create & run assessments</span>
+            <span className="text-xs font-semibold text-text-primary">Manage Exams</span>
+            <span className="text-[9px] text-text-muted mt-0.5">Create & run assessments</span>
           </Link>
 
           <Link
             href="/faculty/calendar"
-            className="flex flex-col items-center justify-center p-4 rounded-lg border border-neutral-800 bg-neutral-950/40 hover:bg-neutral-800/20 hover:border-indigo-500/30 transition text-center group cursor-pointer"
+            className="flex flex-col items-center justify-center p-4 rounded-lg border border-border-subtle bg-background/45 hover:bg-surface-elevated/20 dark:hover:border-indigo-500/30 hover:border-indigo-500/40 transition text-center group cursor-pointer"
           >
             <CalendarDays size={20} className="text-indigo-400 group-hover:scale-110 transition-transform mb-2" />
-            <span className="text-xs font-semibold text-white">View Calendar</span>
-            <span className="text-[9px] text-neutral-500 mt-0.5">Events milestones</span>
+            <span className="text-xs font-semibold text-text-primary">View Calendar</span>
+            <span className="text-[9px] text-text-muted mt-0.5">Events milestones</span>
           </Link>
 
           <Link
             href="/faculty/lms"
-            className="flex flex-col items-center justify-center p-4 rounded-lg border border-neutral-800 bg-neutral-950/40 hover:bg-neutral-800/20 hover:border-indigo-500/30 transition text-center group cursor-pointer"
+            className="flex flex-col items-center justify-center p-4 rounded-lg border border-border-subtle bg-background/45 hover:bg-surface-elevated/20 dark:hover:border-indigo-500/30 hover:border-indigo-500/40 transition text-center group cursor-pointer"
           >
             <BookOpen size={20} className="text-indigo-450 group-hover:scale-110 transition-transform mb-2" />
-            <span className="text-xs font-semibold text-white">LMS Portal</span>
-            <span className="text-[9px] text-neutral-500 mt-0.5">Courseware & Materials</span>
+            <span className="text-xs font-semibold text-text-primary">LMS Portal</span>
+            <span className="text-[9px] text-text-muted mt-0.5">Courseware & Materials</span>
           </Link>
         </div>
       </div>
@@ -398,28 +398,28 @@ export default function FacultyDashboard() {
           value={loadingWorkload ? "..." : apiWorkload.length}
           icon={Users}
           description="Active class allocations"
-          iconClass="bg-blue-500/10 text-blue-400 border border-blue-500/20"
+          iconClass="dark:bg-blue-500/10 bg-blue-50 dark:text-blue-400 text-blue-700 border dark:border-blue-500/20 border-blue-200"
         />
         <StatsCard
           title="Attendance Roll Calls"
           value={loadingWorkload ? "..." : pendingAttendanceTasks.length}
           icon={Clock}
           description="Pending registration today"
-          iconClass={pendingAttendanceTasks.length > 0 ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"}
+          iconClass={pendingAttendanceTasks.length > 0 ? "dark:bg-amber-500/10 bg-amber-50 dark:text-amber-400 text-amber-700 border dark:border-amber-500/20 border-amber-200" : "dark:bg-emerald-500/10 bg-emerald-50 dark:text-emerald-400 text-emerald-700 border dark:border-emerald-500/20 border-emerald-200"}
         />
         <StatsCard
           title="Active Assignments"
           value={loadingLms ? "..." : apiLmsAssignments.length}
           icon={BookOpen}
           description="LMS course tasks created"
-          iconClass="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
+          iconClass="dark:bg-indigo-500/10 bg-indigo-50 dark:text-indigo-400 text-indigo-700 border dark:border-indigo-500/20 border-indigo-200"
         />
         <StatsCard
           title="Pending Evaluations"
           value={loadingLms ? "..." : totalPendingEvaluations}
           icon={FileSpreadsheet}
           description="Submissions requiring grading"
-          iconClass={totalPendingEvaluations > 0 ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"}
+          iconClass={totalPendingEvaluations > 0 ? "dark:bg-rose-500/10 bg-rose-50 dark:text-rose-400 text-rose-700 border dark:border-rose-500/20 border-rose-200" : "dark:bg-emerald-500/10 bg-emerald-50 dark:text-emerald-400 text-emerald-700 border dark:border-emerald-500/20 border-emerald-200"}
         />
       </div>
 
@@ -459,10 +459,10 @@ export default function FacultyDashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Timetable from original */}
-            <div className="glass-card border border-neutral-800 rounded-xl p-5">
+            <div className="bg-surface border border-border-subtle rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-display font-bold text-white text-base">Today&apos;s Class Timetable</h3>
-                <span className="text-[10px] text-neutral-505 font-mono" suppressHydrationWarning>{new Date().toLocaleDateString("en-IN", { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                <h3 className="font-display font-bold text-text-primary text-base">Today&apos;s Class Timetable</h3>
+                <span className="text-[10px] text-text-muted font-mono" suppressHydrationWarning>{new Date().toLocaleDateString("en-IN", { weekday: 'short', month: 'short', day: 'numeric' })}</span>
               </div>
 
               <div className="space-y-3">
@@ -473,17 +473,17 @@ export default function FacultyDashboard() {
                       className={`p-3 rounded-lg border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all ${
                         slot.status === "Active"
                           ? "bg-blue-600/5 border-blue-500/30"
-                          : "bg-neutral-950/40 border-neutral-900"
+                          : "bg-background/40 border-border-subtle"
                       }`}
                     >
                       <div className="space-y-0.5">
-                        <span className="text-[8px] text-neutral-500 font-mono block">{slot.time}</span>
-                        <h4 className="text-xs font-bold text-white">{slot.subjectName}</h4>
-                        <span className="text-[8px] text-neutral-400 font-semibold">{slot.batch}</span>
+                        <span className="text-[8px] text-text-muted font-mono block">{slot.time}</span>
+                        <h4 className="text-xs font-bold text-text-primary">{slot.subjectName}</h4>
+                        <span className="text-[8px] text-text-muted font-semibold">{slot.batch}</span>
                       </div>
                       
                       {slot.isLogged ? (
-                        <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-bold">
+                        <span className="text-[10px] dark:text-emerald-400 text-emerald-700 flex items-center gap-1 font-bold">
                           <CheckCircle size={12} />
                           <span>Logged</span>
                         </span>
@@ -498,30 +498,30 @@ export default function FacultyDashboard() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-6 text-neutral-600 font-mono italic">No teaching slots today.</div>
+                  <div className="text-center py-6 text-text-muted font-mono italic">No teaching slots today.</div>
                 )}
               </div>
             </div>
 
             {/* Checklist from original */}
-            <div className="glass-card border border-neutral-800 rounded-xl p-5 space-y-4">
+            <div className="bg-surface border border-border-subtle rounded-xl p-5 space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Users size={16} className="text-amber-500" />
-                  <h4 className="font-display font-bold text-white text-sm">Attendance Checklist</h4>
+                  <h4 className="font-display font-bold text-text-primary text-sm">Attendance Checklist</h4>
                 </div>
                 
                 {pendingAttendanceTasks.length > 0 ? (
                   <div className="space-y-2">
                     {pendingAttendanceTasks.map((task, idx) => (
-                      <div key={idx} className="p-2.5 bg-rose-500/[0.02] border border-rose-500/20 rounded-lg flex items-center justify-between gap-2 text-xs">
+                      <div key={idx} className="p-2.5 dark:bg-rose-500/[0.02] bg-rose-50/10 border dark:border-rose-500/20 border-rose-200 rounded-lg flex items-center justify-between gap-2 text-xs">
                         <div className="min-w-0">
-                          <span className="font-semibold text-white block truncate">{task.subjectName.split(":")[1] || task.subjectName}</span>
-                          <span className="text-[8px] text-neutral-550 font-mono">Sec {task.section}</span>
+                          <span className="font-semibold text-text-primary block truncate">{task.subjectName.split(":")[1] || task.subjectName}</span>
+                          <span className="text-[8px] text-text-muted font-mono">Sec {task.section}</span>
                         </div>
                         <Link 
                           href="/faculty/attendance"
-                          className="px-2 py-0.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 rounded text-[9px] font-bold transition shrink-0"
+                          className="px-2 py-0.5 dark:bg-amber-500/10 bg-amber-50 dark:hover:bg-amber-500/20 hover:bg-amber-100 dark:text-amber-500 text-amber-700 border dark:border-amber-500/20 border-amber-200 rounded text-[9px] font-bold transition shrink-0"
                         >
                           Roll Call
                         </Link>
@@ -529,28 +529,28 @@ export default function FacultyDashboard() {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-2.5 bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 text-[10px] font-semibold rounded-lg flex items-center gap-1.5">
+                  <div className="p-2.5 dark:bg-emerald-500/5 bg-emerald-50 border dark:border-emerald-500/10 border-emerald-200 dark:text-emerald-400 text-emerald-700 text-[10px] font-semibold rounded-lg flex items-center gap-1.5">
                     <CheckCircle size={12} />
                     <span>All attendance logs completed today.</span>
                   </div>
                 )}
               </div>
 
-              <div className="space-y-3 pt-3 border-t border-neutral-900">
+              <div className="space-y-3 pt-3 border-t border-border-subtle">
                 <div className="flex items-center gap-2">
                   <ClipboardList size={16} className="text-amber-500" />
-                  <h4 className="font-display font-bold text-white text-sm">Examinations Scheduled</h4>
+                  <h4 className="font-display font-bold text-text-primary text-sm">Examinations Scheduled</h4>
                 </div>
 
                 {displayExams.length > 0 ? (
                   <div className="space-y-2">
                     {displayExams.map((ex: any, idx: number) => (
-                      <div key={ex.id || idx} className="p-2.5 bg-neutral-950/40 border border-neutral-900 rounded-lg text-xs space-y-1">
+                      <div key={ex.id || idx} className="p-2.5 bg-background/45 border border-border-subtle rounded-lg text-xs space-y-1">
                         <div className="flex justify-between items-start">
-                          <span className="font-semibold text-white block truncate max-w-[130px]">{ex.subjectName.split(":")[1] || ex.subjectName}</span>
-                          <span className="text-[8px] bg-blue-500/10 text-blue-450 border border-blue-500/20 px-1 rounded font-bold">{ex.examType}</span>
+                          <span className="font-semibold text-text-primary block truncate max-w-[130px]">{ex.subjectName.split(":")[1] || ex.subjectName}</span>
+                          <span className="text-[8px] dark:bg-blue-500/10 bg-blue-50 dark:text-blue-400 text-blue-700 border dark:border-blue-500/20 border-blue-200 px-1 rounded font-bold">{ex.examType}</span>
                         </div>
-                        <div className="flex items-center justify-between text-[8px] text-neutral-500 font-mono">
+                        <div className="flex items-center justify-between text-[8px] text-text-muted font-mono">
                           <span>{ex.examDate}</span>
                           <span>{ex.startTime}</span>
                         </div>
@@ -558,7 +558,7 @@ export default function FacultyDashboard() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center text-[10px] text-neutral-600 font-mono italic">No exam duties scheduled.</div>
+                  <div className="text-center text-[10px] text-text-muted font-mono italic">No exam duties scheduled.</div>
                 )}
               </div>
             </div>

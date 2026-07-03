@@ -331,7 +331,7 @@ export default function FacultyAttendance() {
 
   if (loadingAssignments) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-neutral-400">
+      <div className="flex flex-col items-center justify-center py-20 text-text-muted">
         <Loader2 className="animate-spin text-blue-500 mb-3" size={30} />
         <span className="font-mono text-xs">Loading faculty workload mappings...</span>
       </div>
@@ -352,22 +352,22 @@ export default function FacultyAttendance() {
       {/* Header and Selectors */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
-          <h2 className="font-display font-bold text-2xl text-white">Attendance Register</h2>
-          <p className="text-xs text-neutral-400 mt-1">
+          <h2 className="font-display font-bold text-2xl text-text-primary">Attendance Register</h2>
+          <p className="text-xs text-text-muted mt-1">
             Record class attendance rolls. Current day edits are submitted to databases instantly.
           </p>
         </div>
 
         {/* Date Selector */}
-        <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 rounded px-2.5 text-xs text-white self-start">
+        <div className="flex items-center gap-2 bg-surface border border-border-subtle rounded px-2.5 text-xs text-text-primary self-start">
           <Calendar size={12} className="text-blue-400" />
-          <span className="text-neutral-400">Date:</span>
+          <span className="text-text-muted">Date:</span>
           <input
             type="date"
             max={todayStr}
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="bg-transparent text-white cursor-pointer py-2 focus:outline-none font-bold"
+            className="bg-transparent text-text-primary cursor-pointer py-2 focus:outline-none font-bold"
           />
         </div>
       </div>
@@ -386,16 +386,16 @@ export default function FacultyAttendance() {
         <div className="flex-1 w-full space-y-6">
           
           {/* Class Selectors & Search bar */}
-          <div className="glass-card border border-neutral-800 rounded-xl p-4 flex flex-col md:flex-row gap-3">
+          <div className="glass-card border border-border-subtle rounded-xl p-4 flex flex-col md:flex-row gap-3">
             {/* Subject Select */}
-            <div className="flex-1 flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-3 text-xs text-white">
-              <BookOpen size={12} className="text-neutral-500 shrink-0" />
-              <span className="text-neutral-500 whitespace-nowrap">Subject:</span>
+            <div className="flex-1 flex items-center gap-2 dark:bg-neutral-950 bg-surface border dark:border-neutral-850 border-border-subtle rounded px-3 text-xs dark:text-white text-text-primary">
+              <BookOpen size={12} className="dark:text-neutral-500 text-text-muted shrink-0" />
+              <span className="dark:text-neutral-500 text-text-muted whitespace-nowrap">Subject:</span>
               {uniqueSubjects.length > 0 ? (
                 <select
                   value={selectedSubjId}
                   onChange={(e) => setSelectedSubjId(e.target.value)}
-                  className="bg-transparent text-white cursor-pointer py-2.5 flex-1 focus:outline-none font-semibold"
+                  className="bg-transparent dark:text-white text-text-primary cursor-pointer py-2.5 flex-1 focus:outline-none font-semibold"
                 >
                   {uniqueSubjects.map(sub => (
                     <option key={sub.id} value={sub.id}>
@@ -404,19 +404,19 @@ export default function FacultyAttendance() {
                   ))}
                 </select>
               ) : (
-                <span className="py-2.5 text-neutral-500 font-mono">No Subject Assigned</span>
+                <span className="py-2.5 dark:text-neutral-500 text-text-muted font-mono">No Subject Assigned</span>
               )}
             </div>
 
             {/* Section Select */}
-            <div className="w-full md:w-40 flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-3 text-xs text-white">
-              <Filter size={12} className="text-neutral-500 shrink-0" />
-              <span className="text-neutral-500">Sec:</span>
+            <div className="w-full md:w-40 flex items-center gap-2 dark:bg-neutral-950 bg-surface border dark:border-neutral-850 border-border-subtle rounded px-3 text-xs dark:text-white text-text-primary">
+              <Filter size={12} className="dark:text-neutral-500 text-text-muted shrink-0" />
+              <span className="dark:text-neutral-500 text-text-muted">Sec:</span>
               {sectionsForSelectedSubject.length > 0 ? (
                 <select
                   value={selectedSection}
                   onChange={(e) => setSelectedSection(e.target.value)}
-                  className="bg-transparent text-white cursor-pointer py-2.5 flex-1 focus:outline-none font-bold"
+                  className="bg-transparent dark:text-white text-text-primary cursor-pointer py-2.5 flex-1 focus:outline-none font-bold"
                 >
                   {sectionsForSelectedSubject.map(sec => (
                     <option key={sec} value={sec}>
@@ -425,28 +425,28 @@ export default function FacultyAttendance() {
                   ))}
                 </select>
               ) : (
-                <span className="py-2.5 text-neutral-500 font-mono">N/A</span>
+                <span className="py-2.5 dark:text-neutral-500 text-text-muted font-mono">N/A</span>
               )}
             </div>
 
             {/* Search Input */}
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-neutral-500" />
+              <Search className="absolute left-3 top-3 w-4 h-4 dark:text-neutral-500 text-text-muted" />
               <input
                 type="text"
                 placeholder="Search by name or roll number..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-neutral-700"
+                className="w-full pl-9 pr-4 py-2.5 text-xs dark:bg-neutral-950 bg-surface border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
               />
             </div>
           </div>
 
           {/* Roster Controls and locked state indicator */}
-          <div className="glass-card border border-neutral-800 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-neutral-900/40">
-            <div className="flex items-center gap-2 text-xs text-neutral-400">
+          <div className="glass-card border border-border-subtle rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 dark:bg-neutral-900/40 bg-surface">
+            <div className="flex items-center gap-2 text-xs dark:text-neutral-400 text-text-secondary">
               <Users size={14} className="text-blue-400" />
-              <span>Enrolled Students: <strong className="text-white">{totalRoster}</strong></span>
+              <span>Enrolled Students: <strong className="dark:text-white text-text-primary">{totalRoster}</strong></span>
               {!isTodaySelected && (
                 <span className="ml-2 flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/25 rounded px-2 py-0.5 text-[10px] font-semibold">
                   <Lock size={10} />
@@ -460,14 +460,14 @@ export default function FacultyAttendance() {
                 <button
                   type="button"
                   onClick={handleMarkAllPresent}
-                  className="flex-1 sm:flex-none px-3 py-1.5 rounded border border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold text-xs cursor-pointer transition"
+                  className="flex-1 sm:flex-none px-3 py-1.5 rounded border border-emerald-500/20 dark:bg-emerald-500/10 bg-emerald-50 hover:bg-emerald-500/20 text-emerald-400 font-bold text-xs cursor-pointer transition"
                 >
                   All Present
                 </button>
                 <button
                   type="button"
                   onClick={handleMarkAllAbsent}
-                  className="flex-1 sm:flex-none px-3 py-1.5 rounded border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold text-xs cursor-pointer transition"
+                  className="flex-1 sm:flex-none px-3 py-1.5 rounded border border-rose-500/20 dark:bg-rose-500/10 bg-rose-50 hover:bg-rose-500/20 text-rose-400 font-bold text-xs cursor-pointer transition"
                 >
                   All Absent
                 </button>
@@ -487,21 +487,21 @@ export default function FacultyAttendance() {
                 filteredRoster.map(student => (
                   <div 
                     key={student.studentId} 
-                    className="glass-card border border-neutral-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-neutral-700 transition"
+                    className="glass-card border border-border-subtle rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 dark:hover:border-neutral-750 hover:border-border-strong transition"
                   >
                     {/* Student Info */}
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-neutral-850 border border-neutral-800 flex items-center justify-center font-bold text-blue-400 shrink-0">
+                      <div className="w-10 h-10 rounded-full dark:bg-neutral-850 bg-neutral-100 border dark:border-neutral-800 border-border-subtle flex items-center justify-center font-bold text-blue-400 shrink-0">
                         {student.fullName.charAt(0)}
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-white leading-tight">{student.fullName}</h4>
+                        <h4 className="text-sm font-bold dark:text-white text-text-primary leading-tight">{student.fullName}</h4>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] text-neutral-500 font-mono select-all" title="Student ID">
+                          <span className="text-[10px] dark:text-neutral-500 text-text-muted font-mono select-all" title="Student ID">
                             ID: {student.studentId.substring(0, 8)}...
                           </span>
-                          <span className="text-neutral-700">•</span>
-                          <span className="text-[10px] text-neutral-400 font-mono font-semibold">
+                          <span className="dark:text-neutral-700 text-neutral-300">•</span>
+                          <span className="text-[10px] dark:text-neutral-400 text-text-secondary font-mono font-semibold">
                             Roll: {student.rollNumber}
                           </span>
                         </div>
@@ -518,8 +518,8 @@ export default function FacultyAttendance() {
                             onClick={() => handleStatusChange(student.studentId, "present")}
                             className={`px-4 py-2 rounded-lg border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
                               student.status === "present"
-                                ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400 shadow-md shadow-emerald-500/5"
-                                : "bg-neutral-950 border-neutral-900 text-neutral-500 hover:text-neutral-400"
+                                ? "dark:bg-emerald-500/20 bg-emerald-50 border dark:border-emerald-500/40 border-emerald-300 dark:text-emerald-400 text-emerald-700 shadow-md shadow-emerald-500/5"
+                                : "dark:bg-neutral-950 bg-surface border dark:border-neutral-900 border-border-subtle dark:text-neutral-500 text-text-muted dark:hover:text-neutral-400 hover:text-text-primary"
                             }`}
                           >
                             <Check size={13} />
@@ -532,8 +532,8 @@ export default function FacultyAttendance() {
                             onClick={() => handleStatusChange(student.studentId, "absent")}
                             className={`px-4 py-2 rounded-lg border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
                               student.status === "absent"
-                                ? "bg-rose-500/20 border-rose-500/40 text-rose-400 shadow-md shadow-rose-500/5"
-                                : "bg-neutral-950 border-neutral-900 text-neutral-500 hover:text-neutral-400"
+                                ? "dark:bg-rose-500/20 bg-rose-50 border dark:border-rose-500/40 border-rose-300 dark:text-rose-400 text-rose-700 shadow-md shadow-rose-500/5"
+                                : "dark:bg-neutral-950 bg-surface border dark:border-neutral-900 border-border-subtle dark:text-neutral-500 text-text-muted dark:hover:text-neutral-400 hover:text-text-primary"
                             }`}
                           >
                             <X size={13} />
@@ -544,17 +544,17 @@ export default function FacultyAttendance() {
                         // View Only Mode (Render Status Badges)
                         <div className="flex items-center">
                           {student.status === "present" ? (
-                            <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3.5 py-1.5">
+                            <span className="flex items-center gap-1.5 text-xs font-bold dark:text-emerald-400 text-emerald-700 dark:bg-emerald-500/10 bg-emerald-50 border dark:border-emerald-500/20 border-emerald-200 rounded-lg px-3.5 py-1.5">
                               <CheckCircle size={12} />
                               <span>Present</span>
                             </span>
                           ) : student.status === "absent" ? (
-                            <span className="flex items-center gap-1.5 text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3.5 py-1.5">
+                            <span className="flex items-center gap-1.5 text-xs font-bold dark:text-rose-400 text-rose-700 dark:bg-rose-500/10 bg-rose-50 border dark:border-rose-500/20 border-rose-200 rounded-lg px-3.5 py-1.5">
                               <XCircle size={12} />
                               <span>Absent</span>
                             </span>
                           ) : (
-                            <span className="flex items-center gap-1.5 text-xs font-bold text-neutral-500 bg-neutral-950 border border-neutral-900 rounded-lg px-3.5 py-1.5 font-mono">
+                            <span className="flex items-center gap-1.5 text-xs font-bold dark:text-neutral-500 text-text-muted dark:bg-neutral-950 bg-neutral-100 border dark:border-neutral-900 border-border-subtle rounded-lg px-3.5 py-1.5 font-mono">
                               No Record
                             </span>
                           )}
@@ -564,7 +564,7 @@ export default function FacultyAttendance() {
                   </div>
                 ))
               ) : (
-                <div className="p-12 text-center glass-card border border-neutral-800 text-neutral-500 font-mono text-xs">
+                <div className="p-12 text-center glass-card border border-border-subtle dark:text-neutral-500 text-text-muted font-mono text-xs">
                   {searchTerm ? "No students match your query." : "No students found. Verify subject assignment parameters."}
                 </div>
               )}
@@ -572,15 +572,15 @@ export default function FacultyAttendance() {
 
             {/* Sticky/Bottom Submission Stats Panel */}
             {totalRoster > 0 && (
-              <div className="glass-card border border-neutral-850 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-neutral-950/60 sticky bottom-20 lg:bottom-4 z-15 shadow-2xl">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-neutral-400">
+              <div className="glass-card border dark:border-neutral-850 border-border-subtle rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 dark:bg-neutral-955/65 bg-surface/95 sticky bottom-20 lg:bottom-4 z-15 shadow-2xl">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs dark:text-neutral-400 text-text-secondary">
                   <span className="flex items-center gap-1">
                     <CheckCircle size={14} className="text-emerald-400" />
-                    <span>Present: <strong className="text-white font-mono">{presentCount}</strong></span>
+                    <span>Present: <strong className="dark:text-white text-text-primary font-mono">{presentCount}</strong></span>
                   </span>
                   <span className="flex items-center gap-1">
                     <XCircle size={14} className="text-rose-400" />
-                    <span>Absent: <strong className="text-white font-mono">{absentCount}</strong></span>
+                    <span>Absent: <strong className="dark:text-white text-text-primary font-mono">{absentCount}</strong></span>
                   </span>
                   {unmarkedCount > 0 && (
                     <span className="flex items-center gap-1">
@@ -611,8 +611,8 @@ export default function FacultyAttendance() {
         </div>
 
         {/* Previous Sessions (Right 30%) */}
-        <div className="w-full lg:w-80 glass-card border border-neutral-800 rounded-xl p-4 shrink-0 space-y-4">
-          <div className="flex items-center gap-1.5 border-b border-neutral-800 pb-2 text-white">
+        <div className="w-full lg:w-80 glass-card border border-border-subtle rounded-xl p-4 shrink-0 space-y-4">
+          <div className="flex items-center gap-1.5 border-b border-border-subtle pb-2 dark:text-white text-text-primary">
             <History size={16} className="text-blue-400" />
             <h3 className="font-display font-bold text-sm">Previous Sessions</h3>
           </div>
@@ -634,21 +634,21 @@ export default function FacultyAttendance() {
                     className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
                       isSelected 
                         ? "bg-blue-600/10 border-blue-500/40" 
-                        : "bg-neutral-950/40 border-neutral-900 hover:border-neutral-800 hover:bg-neutral-950"
+                        : "dark:bg-neutral-950/40 bg-surface/50 border dark:border-neutral-900 border-border-subtle dark:hover:border-neutral-800 hover:border-border-strong dark:hover:bg-neutral-950 hover:bg-surface-hover"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-mono text-neutral-400">{session.date}</span>
-                      <span className="text-[9px] bg-neutral-800 border border-neutral-700 text-neutral-300 font-bold px-1.5 py-0.5 rounded uppercase font-mono">
+                      <span className="text-[10px] font-mono dark:text-neutral-400 text-text-secondary">{session.date}</span>
+                      <span className="text-[9px] dark:bg-neutral-800 bg-neutral-100 border dark:border-neutral-700 border-border-subtle dark:text-neutral-300 text-text-primary font-bold px-1.5 py-0.5 rounded uppercase font-mono">
                         Sec {session.section}
                       </span>
                     </div>
                     
-                    <h4 className="text-xs font-bold text-white leading-tight truncate" title={session.subjectName}>
+                    <h4 className="text-xs font-bold dark:text-white text-text-primary leading-tight truncate" title={session.subjectName}>
                       {session.subjectCode}: {session.subjectName}
                     </h4>
 
-                    <div className="flex items-center gap-3 mt-2 text-[9px] text-neutral-500 font-mono">
+                    <div className="flex items-center gap-3 mt-2 text-[9px] dark:text-neutral-500 text-text-muted font-mono">
                       <span className="text-emerald-400">P: {session.present}</span>
                       <span>•</span>
                       <span className="text-rose-400">A: {session.absent}</span>
@@ -659,7 +659,7 @@ export default function FacultyAttendance() {
                 );
               })
             ) : (
-              <p className="text-[10px] text-neutral-500 font-mono italic text-center py-6">
+              <p className="text-[10px] dark:text-neutral-500 text-text-muted font-mono italic text-center py-6">
                 No previous sessions logged by this profile.
               </p>
             )}

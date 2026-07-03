@@ -9,7 +9,7 @@ export default function AdminSubjectLMSPage() {
   const subjectId = params?.subjectId as string;
 
   if (!subjectId) {
-    return <div className="text-center py-10 text-neutral-500">Invalid subject identifier.</div>;
+    return <div className="text-center py-10 text-text-muted">Invalid subject identifier.</div>;
   }
 
   return <SubjectLMS subjectId={subjectId} />;

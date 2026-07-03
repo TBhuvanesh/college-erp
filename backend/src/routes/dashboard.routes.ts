@@ -13,6 +13,9 @@ router.get('/admin', requireRole('admin'), dashboardController.adminDashboard);
 // GET /api/dashboard/faculty — workload + pending-task summary for the requesting faculty member
 router.get('/faculty', requireRole('faculty'), dashboardController.facultyDashboard);
 
+// GET /api/dashboard/hod — department metrics summary for HOD
+router.get('/hod', requireRole('faculty'), dashboardController.hodDashboard);
+
 // GET /api/dashboard/student — attendance, fees, results, and events for the requesting student
 router.get('/student', requireRole('student'), dashboardController.studentDashboard);
 

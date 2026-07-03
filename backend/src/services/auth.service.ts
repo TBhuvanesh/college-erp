@@ -67,11 +67,25 @@ export async function login(
 
   const tokens = await issueTokenPair(user.id, user.email, user.role);
 
+  let designation: string | undefined;
+  let departmentId: string | undefined;
+
+  if (user.role === 'faculty') {
+    const { rows: facRows } = await query<{ designation: string; department_id: string }>(
+      'SELECT designation, department_id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
+      [user.id]
+    );
+    if (facRows[0]) {
+      designation = facRows[0].designation;
+      departmentId = facRows[0].department_id;
+    }
+  }
+
   await query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
 
   return {
     tokens,
-    user: { id: user.id, email: user.email, role: user.role, isActive: user.is_active },
+    user: { id: user.id, email: user.email, role: user.role, isActive: user.is_active, designation, departmentId },
   };
 }
 
@@ -124,6 +138,20 @@ export async function refresh(
 
   const tokens = await issueTokenPair(stored.user_id, stored.email, stored.role);
 
+  let designation: string | undefined;
+  let departmentId: string | undefined;
+
+  if (stored.role === 'faculty') {
+    const { rows: facRows } = await query<{ designation: string; department_id: string }>(
+      'SELECT designation, department_id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
+      [stored.user_id]
+    );
+    if (facRows[0]) {
+      designation = facRows[0].designation;
+      departmentId = facRows[0].department_id;
+    }
+  }
+
   return {
     tokens,
     user: {
@@ -131,6 +159,8 @@ export async function refresh(
       email: stored.email,
       role: stored.role,
       isActive: stored.is_active,
+      designation,
+      departmentId,
     },
   };
 }
@@ -157,7 +187,22 @@ async function issueTokenPair(
 ): Promise<TokenPair> {
   const tokenId = uuidv4();
   const refreshToken = signRefreshToken({ sub: userId, tokenId });
-  const accessToken = signAccessToken({ sub: userId, email, role });
+
+  let designation: string | undefined;
+  let departmentId: string | undefined;
+
+  if (role === 'faculty') {
+    const { rows } = await query<{ designation: string; department_id: string }>(
+      'SELECT designation, department_id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
+      [userId]
+    );
+    if (rows[0]) {
+      designation = rows[0].designation;
+      departmentId = rows[0].department_id;
+    }
+  }
+
+  const accessToken = signAccessToken({ sub: userId, email, role, designation, departmentId });
   const tokenHash = hashToken(refreshToken);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 

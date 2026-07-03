@@ -28,7 +28,13 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 
   sendSuccess(res, {
     accessToken: tokens.accessToken,
-    user: { id: user.id, email: user.email, role: user.role },
+    user: { 
+      id: user.id, 
+      email: user.email, 
+      role: user.role, 
+      designation: (user as any).designation, 
+      departmentId: (user as any).departmentId 
+    },
   });
 });
 
@@ -45,7 +51,13 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
 
   sendSuccess(res, {
     accessToken: tokens.accessToken,
-    user: { id: user.id, email: user.email, role: user.role },
+    user: { 
+      id: user.id, 
+      email: user.email, 
+      role: user.role, 
+      designation: user.designation, 
+      departmentId: user.departmentId 
+    },
   });
 });
 

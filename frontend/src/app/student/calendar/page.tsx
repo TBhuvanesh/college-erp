@@ -103,25 +103,25 @@ export default function StudentCalendar() {
     <div className="space-y-6">
       
       {/* Personalized Header block */}
-      <div className="glass-card border border-neutral-800 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="glass-card border dark:border-neutral-800 border-border-subtle rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="space-y-1">
           <span className="text-[9px] uppercase font-bold text-blue-500 tracking-wider font-mono">Student Calendar Access</span>
-          <h2 className="font-display font-bold text-xl text-white">
+          <h2 className="font-display font-bold text-xl dark:text-white text-text-primary">
             Milestones for {activeStudent?.name || "Rahul Sharma"}
           </h2>
-          <p className="text-[10px] text-neutral-400">
-            Current Roll No: <strong className="text-neutral-200">{activeStudent?.rollNo}</strong> | Academic Stream: <strong className="text-neutral-200">{activeStudent?.department} • {activeStudent?.semester}</strong>
+          <p className="text-[10px] dark:text-neutral-400 text-text-secondary">
+            Current Roll No: <strong className="dark:text-neutral-200 text-text-primary">{activeStudent?.rollNo}</strong> | Academic Stream: <strong className="dark:text-neutral-200 text-text-primary">{activeStudent?.department} • {activeStudent?.semester}</strong>
           </p>
         </div>
 
         {/* Filter Toggle Switch */}
-        <div className="flex items-center gap-3 bg-neutral-950 border border-neutral-800 rounded-lg p-1.5 shrink-0 self-stretch sm:self-auto justify-between sm:justify-start">
-          <span className="text-[10px] font-bold text-neutral-450 uppercase pl-1.5">Personalized View:</span>
-          <div className="flex rounded bg-neutral-900 border border-neutral-850 p-0.5">
+        <div className="flex items-center gap-3 dark:bg-neutral-950 bg-surface border dark:border-neutral-800 border-border-subtle rounded-lg p-1.5 shrink-0 self-stretch sm:self-auto justify-between sm:justify-start">
+          <span className="text-[10px] font-bold dark:text-neutral-450 text-text-secondary uppercase pl-1.5">Personalized View:</span>
+          <div className="flex rounded dark:bg-neutral-900 bg-surface border dark:border-neutral-850 border-border-subtle p-0.5">
             <button
               onClick={() => setPersonalizedFilter(true)}
               className={`px-3 py-1 text-[9px] font-bold rounded cursor-pointer transition ${
-                personalizedFilter ? "bg-blue-600 text-white font-extrabold" : "text-neutral-400 hover:text-neutral-200"
+                personalizedFilter ? "bg-blue-600 text-white font-extrabold" : "dark:text-neutral-400 text-text-secondary dark:hover:text-neutral-200 hover:text-text-primary"
               }`}
             >
               My Roll Scope
@@ -129,7 +129,7 @@ export default function StudentCalendar() {
             <button
               onClick={() => setPersonalizedFilter(false)}
               className={`px-3 py-1 text-[9px] font-bold rounded cursor-pointer transition ${
-                !personalizedFilter ? "bg-blue-600 text-white font-extrabold" : "text-neutral-400 hover:text-neutral-200"
+                !personalizedFilter ? "bg-blue-600 text-white font-extrabold" : "dark:text-neutral-400 text-text-secondary dark:hover:text-neutral-200 hover:text-text-primary"
               }`}
             >
               All Institutional
@@ -140,7 +140,7 @@ export default function StudentCalendar() {
 
       {/* Info notification about default filters */}
       {personalizedFilter && activeStudent && (
-        <div className="p-3.5 rounded-lg bg-blue-500/5 border border-blue-500/15 text-blue-400 text-[10px] font-medium leading-normal flex items-start gap-2 shadow-sm">
+        <div className="p-3.5 rounded-lg dark:bg-blue-500/5 bg-blue-50/50 border dark:border-blue-500/15 border-blue-200 dark:text-blue-400 text-blue-700 text-[10px] font-medium leading-normal flex items-start gap-2 shadow-sm">
           <Info size={14} className="shrink-0 mt-0.5" />
           <span>
             Calendar is automatically scoped to <strong>{activeStudent.department}</strong> department, <strong>{activeStudent.semester}</strong> classes, and general announcements. Toggle &quot;All Institutional&quot; above to view timelines for other programs.

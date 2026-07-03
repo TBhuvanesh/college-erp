@@ -7,6 +7,8 @@ export interface UserProfile {
   id: string;
   email: string;
   role: "admin" | "faculty" | "student";
+  designation?: string;
+  departmentId?: string;
 }
 
 interface AuthContextType {
@@ -28,11 +30,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const { setCurrentRole, setCurrentStudentId, setCurrentFacultyId } = useSimulation();
 
-  const syncSimulationState = useCallback((role: "admin" | "faculty" | "student") => {
+  const syncSimulationState = useCallback((role: "admin" | "faculty" | "student", designation?: string) => {
     if (role === "admin") {
       setCurrentRole("Admin");
     } else if (role === "faculty") {
-      setCurrentRole("Faculty");
+      if (designation === "hod") {
+        setCurrentRole("HOD" as any);
+      } else {
+        setCurrentRole("Faculty");
+      }
       setCurrentFacultyId("fac-amit");
     } else if (role === "student") {
       setCurrentRole("Student");
@@ -56,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const { accessToken: newAccessToken, user: newUser } = json.data;
           setAccessToken(newAccessToken);
           setUser(newUser);
-          syncSimulationState(newUser.role);
+          syncSimulationState(newUser.role, newUser.designation);
         }
       }
     } catch (err) {
@@ -92,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { accessToken: newAccessToken, user: newUser } = json.data;
     setAccessToken(newAccessToken);
     setUser(newUser);
-    syncSimulationState(newUser.role);
+    syncSimulationState(newUser.role, newUser.designation);
   };
 
   const logout = async () => {

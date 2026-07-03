@@ -345,13 +345,26 @@ export async function updateCalendarEntry(
   id: string,
   data: UpdateCalendarEntryInput
 ): Promise<CalendarEntry> {
-  const { rows: existing } = await query<{ id: string; created_by: string; start_date: Date; end_date: Date | null }>(
-    'SELECT id, created_by, start_date, end_date FROM calendar_entries WHERE id = $1 AND deleted_at IS NULL',
+  const { rows: existing } = await query<{ id: string; created_by: string; start_date: Date; end_date: Date | null; department_id: string | null }>(
+    'SELECT id, created_by, start_date, end_date, department_id FROM calendar_entries WHERE id = $1 AND deleted_at IS NULL',
     [id]
   );
   if (!existing[0]) throw AppError.notFound('Calendar entry not found');
-  if (role !== 'admin' && existing[0].created_by !== userId) {
-    throw AppError.forbidden('You can only edit calendar entries you created');
+
+  let allowed = role === 'admin' || existing[0].created_by === userId;
+
+  if (!allowed && role === 'faculty') {
+    const { rows: facRows } = await query<{ designation: string; department_id: string }>(
+      'SELECT designation, department_id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
+      [userId]
+    );
+    if (facRows[0] && facRows[0].designation === 'hod' && existing[0].department_id === facRows[0].department_id) {
+      allowed = true;
+    }
+  }
+
+  if (!allowed) {
+    throw AppError.forbidden('You can only edit calendar entries you created or that belong to your department');
   }
 
   // Date consistency check
@@ -408,13 +421,26 @@ export async function deleteCalendarEntry(
   role: Role,
   id: string
 ): Promise<void> {
-  const { rows: existing } = await query<{ id: string; created_by: string }>(
-    'SELECT id, created_by FROM calendar_entries WHERE id = $1 AND deleted_at IS NULL',
+  const { rows: existing } = await query<{ id: string; created_by: string; department_id: string | null }>(
+    'SELECT id, created_by, department_id FROM calendar_entries WHERE id = $1 AND deleted_at IS NULL',
     [id]
   );
   if (!existing[0]) throw AppError.notFound('Calendar entry not found');
-  if (role !== 'admin' && existing[0].created_by !== userId) {
-    throw AppError.forbidden('You can only delete calendar entries you created');
+
+  let allowed = role === 'admin' || existing[0].created_by === userId;
+
+  if (!allowed && role === 'faculty') {
+    const { rows: facRows } = await query<{ designation: string; department_id: string }>(
+      'SELECT designation, department_id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
+      [userId]
+    );
+    if (facRows[0] && facRows[0].designation === 'hod' && existing[0].department_id === facRows[0].department_id) {
+      allowed = true;
+    }
+  }
+
+  if (!allowed) {
+    throw AppError.forbidden('You can only delete calendar entries you created or that belong to your department');
   }
 
   await query('UPDATE calendar_entries SET deleted_at = NOW() WHERE id = $1', [id]);

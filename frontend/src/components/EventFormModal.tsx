@@ -161,22 +161,22 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-fade-in">
       {/* Backdrop click close */}
       <div className="absolute inset-0 cursor-default" onClick={onClose}></div>
 
       {/* Modal Dialog */}
-      <div className="relative w-full max-w-lg bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl p-6 overflow-y-auto max-h-[90vh] z-10 flex flex-col justify-between">
-        
+      <div className="relative w-full max-w-lg bg-surface border border-border-subtle rounded-xl shadow-2xl p-6 overflow-y-auto max-h-[90vh] z-10 flex flex-col justify-between">
+
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-neutral-800 pb-3 mb-4">
-          <h3 className="font-display font-bold text-white text-base flex items-center gap-2">
+        <div className="flex items-center justify-between border-b border-border-subtle pb-3 mb-4">
+          <h3 className="font-display font-bold text-text-primary text-base flex items-center gap-2">
             <Sparkles size={16} className="text-blue-500" />
             <span>{title}</span>
           </h3>
           <button
             onClick={onClose}
-            className="p-1 rounded bg-neutral-850 hover:bg-neutral-800 text-neutral-450 hover:text-white cursor-pointer transition"
+            className="p-1 rounded bg-surface-elevated hover:bg-surface-elevated text-text-muted hover:text-text-primary cursor-pointer transition"
           >
             <X size={16} />
           </button>
@@ -191,7 +191,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
         )}
 
         {loading ? (
-          <div className="py-12 flex flex-col items-center justify-center text-neutral-500 text-xs font-mono">
+          <div className="py-12 flex flex-col items-center justify-center text-text-muted text-xs font-mono">
             <Loader2 className="animate-spin text-blue-500 mb-2" size={24} />
             <span>Loading dependencies...</span>
           </div>
@@ -200,7 +200,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
             
             {/* Title */}
             <div>
-              <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">
+              <label className="block text-[10px] font-bold text-text-muted uppercase mb-1">
                 Event Title <span className="text-rose-500">*</span>
               </label>
               <input
@@ -209,14 +209,14 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                 maxLength={500}
                 value={eventTitle}
                 onChange={(e) => setEventTitle(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+                className="w-full px-3 py-2 text-xs bg-background border border-border-subtle rounded text-text-primary focus:outline-none focus:border-blue-600 transition"
                 placeholder="e.g. Commencement of B.Tech II Sem Instruction"
               />
             </div>
 
             {/* Description */}
             <div>
-              <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">
+              <label className="block text-[10px] font-bold text-text-muted uppercase mb-1">
                 Description / Details
               </label>
               <textarea
@@ -224,7 +224,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
                 maxLength={2000}
-                className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition resize-none"
+                className="w-full px-3 py-2 text-xs bg-background border border-border-subtle rounded text-text-primary focus:outline-none focus:border-blue-600 transition resize-none"
                 placeholder="Details about locations, regulations, syllabus coverage..."
               />
             </div>
@@ -232,7 +232,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
             {/* Dates Row */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">
+                <label className="block text-[10px] font-bold text-text-muted uppercase mb-1">
                   Start Date <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -240,18 +240,18 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                   required
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+                  className="w-full px-3 py-2 text-xs bg-background border border-border-subtle rounded text-text-primary focus:outline-none focus:border-blue-600 transition"
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">
+                <label className="block text-[10px] font-bold text-text-muted uppercase mb-1">
                   End Date
                 </label>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+                  className="w-full px-3 py-2 text-xs bg-background border border-border-subtle rounded text-text-primary focus:outline-none focus:border-blue-600 transition"
                 />
               </div>
             </div>
@@ -259,7 +259,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
             {/* Event Type & Target Audience */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">
+                <label className="block text-[10px] font-bold text-text-muted uppercase mb-1">
                   Event Category (DB) <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
@@ -267,7 +267,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                     required
                     value={eventType}
                     onChange={(e) => setEventType(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition appearance-none pr-8 cursor-pointer"
+                    className="w-full px-3 py-2 text-xs bg-background border border-border-subtle rounded text-text-primary focus:outline-none focus:border-blue-600 transition appearance-none pr-8 cursor-pointer"
                   >
                     {eventTypes.map((type) => (
                       <option key={type} value={type}>
@@ -275,13 +275,13 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                       </option>
                     ))}
                   </select>
-                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500">
+                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
                     <ChevronDown size={14} />
                   </div>
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">
+                <label className="block text-[10px] font-bold text-text-muted uppercase mb-1">
                   Target Audience <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
@@ -289,7 +289,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                     required
                     value={targetAudience}
                     onChange={(e) => setTargetAudience(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition appearance-none pr-8 cursor-pointer"
+                    className="w-full px-3 py-2 text-xs bg-background border border-border-subtle rounded text-text-primary focus:outline-none focus:border-blue-600 transition appearance-none pr-8 cursor-pointer"
                   >
                     {targetAudiences.map((aud) => (
                       <option key={aud} value={aud}>
@@ -297,7 +297,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                       </option>
                     ))}
                   </select>
-                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500">
+                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
                     <ChevronDown size={14} />
                   </div>
                 </div>
@@ -307,14 +307,14 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
             {/* Department & Semester */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">
+                <label className="block text-[10px] font-bold text-text-muted uppercase mb-1">
                   Department Specificity
                 </label>
                 <div className="relative">
                   <select
                     value={departmentId}
                     onChange={(e) => setDepartmentId(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition appearance-none pr-8 cursor-pointer"
+                    className="w-full px-3 py-2 text-xs bg-background border border-border-subtle rounded text-text-primary focus:outline-none focus:border-blue-600 transition appearance-none pr-8 cursor-pointer"
                   >
                     <option value="">Institution-Wide (All)</option>
                     {departments.map((dept) => (
@@ -323,20 +323,20 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                       </option>
                     ))}
                   </select>
-                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500">
+                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
                     <ChevronDown size={14} />
                   </div>
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">
+                <label className="block text-[10px] font-bold text-text-muted uppercase mb-1">
                   Semester Specificity
                 </label>
                 <div className="relative">
                   <select
                     value={semester}
                     onChange={(e) => setSemester(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition appearance-none pr-8 cursor-pointer"
+                    className="w-full px-3 py-2 text-xs bg-background border border-border-subtle rounded text-text-primary focus:outline-none focus:border-blue-600 transition appearance-none pr-8 cursor-pointer"
                   >
                     <option value="">All Semesters</option>
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((sem) => (
@@ -345,7 +345,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
                       </option>
                     ))}
                   </select>
-                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500">
+                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted">
                     <ChevronDown size={14} />
                   </div>
                 </div>
@@ -353,11 +353,11 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-3 pt-4 border-t border-neutral-800 mt-6">
+            <div className="flex items-center gap-3 pt-4 border-t border-border-subtle mt-6">
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-2 text-xs font-semibold rounded bg-neutral-800 hover:bg-neutral-750 text-neutral-350 hover:text-white cursor-pointer transition text-center"
+                className="flex-1 py-2 text-xs font-semibold rounded bg-surface-elevated hover:bg-surface-hover text-text-secondary hover:text-text-primary cursor-pointer transition text-center"
               >
                 Cancel
               </button>

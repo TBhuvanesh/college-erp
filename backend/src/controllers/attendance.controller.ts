@@ -108,14 +108,18 @@ export const updateAttendance = asyncHandler(async (req: Request, res: Response)
 export const listAttendance = asyncHandler(async (req: Request, res: Response) => {
   const filters = req.query as unknown as ListAttendanceQuery;
 
-  // Faculty automatically scoped to records they marked
-  if (req.user!.role === 'faculty') {
-    const { rows } = await (await import('../config/database')).query<{ id: string }>(
-      'SELECT id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-      [req.user!.id]
-    );
-    if (rows[0]) {
-      (filters as ListAttendanceQuery & { facultyId?: string }).facultyId = rows[0].id;
+  // Faculty/HOD scoping
+  if (req.user && req.user.role === 'faculty') {
+    if (req.user.designation === 'hod') {
+      (filters as any).departmentId = req.user.departmentId;
+    } else {
+      const { rows } = await (await import('../config/database')).query<{ id: string }>(
+        'SELECT id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
+        [req.user!.id]
+      );
+      if (rows[0]) {
+        (filters as ListAttendanceQuery & { facultyId?: string }).facultyId = rows[0].id;
+      }
     }
   }
 

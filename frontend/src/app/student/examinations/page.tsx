@@ -112,15 +112,15 @@ export default function StudentExaminations() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Scheduled":
-        return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+        return "dark:bg-blue-500/10 bg-blue-50 dark:text-blue-400 text-blue-700 dark:border-blue-500/20 border-blue-200";
       case "Ongoing":
-        return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 animate-pulse";
+        return "dark:bg-emerald-500/10 bg-emerald-50 dark:text-emerald-400 text-emerald-700 dark:border-emerald-500/20 border-emerald-200 animate-pulse";
       case "Completed":
-        return "bg-neutral-500/10 text-neutral-400 border-neutral-500/20";
+        return "dark:bg-neutral-500/10 bg-neutral-100 dark:text-neutral-400 text-text-secondary dark:border-neutral-500/20 border-border-subtle";
       case "Cancelled":
-        return "bg-rose-500/10 text-rose-400 border-rose-500/20";
+        return "dark:bg-rose-500/10 bg-rose-50 dark:text-rose-400 text-rose-700 dark:border-rose-500/20 border-rose-200";
       default:
-        return "bg-neutral-500/10 text-neutral-400 border-neutral-500/20";
+        return "dark:bg-neutral-500/10 bg-neutral-100 dark:text-neutral-400 text-text-secondary dark:border-neutral-500/20 border-border-subtle";
     }
   };
 
@@ -129,8 +129,8 @@ export default function StudentExaminations() {
       
       {/* Page Header */}
       <div>
-        <h2 className="font-display font-bold text-2xl text-white">Examinations Desk</h2>
-        <p className="text-xs text-neutral-400 mt-1">
+        <h2 className="font-display font-bold text-2xl dark:text-white text-text-primary">Examinations Desk</h2>
+        <p className="text-xs dark:text-neutral-400 text-text-secondary mt-1">
           Review upcoming schedules, seat allocations placeholder details, and verify mid-term & end-semester calendars.
         </p>
       </div>
@@ -143,11 +143,11 @@ export default function StudentExaminations() {
       )}
 
       {/* Tabs Menu */}
-      <div className="flex border-b border-neutral-800 gap-4">
+      <div className="flex border-b dark:border-neutral-800 border-border-subtle gap-4">
         <button
           onClick={() => setActiveTab("upcoming")}
           className={`pb-3 text-xs font-bold transition-all relative cursor-pointer ${
-            activeTab === "upcoming" ? "text-blue-500 font-semibold" : "text-neutral-400 hover:text-white"
+            activeTab === "upcoming" ? "text-blue-500 font-semibold" : "dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary"
           }`}
         >
           Upcoming Examinations
@@ -158,7 +158,7 @@ export default function StudentExaminations() {
         <button
           onClick={() => setActiveTab("all")}
           className={`pb-3 text-xs font-bold transition-all relative cursor-pointer ${
-            activeTab === "all" ? "text-blue-500 font-semibold" : "text-neutral-400 hover:text-white"
+            activeTab === "all" ? "text-blue-500 font-semibold" : "dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary"
           }`}
         >
           Examination Timetable
@@ -169,7 +169,7 @@ export default function StudentExaminations() {
         <button
           onClick={() => setActiveTab("completed")}
           className={`pb-3 text-xs font-bold transition-all relative cursor-pointer ${
-            activeTab === "completed" ? "text-blue-500 font-semibold" : "text-neutral-400 hover:text-white"
+            activeTab === "completed" ? "text-blue-500 font-semibold" : "dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary"
           }`}
         >
           Completed Examinations
@@ -180,15 +180,15 @@ export default function StudentExaminations() {
       </div>
 
       {/* Filters Area */}
-      <div className="glass-card border border-neutral-800 rounded-xl p-4 flex flex-col sm:flex-row gap-3">
+      <div className="glass-card border dark:border-neutral-800 border-border-subtle rounded-xl p-4 flex flex-col sm:flex-row gap-3">
         {/* Subject Filter */}
-        <div className="flex-1 flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-3 text-xs text-white">
-          <BookOpen size={12} className="text-neutral-500 shrink-0" />
-          <span className="text-neutral-500 whitespace-nowrap">Subject:</span>
+        <div className="flex-1 flex items-center gap-2 dark:bg-neutral-950 bg-surface border dark:border-neutral-850 border-border-subtle rounded px-3 text-xs dark:text-white text-text-primary">
+          <BookOpen size={12} className="dark:text-neutral-500 text-text-muted shrink-0" />
+          <span className="dark:text-neutral-500 text-text-muted whitespace-nowrap">Subject:</span>
           <select
             value={subjectFilter}
             onChange={(e) => setSubjectFilter(e.target.value)}
-            className="bg-transparent text-white cursor-pointer py-2.5 flex-1 focus:outline-none font-semibold"
+            className="bg-transparent dark:text-white text-text-primary cursor-pointer py-2.5 flex-1 focus:outline-none font-semibold"
           >
             <option value="ALL">All Subjects</option>
             {uniqueSubjects.map(sub => (
@@ -200,13 +200,13 @@ export default function StudentExaminations() {
         </div>
 
         {/* Semester Filter */}
-        <div className="w-full sm:w-48 flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-3 text-xs text-white">
-          <ListFilter size={12} className="text-neutral-500 shrink-0" />
-          <span className="text-neutral-500">Sem:</span>
+        <div className="w-full sm:w-48 flex items-center gap-2 dark:bg-neutral-950 bg-surface border dark:border-neutral-850 border-border-subtle rounded px-3 text-xs dark:text-white text-text-primary">
+          <ListFilter size={12} className="dark:text-neutral-500 text-text-muted shrink-0" />
+          <span className="dark:text-neutral-500 text-text-muted">Sem:</span>
           <select
             value={semesterFilter}
             onChange={(e) => setSemesterFilter(e.target.value)}
-            className="bg-transparent text-white cursor-pointer py-2.5 flex-1 focus:outline-none font-bold"
+            className="bg-transparent dark:text-white text-text-primary cursor-pointer py-2.5 flex-1 focus:outline-none font-bold"
           >
             <option value="ALL">All Semesters</option>
             {uniqueSemesters.map(sem => (
@@ -221,17 +221,17 @@ export default function StudentExaminations() {
       {/* Main Content View (Table on desktop, Cards on mobile) */}
       <div>
         {loading ? (
-          <div className="text-center py-20 text-neutral-400">
+          <div className="text-center py-20 dark:text-neutral-400 text-text-secondary">
             <Loader2 className="animate-spin text-blue-500 mx-auto mb-3" size={30} />
             <span className="font-mono text-xs">Accessing examination records database...</span>
           </div>
         ) : filteredExams.length > 0 ? (
           <>
             {/* Desktop Table View */}
-            <div className="hidden md:block glass-card border border-neutral-800 rounded-xl overflow-hidden">
+            <div className="hidden md:block glass-card border dark:border-neutral-800 border-border-subtle rounded-xl overflow-hidden">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-neutral-900/50 border-b border-neutral-800 text-neutral-400 font-semibold">
+                  <tr className="dark:bg-neutral-900/50 bg-surface border-b dark:border-neutral-800 border-border-subtle dark:text-neutral-400 text-text-secondary font-semibold">
                     <th className="px-4 py-3">Subject</th>
                     <th className="px-4 py-3 font-mono">Exam Type</th>
                     <th className="px-4 py-3">Date</th>
@@ -241,17 +241,17 @@ export default function StudentExaminations() {
                     <th className="px-4 py-3">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-900 text-neutral-300">
+                <tbody className="divide-y dark:divide-neutral-900 divide-border-subtle dark:text-neutral-300 text-text-secondary">
                   {filteredExams.map((exam) => (
-                    <tr key={exam.id} className="hover:bg-neutral-900/30 transition">
+                    <tr key={exam.id} className="dark:hover:bg-neutral-900/30 hover:bg-surface-hover transition">
                       <td className="px-4 py-3">
-                        <span className="font-semibold text-white block">{exam.subjectName}</span>
-                        <span className="text-[10px] text-neutral-500 font-mono">{exam.subjectCode}</span>
+                        <span className="font-semibold dark:text-white text-text-primary block">{exam.subjectName}</span>
+                        <span className="text-[10px] dark:text-neutral-500 text-text-muted font-mono">{exam.subjectCode}</span>
                       </td>
-                      <td className="px-4 py-3 font-mono text-[10px] font-bold text-neutral-200">
+                      <td className="px-4 py-3 font-mono text-[10px] font-bold dark:text-neutral-200 text-text-primary">
                         {exam.examType}
                       </td>
-                      <td className="px-4 py-3 font-mono text-neutral-300">
+                      <td className="px-4 py-3 font-mono dark:text-neutral-300 text-text-secondary">
                         {new Date(exam.examDate).toLocaleDateString("en-US", {
                           weekday: "short",
                           year: "numeric",
@@ -259,15 +259,15 @@ export default function StudentExaminations() {
                           day: "numeric"
                         })}
                       </td>
-                      <td className="px-4 py-3 font-mono text-neutral-400">
+                      <td className="px-4 py-3 font-mono dark:text-neutral-400 text-text-secondary">
                         {exam.startTime} - {exam.endTime}
                       </td>
-                      <td className="px-4 py-3 font-mono text-neutral-400 text-center">
+                      <td className="px-4 py-3 font-mono dark:text-neutral-400 text-text-secondary text-center">
                         {exam.maximumMarks}
                       </td>
-                      <td className="px-4 py-3 text-neutral-400">
+                      <td className="px-4 py-3 dark:text-neutral-400 text-text-secondary">
                         <span className="flex items-center gap-1">
-                          <MapPin size={12} className="text-neutral-500 shrink-0" />
+                          <MapPin size={12} className="dark:text-neutral-500 text-text-muted shrink-0" />
                           <span>Main Campus Block</span>
                         </span>
                       </td>
@@ -285,38 +285,38 @@ export default function StudentExaminations() {
             {/* Mobile Card View */}
             <div className="block md:hidden space-y-3">
               {filteredExams.map((exam) => (
-                <div key={exam.id} className="glass-card border border-neutral-800 rounded-xl p-4 space-y-3">
+                <div key={exam.id} className="glass-card border dark:border-neutral-800 border-border-subtle rounded-xl p-4 space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h4 className="text-sm font-bold text-white leading-tight">{exam.subjectName}</h4>
-                      <span className="text-[10px] text-neutral-500 font-mono mt-0.5 block">{exam.subjectCode}</span>
+                      <h4 className="text-sm font-bold dark:text-white text-text-primary leading-tight">{exam.subjectName}</h4>
+                      <span className="text-[10px] dark:text-neutral-500 text-text-muted font-mono mt-0.5 block">{exam.subjectCode}</span>
                     </div>
                     <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border capitalize shrink-0 ${getStatusBadge(exam.status)}`}>
                       {exam.status}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-y-2.5 gap-x-4 text-[10px] text-neutral-300 font-mono pt-2 border-t border-neutral-900">
+                  <div className="grid grid-cols-2 gap-y-2.5 gap-x-4 text-[10px] dark:text-neutral-300 text-text-secondary font-mono pt-2 border-t dark:border-neutral-900 border-border-subtle">
                     <div>
-                      <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Exam Type</span>
-                      <span className="font-semibold text-neutral-200">{exam.examType}</span>
+                      <span className="dark:text-neutral-500 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Exam Type</span>
+                      <span className="font-semibold dark:text-neutral-200 text-text-primary">{exam.examType}</span>
                     </div>
                     <div>
-                      <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Max Marks</span>
+                      <span className="dark:text-neutral-500 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Max Marks</span>
                       <span>{exam.maximumMarks} Marks</span>
                     </div>
                     <div>
-                      <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Date</span>
+                      <span className="dark:text-neutral-500 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Date</span>
                       <span>{exam.examDate}</span>
                     </div>
                     <div>
-                      <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Time Slot</span>
+                      <span className="dark:text-neutral-500 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Time Slot</span>
                       <span>{exam.startTime} - {exam.endTime}</span>
                     </div>
                     <div className="col-span-2">
-                      <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Venue Location</span>
-                      <span className="flex items-center gap-1 font-sans text-neutral-400">
-                        <MapPin size={10} className="text-neutral-500 shrink-0" />
+                      <span className="dark:text-neutral-500 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Venue Location</span>
+                      <span className="flex items-center gap-1 font-sans dark:text-neutral-400 text-text-secondary">
+                        <MapPin size={10} className="dark:text-neutral-500 text-text-muted shrink-0" />
                         <span>Main Campus Block (Placeholder)</span>
                       </span>
                     </div>
@@ -326,8 +326,8 @@ export default function StudentExaminations() {
             </div>
           </>
         ) : (
-          <div className="text-center py-16 glass-card border border-neutral-800 rounded-xl text-neutral-500 font-mono text-xs flex flex-col items-center justify-center gap-2">
-            <FileText size={20} className="text-neutral-600" />
+          <div className="text-center py-16 glass-card border dark:border-neutral-800 border-border-subtle rounded-xl dark:text-neutral-500 text-text-muted font-mono text-xs flex flex-col items-center justify-center gap-2">
+            <FileText size={20} className="dark:text-neutral-600 text-text-muted" />
             <span>
               {subjectFilter !== "ALL" || semesterFilter !== "ALL"
                 ? "No examinations match the selected filter parameters."

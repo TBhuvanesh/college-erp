@@ -4,6 +4,8 @@ export interface JwtAccessPayload {
   sub: string;
   email: string;
   role: Role;
+  designation?: string;
+  departmentId?: string;
 }
 
 export interface JwtRefreshPayload {
@@ -16,6 +18,8 @@ export interface AuthUser {
   email: string;
   role: Role;
   isActive: boolean;
+  designation?: string;
+  departmentId?: string;
 }
 
 export interface TokenPair {

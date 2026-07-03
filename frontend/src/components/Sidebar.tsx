@@ -11,14 +11,14 @@ import {
   GraduationCap,
   Calendar,
   CreditCard,
-  Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
   Database,
   BookOpen,
   FileText,
-  Briefcase
+  Briefcase,
+  PanelLeft,
 } from "lucide-react";
 
 export const Sidebar: React.FC = () => {
@@ -35,20 +35,26 @@ export const Sidebar: React.FC = () => {
     resetDatabase
   } = useSimulation();
 
-  // Find current user profile names
   const activeStudent = students.find(s => s.id === currentStudentId);
   const activeFaculty = faculty.find(f => f.id === currentFacultyId);
 
   const getUserName = () => {
     if (currentRole === "Admin") return "Admin Control";
-    if (currentRole === "Faculty") return activeFaculty?.name || "Dr. Amit Verma";
+    if (currentRole === "Faculty" || currentRole === "HOD") return activeFaculty?.name || "Dr. Amit Verma";
     return activeStudent?.name || "Rahul Sharma";
   };
 
   const getUserSub = () => {
     if (currentRole === "Admin") return "Super User";
-    if (currentRole === "Faculty") return activeFaculty?.employeeId || "EMP-CS203";
+    if (currentRole === "Faculty" || currentRole === "HOD") return activeFaculty?.employeeId || "EMP-CS203";
     return activeStudent?.rollNo || "2026CSE001";
+  };
+
+  const getRoleBadgeClass = () => {
+    if (currentRole === "Admin") return "dark:text-purple-400 text-purple-700 dark:bg-purple-500/10 bg-purple-50 dark:border-purple-500/20 border-purple-200";
+    if (currentRole === "Faculty") return "dark:text-blue-400 text-blue-700 dark:bg-blue-500/10 bg-blue-50 dark:border-blue-500/20 border-blue-200";
+    if (currentRole === "HOD") return "dark:text-amber-400 text-amber-700 dark:bg-amber-500/10 bg-amber-50 dark:border-amber-500/20 border-amber-200";
+    return "dark:text-emerald-400 text-emerald-700 dark:bg-emerald-500/10 bg-emerald-50 dark:border-emerald-500/20 border-emerald-200";
   };
 
   type NavItem = { name: string; href: string; icon: React.ElementType };
@@ -133,12 +139,34 @@ export const Sidebar: React.FC = () => {
     }
   ];
 
+  const hodNav: NavGroup[] = [
+    {
+      section: "Overview",
+      items: [
+        { name: "Dashboard", href: "/hod/dashboard", icon: LayoutDashboard },
+      ]
+    },
+    {
+      section: "People",
+      items: [
+        { name: "Student Registry", href: "/hod/students", icon: Users },
+        { name: "Faculty Roster", href: "/hod/faculty", icon: GraduationCap },
+      ]
+    },
+    {
+      section: "Academics",
+      items: [
+        { name: "Class Schedules", href: "/hod/classes", icon: BookOpen },
+        { name: "Attendance Registry", href: "/hod/attendance", icon: Calendar },
+      ]
+    }
+  ];
+
   const navGroups =
-    currentRole === "Admin"
-      ? adminNav
-      : currentRole === "Faculty"
-      ? facultyNav
-      : studentNav;
+    currentRole === "Admin" ? adminNav :
+    currentRole === "Faculty" ? facultyNav :
+    currentRole === "HOD" ? hodNav :
+    studentNav;
 
   const handleReset = () => {
     if (confirm("Reset simulation database to initial academic state?")) {
@@ -148,71 +176,94 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside
-      className={`hidden lg:flex flex-col border-r border-border-subtle bg-surface/95 backdrop-blur-xl transition-all duration-300 ease-in-out ${
-        collapsed ? "w-20" : "w-64"
-      } h-screen sticky top-0 text-text-secondary z-30`}
-    >
-      {/* Brand Header */}
-      <div className="flex h-16 items-center justify-between px-4 border-b border-border-subtle/50">
+    <aside className={`hidden lg:flex flex-col border-r border-border-subtle bg-surface/98 backdrop-blur-xl transition-all duration-300 ease-in-out ${
+      collapsed ? "w-[68px]" : "w-[232px]"
+    } h-screen sticky top-0 z-30`}>
+
+      {/* Brand / Logo */}
+      <div className={`flex h-14 items-center border-b border-border-subtle/60 shrink-0 ${collapsed ? "justify-center px-4" : "justify-between px-4"}`}>
         {!collapsed && (
-          <div className="flex items-center gap-3 min-w-0 pl-1">
-            <img 
-              src="/college_logo.jpeg" 
-              className="w-7 h-7 rounded-[8px] border border-border-strong object-cover bg-surface shadow-sm shrink-0" 
-              alt="SIET logo" 
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img
+              src="/college_logo.jpeg"
+              className="w-6 h-6 rounded-lg border border-border-strong object-cover bg-surface shadow-sm shrink-0"
+              alt="SIET logo"
             />
-            <span className="font-semibold text-[13px] text-text-primary tracking-wide truncate">
+            <span className="font-semibold text-[12px] text-text-primary tracking-wide truncate">
               SIET PORTAL
             </span>
           </div>
         )}
         {collapsed && (
-          <img 
-            src="/college_logo.jpeg" 
-            className="mx-auto w-7 h-7 rounded-[8px] border border-border-strong object-cover bg-surface shadow-sm" 
-            alt="SIET logo" 
+          <img
+            src="/college_logo.jpeg"
+            className="w-6 h-6 rounded-lg border border-border-strong object-cover bg-surface shadow-sm"
+            alt="SIET logo"
           />
         )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer"
-        >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </button>
+        {!collapsed && (
+          <button
+            onClick={() => setCollapsed(true)}
+            className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer shrink-0"
+            title="Collapse sidebar"
+          >
+            <PanelLeft size={14} />
+          </button>
+        )}
       </div>
 
-      {/* Role Tag & User Info */}
-      <div className={`px-4 py-4 ${collapsed ? "items-center" : ""} flex flex-col gap-3 border-b border-border-subtle/50`}>
+      {/* Expand button when collapsed */}
+      {collapsed && (
+        <div className="flex items-center justify-center py-2 border-b border-border-subtle/60">
+          <button
+            onClick={() => setCollapsed(false)}
+            className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer"
+            title="Expand sidebar"
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* User profile block */}
+      <div className={`px-3 py-3 border-b border-border-subtle/60 shrink-0 ${collapsed ? "flex justify-center" : ""}`}>
         {!collapsed ? (
-          <div className="flex items-center gap-3 w-full group cursor-pointer hover:bg-surface-hover p-1.5 -ml-1.5 rounded-lg transition-colors">
-            <div className="w-9 h-9 rounded-full bg-accent-blue-soft border border-accent-blue/30 flex items-center justify-center font-bold text-accent-blue">
+          <div className="flex items-center gap-2.5 group cursor-pointer hover:bg-surface-hover p-1.5 -mx-1.5 rounded-lg transition-colors">
+            <div className="w-8 h-8 rounded-lg bg-accent-blue/10 border border-accent-blue/20 flex items-center justify-center font-bold text-sm text-accent-blue shrink-0">
               {getUserName().charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-semibold text-text-primary truncate">
-                {getUserName()}
-              </h4>
-              <p className="text-[10px] text-text-muted truncate mt-0.5">
-                {currentRole} • {getUserSub()}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <h4 className="text-[12px] font-semibold text-text-primary truncate leading-none">
+                  {getUserName()}
+                </h4>
+              </div>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider border ${getRoleBadgeClass()}`}>
+                  {currentRole}
+                </span>
+                <span className="text-[10px] text-text-muted truncate font-mono">{getUserSub()}</span>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="w-9 h-9 rounded-full bg-accent-blue-soft border border-accent-blue/30 flex items-center justify-center font-bold text-accent-blue shrink-0 mx-auto">
+          <div className="w-8 h-8 rounded-lg bg-accent-blue/10 border border-accent-blue/20 flex items-center justify-center font-bold text-sm text-accent-blue cursor-pointer hover:bg-accent-blue/15 transition-colors">
             {getUserName().charAt(0)}
           </div>
         )}
       </div>
 
-      {/* Nav links */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 custom-scrollbar space-y-6">
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2 custom-scrollbar space-y-5">
         {navGroups.map((group, groupIdx) => (
-          <div key={groupIdx} className="space-y-1">
+          <div key={groupIdx}>
             {!collapsed && (
-              <h3 className="px-3 text-[10px] font-bold text-text-muted uppercase tracking-wider mb-2">
+              <h3 className="px-2 text-[9px] font-black text-text-muted uppercase tracking-[0.12em] mb-1.5 select-none">
                 {group.section}
               </h3>
+            )}
+            {collapsed && groupIdx > 0 && (
+              <div className="mx-auto w-4 h-px bg-border-subtle mb-3" />
             )}
             <div className="space-y-0.5">
               {group.items.map(link => {
@@ -222,17 +273,23 @@ export const Sidebar: React.FC = () => {
                   <Link
                     key={link.name}
                     href={link.href}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all group ${
+                    title={collapsed ? link.name : undefined}
+                    className={`relative flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 group ${
                       isActive
-                        ? "bg-surface-elevated text-accent-blue border border-border-subtle shadow-sm"
-                        : "text-text-secondary hover:text-text-primary hover:bg-surface-hover border border-transparent"
-                    }`}
+                        ? "bg-accent-blue/8 text-accent-blue"
+                        : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
+                    } ${collapsed ? "justify-center" : ""}`}
                   >
-                    <Icon 
-                      size={16} 
-                      className={`${isActive ? "text-accent-blue" : "text-text-muted group-hover:text-text-secondary"}`} 
+                    {/* Left active bar */}
+                    {isActive && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-accent-blue" />
+                    )}
+                    <Icon
+                      size={15}
+                      strokeWidth={isActive ? 2.5 : 2}
+                      className={isActive ? "text-accent-blue shrink-0" : "text-text-muted group-hover:text-text-secondary shrink-0 transition-colors"}
                     />
-                    {!collapsed && <span>{link.name}</span>}
+                    {!collapsed && <span className="truncate">{link.name}</span>}
                   </Link>
                 );
               })}
@@ -241,24 +298,26 @@ export const Sidebar: React.FC = () => {
         ))}
       </nav>
 
-      {/* Action triggers */}
-      <div className="p-3 border-t border-border-subtle/50 space-y-1">
+      {/* Bottom actions */}
+      <div className={`p-2 border-t border-border-subtle/60 space-y-0.5 shrink-0 ${collapsed ? "items-center flex flex-col" : ""}`}>
         <button
           onClick={handleReset}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-surface-hover transition cursor-pointer group"
+          title={collapsed ? "Reset Database" : undefined}
+          className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-medium text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer group w-full ${collapsed ? "justify-center" : ""}`}
         >
-          <Database size={16} className="text-text-muted group-hover:text-text-secondary" />
+          <Database size={14} className="text-text-muted group-hover:text-text-secondary transition-colors shrink-0" />
           {!collapsed && <span>Reset Database</span>}
         </button>
-        
+
         <button
           onClick={async () => {
             await logout();
             router.push("/");
           }}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-text-secondary hover:text-danger hover:bg-danger-soft transition cursor-pointer text-left group"
+          title={collapsed ? "Log Out" : undefined}
+          className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-medium text-text-secondary hover:text-danger hover:bg-danger/5 transition-colors cursor-pointer text-left group w-full ${collapsed ? "justify-center" : ""}`}
         >
-          <LogOut size={16} className="text-text-muted group-hover:text-danger" />
+          <LogOut size={14} className="text-text-muted group-hover:text-danger transition-colors shrink-0" />
           {!collapsed && <span>Log Out</span>}
         </button>
       </div>

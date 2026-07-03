@@ -20,3 +20,9 @@ export const studentDashboard = asyncHandler(async (req: Request, res: Response)
   const stats = await dashboardService.getStudentDashboardStats(req.user!.id);
   sendSuccess(res, stats);
 });
+
+// GET /api/dashboard/hod
+export const hodDashboard = asyncHandler(async (req: Request, res: Response) => {
+  const stats = await dashboardService.getHODDashboardStats(req.user!.id);
+  sendSuccess(res, stats);
+});

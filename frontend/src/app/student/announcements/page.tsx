@@ -102,13 +102,13 @@ export default function StudentAnnouncements() {
   const getPriorityBadgeStyle = (priority: string) => {
     switch (priority) {
       case "Urgent":
-        return "bg-rose-500/10 text-rose-400 border-rose-500/20 animate-pulse";
+        return "dark:bg-rose-500/10 bg-rose-50 dark:text-rose-400 text-rose-700 dark:border-rose-500/20 border-rose-200 animate-pulse";
       case "High":
-        return "bg-amber-500/10 text-amber-400 border-amber-500/20";
+        return "dark:bg-amber-500/10 bg-amber-50 dark:text-amber-400 text-amber-700 dark:border-amber-500/20 border-amber-200";
       case "Medium":
-        return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+        return "dark:bg-blue-500/10 bg-blue-50 dark:text-blue-400 text-blue-700 dark:border-blue-500/20 border-blue-200";
       default:
-        return "bg-neutral-800 text-neutral-400 border-neutral-700";
+        return "dark:bg-neutral-800 bg-surface-elevated dark:text-neutral-400 text-text-secondary dark:border-neutral-700 border-border-subtle";
     }
   };
 
@@ -130,26 +130,26 @@ export default function StudentAnnouncements() {
     <div className="space-y-6 max-w-2xl mx-auto pb-12">
       {/* Header */}
       <div>
-        <h2 className="font-display font-bold text-2xl text-white">Campus Notices</h2>
-        <p className="text-xs text-neutral-400 mt-1">
+        <h2 className="font-display font-bold text-2xl dark:text-white text-text-primary">Campus Notices</h2>
+        <p className="text-xs dark:text-neutral-400 text-text-secondary mt-1">
           Stay updated with official department schedules, exam warnings, and institutional listings.
         </p>
       </div>
 
       {/* Urgent Notice Banner Widget */}
       {urgentNotice && (
-        <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 space-y-2 relative overflow-hidden animate-pulse">
-          <div className="flex items-center gap-2 text-rose-400">
+        <div className="p-4 rounded-xl border dark:border-rose-500/30 border-rose-500/20 dark:bg-rose-500/5 bg-rose-50/50 space-y-2 relative overflow-hidden animate-pulse">
+          <div className="flex items-center gap-2 dark:text-rose-400 text-rose-700">
             <AlertTriangle size={16} />
             <h4 className="text-xs font-bold font-display uppercase tracking-wider">Urgent Broadcast notice</h4>
           </div>
-          <h3 className="text-sm font-bold text-white leading-snug">{urgentNotice.title}</h3>
-          <p className="text-[11px] text-neutral-350 leading-relaxed truncate-2-lines">
+          <h3 className="text-sm font-bold dark:text-white text-text-primary leading-snug">{urgentNotice.title}</h3>
+          <p className="text-[11px] dark:text-neutral-350 text-text-secondary leading-relaxed truncate-2-lines">
             {urgentNotice.content}
           </p>
           <button
             onClick={() => toggleExpand(urgentNotice.id)}
-            className="text-[10px] text-rose-400 font-bold uppercase tracking-wider hover:underline"
+            className="text-[10px] dark:text-rose-400 text-rose-750 font-bold uppercase tracking-wider hover:underline animate-none"
           >
             {expandedId === urgentNotice.id ? "Minimize Notice" : "Read Full Notice"}
           </button>
@@ -157,27 +157,27 @@ export default function StudentAnnouncements() {
       )}
 
       {/* Search & Priority Filters */}
-      <div className="glass-card border border-neutral-800 rounded-xl p-4 flex flex-col sm:flex-row gap-3">
+      <div className="glass-card border dark:border-neutral-800 border-border-subtle rounded-xl p-4 flex flex-col sm:flex-row gap-3">
         {/* Title Search */}
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-neutral-500" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 dark:text-neutral-500 text-text-muted" />
           <input
             type="text"
             placeholder="Search notice title..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-blue-600 transition"
+            className="w-full pl-9 pr-4 py-2 text-xs dark:bg-neutral-950 bg-surface border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
           />
         </div>
 
         {/* Priority Filter */}
-        <div className="w-full sm:w-48 flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-2.5 text-xs text-white">
-          <Filter size={12} className="text-neutral-500" />
-          <span className="text-neutral-500">Priority:</span>
+        <div className="w-full sm:w-48 flex items-center gap-2 dark:bg-neutral-950 bg-surface border dark:border-neutral-850 border-border-subtle rounded px-2.5 text-xs dark:text-white text-text-primary">
+          <Filter size={12} className="dark:text-neutral-500 text-text-muted" />
+          <span className="dark:text-neutral-500 text-text-muted">Priority:</span>
           <select
             value={priorityFilter}
             onChange={e => setPriorityFilter(e.target.value)}
-            className="bg-transparent text-white cursor-pointer py-2 flex-1 focus:outline-none"
+            className="bg-transparent dark:text-white text-text-primary cursor-pointer py-2 flex-1 focus:outline-none"
           >
             <option value="ALL">All Levels</option>
             <option value="Urgent">Urgent</option>
@@ -191,25 +191,25 @@ export default function StudentAnnouncements() {
       {/* Notices Feed */}
       <div className="space-y-4">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 glass-card border border-neutral-850 rounded-xl">
+          <div className="flex flex-col items-center justify-center py-12 glass-card border border-border-subtle rounded-xl">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            <p className="text-xs text-neutral-500 mt-2 font-mono">Syncing broadcast registry...</p>
+            <p className="text-xs text-text-muted mt-2 font-mono">Syncing broadcast registry...</p>
           </div>
         ) : error ? (
-          <div className="p-6 text-center glass-card border border-rose-950/20 bg-rose-500/[0.02] rounded-xl">
+          <div className="p-6 text-center glass-card border dark:border-rose-955/20 border-rose-500/20 bg-rose-505/[0.02] rounded-xl">
             <AlertTriangle className="w-8 h-8 mx-auto text-rose-500 mb-2" />
-            <p className="text-xs text-rose-400 font-semibold">{error}</p>
+            <p className="text-xs dark:text-rose-400 text-rose-700 font-semibold">{error}</p>
             <button
               onClick={fetchAnnouncements}
-              className="mt-3 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-neutral-800 hover:bg-neutral-750 text-white rounded transition"
+              className="mt-3 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider dark:bg-neutral-800 bg-surface-elevated hover:bg-surface-hover dark:text-white text-text-primary border dark:border-transparent border-border-subtle rounded transition"
             >
               Retry Sync
             </button>
           </div>
         ) : announcements.length === 0 ? (
-          <div className="p-8 text-center glass-card border border-neutral-800 rounded-xl">
-            <Info className="w-8 h-8 mx-auto text-neutral-600 mb-2" />
-            <p className="text-xs text-neutral-500 font-mono">No campus notices targeted to your profile.</p>
+          <div className="p-8 text-center glass-card border border-border-subtle rounded-xl">
+            <Info className="w-8 h-8 mx-auto text-text-muted mb-2" />
+            <p className="text-xs text-text-muted font-mono">No campus notices targeted to your profile.</p>
           </div>
         ) : (
           <div className="space-y-3.5">
@@ -221,10 +221,10 @@ export default function StudentAnnouncements() {
                   key={ann.id}
                   className={`glass-card border rounded-xl overflow-hidden transition-all duration-200 ${
                     ann.priority === "Urgent"
-                      ? "border-rose-950/50 bg-rose-500/[0.005]"
+                      ? "dark:border-rose-955/50 border-rose-200 bg-rose-505/[0.005]"
                       : ann.priority === "High"
-                      ? "border-amber-950/40"
-                      : "border-neutral-850"
+                      ? "dark:border-amber-955/40 border-amber-200"
+                      : "dark:border-neutral-850 border-border-subtle"
                   }`}
                 >
                   {/* Card Header Row */}
@@ -243,40 +243,40 @@ export default function StudentAnnouncements() {
                           <span>{ann.priority} Priority</span>
                         </span>
                         {ann.departmentName && (
-                          <span className="px-2 py-0.5 rounded text-[8px] font-bold border border-blue-900/30 bg-blue-900/10 text-blue-400 font-mono">
+                          <span className="px-2 py-0.5 rounded text-[8px] font-bold border dark:border-blue-900/30 border-blue-200 dark:bg-blue-900/10 bg-blue-50 dark:text-blue-400 text-blue-700 font-mono">
                             {ann.departmentName}
                           </span>
                         )}
                         {ann.semester && (
-                          <span className="px-2 py-0.5 rounded text-[8px] font-bold border border-indigo-900/30 bg-indigo-900/10 text-indigo-400 font-mono">
+                          <span className="px-2 py-0.5 rounded text-[8px] font-bold border dark:border-indigo-900/30 border-indigo-200 dark:bg-indigo-900/10 bg-indigo-50 dark:text-indigo-400 text-indigo-700 font-mono">
                             Semester {ann.semester}
                           </span>
                         )}
                       </div>
-                      <h4 className="text-sm font-bold text-white leading-tight">{ann.title}</h4>
-                      <div className="flex items-center gap-1.5 text-[9px] text-neutral-500 font-mono">
-                        <Calendar size={11} className="text-neutral-600" />
+                      <h4 className="text-sm font-bold dark:text-white text-text-primary leading-tight">{ann.title}</h4>
+                      <div className="flex items-center gap-1.5 text-[9px] dark:text-neutral-500 text-text-muted font-mono">
+                        <Calendar size={11} className="dark:text-neutral-600 text-text-muted" />
                         <span>Posted on: {ann.publishDate}</span>
                         <span>•</span>
                         <span>By: {ann.createdByName}</span>
                       </div>
                     </div>
 
-                    <div className="text-neutral-500 hover:text-white transition shrink-0 mt-0.5">
+                    <div className="dark:text-neutral-500 text-text-secondary dark:hover:text-white hover:text-text-primary transition shrink-0 mt-0.5">
                       {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </div>
                   </div>
 
                   {/* Expandable Body */}
                   {isExpanded && (
-                    <div className="bg-neutral-950/60 border-t border-neutral-900 p-5 space-y-3">
-                      <p className="text-xs text-neutral-300 leading-relaxed font-sans whitespace-pre-wrap">
+                    <div className="dark:bg-neutral-950/60 bg-surface-elevated border-t dark:border-neutral-900 border-border-subtle p-5 space-y-3">
+                      <p className="text-xs dark:text-neutral-300 text-text-secondary leading-relaxed font-sans whitespace-pre-wrap">
                         {ann.content}
                       </p>
                       
                       {ann.expiryDate && (
-                        <div className="flex items-center gap-1.5 text-[10px] text-neutral-500 font-mono pt-2 border-t border-neutral-900/50">
-                          <Clock size={11} className="text-neutral-600" />
+                        <div className="flex items-center gap-1.5 text-[10px] dark:text-neutral-500 text-text-muted font-mono pt-2 border-t dark:border-neutral-900/50 border-border-subtle/50">
+                          <Clock size={11} className="dark:text-neutral-600 text-text-muted" />
                           <span>Notice validity expires: {ann.expiryDate}</span>
                         </div>
                       )}
@@ -292,21 +292,21 @@ export default function StudentAnnouncements() {
       {/* Pagination Controls */}
       {totalPages > 1 && !loading && (
         <div className="flex items-center justify-between pt-2 select-none">
-          <span className="text-[10px] text-neutral-500 font-mono">
+          <span className="text-[10px] dark:text-neutral-500 text-text-muted font-mono">
             Page {page} of {totalPages} ({totalRecords} total)
           </span>
           <div className="flex items-center gap-1.5">
             <button
               disabled={page <= 1}
               onClick={() => setPage(p => Math.max(p - 1, 1))}
-              className="px-2.5 py-1.5 rounded bg-neutral-900 border border-neutral-800 text-[10px] font-bold uppercase hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition text-neutral-300 cursor-pointer"
+              className="px-2.5 py-1.5 rounded dark:bg-neutral-900 bg-surface-elevated border dark:border-neutral-800 border-border-subtle text-[10px] font-bold uppercase dark:hover:bg-neutral-800 hover:bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed transition dark:text-neutral-300 text-text-secondary cursor-pointer"
             >
               Prev
             </button>
             <button
               disabled={page >= totalPages}
               onClick={() => setPage(p => Math.min(p + 1, totalPages))}
-              className="px-2.5 py-1.5 rounded bg-neutral-900 border border-neutral-800 text-[10px] font-bold uppercase hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition text-neutral-300 cursor-pointer"
+              className="px-2.5 py-1.5 rounded dark:bg-neutral-900 bg-surface-elevated border dark:border-neutral-800 border-border-subtle text-[10px] font-bold uppercase dark:hover:bg-neutral-800 hover:bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed transition dark:text-neutral-300 text-text-secondary cursor-pointer"
             >
               Next
             </button>

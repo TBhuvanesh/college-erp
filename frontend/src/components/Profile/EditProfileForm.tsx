@@ -88,31 +88,31 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
   };
 
   return (
-    <div className="glass-card rounded-xl border border-neutral-850 p-6">
-      <h3 className="font-display font-bold text-white text-sm uppercase tracking-wider mb-4 border-b border-neutral-900 pb-2 flex items-center gap-2">
+    <div className="glass-card rounded-xl border dark:border-neutral-850 border-border-subtle p-6">
+      <h3 className="font-display font-bold dark:text-white text-text-primary text-sm uppercase tracking-wider mb-4 border-b dark:border-neutral-900 border-border-subtle pb-2 flex items-center gap-2">
         <Mail size={16} className="text-blue-400" />
         <span>Contact Information</span>
       </h3>
 
       {/* Notifications */}
       {error && (
-        <div className="p-3 mb-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold">
+        <div className="p-3 mb-4 rounded-lg dark:bg-rose-500/10 bg-rose-50 border dark:border-rose-500/20 border-rose-205 dark:text-rose-455 text-rose-700 text-xs font-semibold">
           {error}
         </div>
       )}
       {successMsg && (
-        <div className="p-3 mb-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+        <div className="p-3 mb-4 rounded-lg dark:bg-emerald-500/10 bg-emerald-50 border dark:border-emerald-500/20 border-emerald-205 dark:text-emerald-400 text-emerald-700 text-xs font-semibold">
           {successMsg}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">
+          <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">
             Email Address <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-neutral-500 pointer-events-none">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center dark:text-neutral-500 text-text-muted pointer-events-none">
               <Mail size={14} />
             </span>
             <input
@@ -120,29 +120,29 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+              className="w-full pl-9 pr-3 py-2 text-xs dark:bg-neutral-950 bg-surface border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
               placeholder="name@university.edu"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">
+          <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">
             Phone Number
           </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-neutral-500 pointer-events-none">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center dark:text-neutral-500 text-text-muted pointer-events-none">
               <Phone size={14} />
             </span>
             <input
               type="tel"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+              className="w-full pl-9 pr-3 py-2 text-xs dark:bg-neutral-950 bg-surface border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
               placeholder="+1 (555) 019-2834"
             />
           </div>
-          <span className="text-[9px] text-neutral-500 mt-1 block leading-normal">
+          <span className="text-[9px] dark:text-neutral-500 text-text-muted mt-1 block leading-normal">
             Minimum 7 digits. Allowed: spaces, dashes, parentheses, +, .
           </span>
         </div>

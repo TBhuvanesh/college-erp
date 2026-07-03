@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { RadialBarChart, RadialBar, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 // ----------------------------------------------------
 // Circular Attendance Radial Chart
@@ -32,15 +32,21 @@ export const AttendanceRadialChart: React.FC<AttendanceRadialChartProps> = ({ pe
           startAngle={90} 
           endAngle={-270}
         >
+          <PolarAngleAxis
+            type="number"
+            domain={[0, 100]}
+            angleAxisId={0}
+            tick={false}
+          />
           <RadialBar
-            background={{ fill: '#262626' }}
+            background={{ fill: 'var(--border-subtle)' }}
             dataKey="value"
             cornerRadius={10}
           />
         </RadialBarChart>
       </ResponsiveContainer>
       <div className="absolute flex flex-col items-center justify-center pointer-events-none">
-        <span className="font-display text-xl font-bold text-white">{percentage}%</span>
+        <span className="font-display text-xl font-bold dark:text-white text-text-primary">{percentage}%</span>
         <span className="text-[9px] text-neutral-500 uppercase tracking-widest font-semibold">ATT</span>
       </div>
     </div>
@@ -66,9 +72,9 @@ export const CGPATrendChart: React.FC<CGPATrendChartProps> = ({ data }) => {
             </linearGradient>
           </defs>
           <Tooltip 
-            contentStyle={{ backgroundColor: '#171717', borderColor: '#262626', fontSize: '12px', borderRadius: '8px' }}
-            itemStyle={{ color: '#60a5fa' }}
-            cursor={{ stroke: '#404040', strokeWidth: 1, strokeDasharray: '4 4' }}
+            contentStyle={{ backgroundColor: 'var(--surface-elevated)', borderColor: 'var(--border-subtle)', color: 'var(--text-primary)', fontSize: '12px', borderRadius: '8px' }}
+            itemStyle={{ color: 'var(--accent-blue)' }}
+            cursor={{ stroke: 'var(--border-strong)', strokeWidth: 1, strokeDasharray: '4 4' }}
           />
           <XAxis dataKey="semester" hide />
           <YAxis domain={[5, 10]} hide />

@@ -309,7 +309,7 @@ export default function FacultyResults() {
 
   if (loadingAssignments) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-neutral-400">
+      <div className="flex flex-col items-center justify-center py-20 dark:text-neutral-400 text-text-secondary">
         <Loader2 className="animate-spin text-blue-500 mb-3" size={30} />
         <span className="font-mono text-xs">Loading faculty workload mappings...</span>
       </div>
@@ -328,8 +328,8 @@ export default function FacultyResults() {
 
       {/* Header */}
       <div className="mb-6">
-        <h2 className="font-display font-bold text-2xl text-white">Results Marks Workspace</h2>
-        <p className="text-xs text-neutral-400 mt-1">
+        <h2 className="font-display font-bold text-2xl dark:text-white text-text-primary">Results Marks Workspace</h2>
+        <p className="text-xs dark:text-neutral-400 text-text-secondary mt-1">
           Input and update student internal and external marks. Submitted rosters are saved as drafts until published.
         </p>
       </div>
@@ -345,17 +345,17 @@ export default function FacultyResults() {
         {/* Workspace Form (Left 75%) */}
         <div className="flex-1 w-full space-y-6">
           {/* Workload Assignment selectors and Form settings */}
-          <div className="glass-card border border-neutral-800 rounded-xl p-4 space-y-4">
+          <div className="glass-card border border-border-subtle rounded-xl p-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {/* Subject Select */}
-              <div className="flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-3 text-xs text-white">
-                <BookOpen size={12} className="text-neutral-500 shrink-0" />
-                <span className="text-neutral-500 whitespace-nowrap">Subject:</span>
+              <div className="flex items-center gap-2 dark:bg-neutral-955 bg-surface border dark:border-neutral-850 border-border-subtle rounded px-3 text-xs dark:text-white text-text-primary">
+                <BookOpen size={12} className="dark:text-neutral-500 text-text-muted shrink-0" />
+                <span className="dark:text-neutral-500 text-text-muted whitespace-nowrap">Subject:</span>
                 {uniqueSubjects.length > 0 ? (
                   <select
                     value={selectedSubjId}
                     onChange={(e) => setSelectedSubjId(e.target.value)}
-                    className="bg-transparent text-white cursor-pointer py-2.5 flex-1 focus:outline-none font-semibold"
+                    className="bg-transparent dark:text-white text-text-primary cursor-pointer py-2.5 flex-1 focus:outline-none font-semibold"
                   >
                     {uniqueSubjects.map((sub) => (
                       <option key={sub.id} value={sub.id}>
@@ -364,19 +364,19 @@ export default function FacultyResults() {
                     ))}
                   </select>
                 ) : (
-                  <span className="py-2.5 text-neutral-500 font-mono">No Subject Assigned</span>
+                  <span className="py-2.5 dark:text-neutral-500 text-text-muted font-mono">No Subject Assigned</span>
                 )}
               </div>
 
               {/* Section Select */}
-              <div className="flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-3 text-xs text-white">
-                <Users size={12} className="text-neutral-500 shrink-0" />
-                <span className="text-neutral-500">Section:</span>
+              <div className="flex items-center gap-2 dark:bg-neutral-955 bg-surface border dark:border-neutral-850 border-border-subtle rounded px-3 text-xs dark:text-white text-text-primary">
+                <Users size={12} className="dark:text-neutral-505 text-text-muted shrink-0" />
+                <span className="dark:text-neutral-505 text-text-muted">Section:</span>
                 {sectionsForSelectedSubject.length > 0 ? (
                   <select
                     value={selectedSection}
                     onChange={(e) => setSelectedSection(e.target.value)}
-                    className="bg-transparent text-white cursor-pointer py-2.5 flex-1 focus:outline-none font-bold"
+                    className="bg-transparent dark:text-white text-text-primary cursor-pointer py-2.5 flex-1 focus:outline-none font-bold"
                   >
                     {sectionsForSelectedSubject.map((sec) => (
                       <option key={sec} value={sec}>
@@ -385,27 +385,27 @@ export default function FacultyResults() {
                     ))}
                   </select>
                 ) : (
-                  <span className="py-2.5 text-neutral-500 font-mono">N/A</span>
+                  <span className="py-2.5 dark:text-neutral-500 text-text-muted font-mono">N/A</span>
                 )}
               </div>
 
               {/* Search input */}
               <div className="relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-neutral-500" />
+                <Search className="absolute left-3 top-3 w-4 h-4 dark:text-neutral-500 text-text-muted" />
                 <input
                   type="text"
                   placeholder="Search by name or roll..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-neutral-700"
+                  className="w-full pl-9 pr-4 py-2.5 text-xs dark:bg-neutral-955 bg-surface border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                 />
               </div>
             </div>
 
             {/* Max Marks configuration inputs */}
-            <div className="pt-3 border-t border-neutral-900 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="pt-3 border-t dark:border-neutral-900 border-border-subtle grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] uppercase font-bold text-neutral-500 flex items-center gap-1">
+                <label className="text-[10px] uppercase font-bold dark:text-neutral-500 text-text-muted flex items-center gap-1">
                   <Settings size={10} />
                   <span>Internal Max Marks</span>
                 </label>
@@ -416,14 +416,14 @@ export default function FacultyResults() {
                     max="200"
                     value={internalMax}
                     onChange={(e) => setInternalMax(e.target.value)}
-                    className="w-24 bg-neutral-950 border border-neutral-850 rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-neutral-700"
+                    className="w-24 dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded px-2.5 py-1.5 text-xs dark:text-white text-text-primary font-mono focus:outline-none focus:border-blue-600 transition"
                   />
-                  <span className="text-[10px] text-neutral-500">Recommended Theory: 30, Lab: 50</span>
+                  <span className="text-[10px] dark:text-neutral-500 text-text-muted">Recommended Theory: 30, Lab: 50</span>
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] uppercase font-bold text-neutral-500 flex items-center gap-1">
+                <label className="text-[10px] uppercase font-bold dark:text-neutral-500 text-text-muted flex items-center gap-1">
                   <Settings size={10} />
                   <span>External Max Marks</span>
                 </label>
@@ -434,9 +434,9 @@ export default function FacultyResults() {
                     max="200"
                     value={externalMax}
                     onChange={(e) => setExternalMax(e.target.value)}
-                    className="w-24 bg-neutral-950 border border-neutral-850 rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-neutral-700"
+                    className="w-24 dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded px-2.5 py-1.5 text-xs dark:text-white text-text-primary font-mono focus:outline-none focus:border-blue-600 transition"
                   />
-                  <span className="text-[10px] text-neutral-500">Recommended Theory: 70, Lab: 50</span>
+                  <span className="text-[10px] dark:text-neutral-500 text-text-muted">Recommended Theory: 70, Lab: 50</span>
                 </div>
               </div>
             </div>
@@ -459,20 +459,20 @@ export default function FacultyResults() {
                       key={student.studentId}
                       className={`glass-card border rounded-xl p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 transition ${
                         isPublished 
-                          ? "border-neutral-900 bg-neutral-950/20" 
-                          : "border-neutral-800 hover:border-neutral-700"
+                          ? "dark:border-neutral-900 border-border-subtle dark:bg-neutral-950/20 bg-neutral-100/20" 
+                          : "border-border-subtle dark:hover:border-neutral-700 hover:border-border-strong"
                       }`}
                     >
                       {/* Left: Info */}
                       <div className="flex items-center gap-3 min-w-[240px]">
-                        <div className="w-9 h-9 rounded-full bg-neutral-900 border border-neutral-850 flex items-center justify-center font-bold text-blue-400 shrink-0">
+                        <div className="w-9 h-9 rounded-full dark:bg-neutral-900 bg-neutral-100 border dark:border-neutral-850 border-border-subtle flex items-center justify-center font-bold text-blue-400 shrink-0">
                           {student.fullName.charAt(0)}
                         </div>
                         <div>
-                          <h4 className="text-xs font-bold text-white leading-tight">{student.fullName}</h4>
+                          <h4 className="text-xs font-bold dark:text-white text-text-primary leading-tight">{student.fullName}</h4>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[9px] text-neutral-500 font-mono">Roll: {student.rollNumber}</span>
-                            <span className="text-neutral-700">•</span>
+                            <span className="text-[9px] dark:text-neutral-500 text-text-muted font-mono">Roll: {student.rollNumber}</span>
+                            <span className="dark:text-neutral-700 text-neutral-300">•</span>
                             {isPublished ? (
                               <span className="flex items-center gap-0.5 text-[8px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1">
                                 <Lock size={8} /> Published
@@ -482,7 +482,7 @@ export default function FacultyResults() {
                                 <Unlock size={8} /> Draft Saved
                               </span>
                             ) : (
-                              <span className="text-[8px] text-neutral-600 italic">No entry</span>
+                              <span className="text-[8px] dark:text-neutral-600 text-text-muted italic">No entry</span>
                             )}
                           </div>
                         </div>
@@ -492,7 +492,7 @@ export default function FacultyResults() {
                       <div className="flex-1 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end sm:items-center">
                         {/* Internal Marks Input */}
                         <div>
-                          <label className="text-[9px] text-neutral-500 uppercase font-bold block sm:hidden">Internal Marks</label>
+                          <label className="text-[9px] dark:text-neutral-500 text-text-muted uppercase font-bold block sm:hidden">Internal Marks</label>
                           <div className="flex items-center gap-1.5 mt-1 sm:mt-0">
                             <input
                               type="number"
@@ -503,15 +503,15 @@ export default function FacultyResults() {
                               onChange={(e) =>
                                 handleRecordChange(student.studentId, "internalMarks", e.target.value)
                               }
-                              className="w-16 bg-neutral-950 border border-neutral-850 disabled:bg-neutral-900 disabled:text-neutral-600 rounded px-2 py-1 text-xs text-white font-mono text-center focus:outline-none focus:border-neutral-700"
+                              className="w-16 dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle dark:disabled:bg-neutral-900 disabled:bg-neutral-100 dark:disabled:text-neutral-600 disabled:text-neutral-400 rounded px-2 py-1 text-xs dark:text-white text-text-primary font-mono text-center focus:outline-none focus:border-blue-600 transition"
                             />
-                            <span className="text-[10px] text-neutral-600">/ {internalMax}</span>
+                            <span className="text-[10px] dark:text-neutral-600 text-text-muted">/ {internalMax}</span>
                           </div>
                         </div>
 
                         {/* External Marks Input */}
                         <div>
-                          <label className="text-[9px] text-neutral-500 uppercase font-bold block sm:hidden">External Marks</label>
+                          <label className="text-[9px] dark:text-neutral-500 text-text-muted uppercase font-bold block sm:hidden">External Marks</label>
                           <div className="flex items-center gap-1.5 mt-1 sm:mt-0">
                             <input
                               type="number"
@@ -522,9 +522,9 @@ export default function FacultyResults() {
                               onChange={(e) =>
                                 handleRecordChange(student.studentId, "externalMarks", e.target.value)
                               }
-                              className="w-16 bg-neutral-950 border border-neutral-850 disabled:bg-neutral-900 disabled:text-neutral-600 rounded px-2 py-1 text-xs text-white font-mono text-center focus:outline-none focus:border-neutral-700"
+                              className="w-16 dark:bg-neutral-955 bg-background border dark:border-neutral-855 border-border-subtle dark:disabled:bg-neutral-900 disabled:bg-neutral-100 dark:disabled:text-neutral-600 disabled:text-neutral-400 rounded px-2 py-1 text-xs dark:text-white text-text-primary font-mono text-center focus:outline-none focus:border-blue-600 transition"
                             />
-                            <span className="text-[10px] text-neutral-600">/ {externalMax}</span>
+                            <span className="text-[10px] dark:text-neutral-600 text-text-muted">/ {externalMax}</span>
                           </div>
                         </div>
 
@@ -538,12 +538,12 @@ export default function FacultyResults() {
                             onChange={(e) =>
                               handleRecordChange(student.studentId, "isAbsent", e.target.checked)
                             }
-                            className="bg-neutral-950 border border-neutral-850 rounded text-blue-600 focus:ring-0 focus:ring-offset-0 disabled:opacity-40"
+                            className="dark:bg-neutral-950 bg-background border dark:border-neutral-850 border-border-subtle rounded text-blue-600 focus:ring-0 focus:ring-offset-0 disabled:opacity-40"
                           />
                           <label
                             htmlFor={`absent-${student.studentId}`}
                             className={`text-xs select-none cursor-pointer ${
-                              student.isAbsent ? "text-amber-500 font-bold" : "text-neutral-400"
+                              student.isAbsent ? "text-amber-550 font-bold" : "dark:text-neutral-400 text-text-secondary"
                             } ${isPublished ? "pointer-events-none opacity-40" : ""}`}
                           >
                             Mark Absent
@@ -560,7 +560,7 @@ export default function FacultyResults() {
                             onChange={(e) =>
                               handleRecordChange(student.studentId, "remarks", e.target.value)
                             }
-                            className="w-full bg-neutral-950 border border-neutral-850 disabled:bg-neutral-900 disabled:text-neutral-600 rounded px-2.5 py-1 text-xs text-white focus:outline-none focus:border-neutral-700 placeholder-neutral-700"
+                            className="w-full dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle dark:disabled:bg-neutral-900 disabled:bg-neutral-100 dark:disabled:text-neutral-600 disabled:text-neutral-400 rounded px-2.5 py-1 text-xs dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition dark:placeholder-neutral-700 placeholder-neutral-400"
                           />
                         </div>
                       </div>
@@ -568,7 +568,7 @@ export default function FacultyResults() {
                   );
                 })
               ) : (
-                <div className="p-12 text-center glass-card border border-neutral-800 text-neutral-500 font-mono text-xs">
+                <div className="p-12 text-center glass-card border border-border-subtle dark:text-neutral-500 text-text-muted font-mono text-xs">
                   {searchTerm
                     ? "No students match your query."
                     : "No students registered in workload section. Verify assignment details."}
@@ -578,16 +578,16 @@ export default function FacultyResults() {
 
             {/* Submission / Bottom Bar */}
             {records.length > 0 && (
-              <div className="glass-card border border-neutral-850 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-neutral-950/60 sticky bottom-20 lg:bottom-4 z-15 shadow-2xl">
-                <div className="text-xs text-neutral-400">
-                  Total Students: <strong className="text-white font-mono">{stats.total}</strong> • 
-                  Draft: <strong className="text-blue-400 font-mono">{stats.draft}</strong> • 
-                  Published: <strong className="text-emerald-400 font-mono">{stats.published}</strong> • 
-                  Absent: <strong className="text-amber-500 font-mono">{stats.absents}</strong>
+              <div className="glass-card border dark:border-neutral-850 border-border-subtle rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 dark:bg-neutral-955/65 bg-surface/95 sticky bottom-20 lg:bottom-4 z-15 shadow-2xl">
+                <div className="text-xs dark:text-neutral-400 text-text-secondary">
+                  Total Students: <strong className="dark:text-white text-text-primary font-mono">{stats.total}</strong> • 
+                  Draft: <strong className="dark:text-blue-400 text-blue-700 font-mono">{stats.draft}</strong> • 
+                  Published: <strong className="dark:text-emerald-400 text-emerald-700 font-mono">{stats.published}</strong> • 
+                  Absent: <strong className="dark:text-amber-500 text-amber-700 font-mono">{stats.absents}</strong>
                 </div>
 
                 {stats.published === stats.total ? (
-                  <div className="text-[10px] text-emerald-400 font-mono flex items-center gap-1.5 font-semibold bg-emerald-500/5 border border-emerald-500/10 rounded p-2">
+                  <div className="text-[10px] dark:text-emerald-400 text-emerald-700 font-mono flex items-center gap-1.5 font-semibold dark:bg-emerald-500/5 bg-emerald-50 border dark:border-emerald-500/10 border-emerald-200 rounded p-2">
                     <Lock size={12} />
                     <span>All marks for this section are published and locked.</span>
                   </div>
@@ -612,20 +612,20 @@ export default function FacultyResults() {
 
         {/* Sidebar Info (Right 25%) */}
         <div className="w-full lg:w-80 space-y-4 shrink-0">
-          <div className="glass-card border border-neutral-800 rounded-xl p-4 space-y-3">
-            <h3 className="font-display font-bold text-white text-sm flex items-center gap-1.5">
+          <div className="glass-card border border-border-subtle rounded-xl p-4 space-y-3">
+            <h3 className="font-display font-bold dark:text-white text-text-primary text-sm flex items-center gap-1.5">
               <Info size={14} className="text-blue-400" />
               <span>Marks Policy Guide</span>
             </h3>
-            <p className="text-[11px] text-neutral-400 leading-relaxed">
+            <p className="text-[11px] dark:text-neutral-400 text-text-secondary leading-relaxed">
               Standard institutions configure different grids for evaluation:
             </p>
-            <ul className="text-[11px] text-neutral-400 space-y-1.5 list-disc list-inside">
+            <ul className="text-[11px] dark:text-neutral-400 text-text-secondary space-y-1.5 list-disc list-inside">
               <li>
-                <strong className="text-white">Theory subjects</strong>: Usually 30 marks internal and 70 marks external.
+                <strong className="dark:text-white text-text-primary">Theory subjects</strong>: Usually 30 marks internal and 70 marks external.
               </li>
               <li>
-                <strong className="text-white">Lab evaluations</strong>: Usually 50 marks internal and 50 marks external.
+                <strong className="dark:text-white text-text-primary">Lab evaluations</strong>: Usually 50 marks internal and 50 marks external.
               </li>
               <li>
                 Exceeded marks are rejected automatically by the database API schema.
@@ -637,12 +637,12 @@ export default function FacultyResults() {
           </div>
 
           {stats.published > 0 && (
-            <div className="glass-card border border-neutral-800 rounded-xl p-4 bg-amber-500/5 border-amber-500/10 text-amber-500 space-y-2">
+            <div className="glass-card border dark:border-neutral-800 border-amber-200 rounded-xl p-4 dark:bg-amber-500/5 bg-amber-50 dark:border-amber-500/10 text-amber-700 space-y-2">
               <h4 className="text-xs font-bold flex items-center gap-1">
                 <AlertTriangle size={13} />
                 <span>Partial Locks Active</span>
               </h4>
-              <p className="text-[10px] text-neutral-400 leading-normal">
+              <p className="text-[10px] dark:text-neutral-400 text-text-secondary leading-normal">
                 {stats.published} student records are locked because they have already been published by the academic administrator desk.
               </p>
             </div>

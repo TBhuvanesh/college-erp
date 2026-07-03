@@ -21,7 +21,11 @@ export default function Home() {
       if (user.role === "admin") {
         router.push("/admin/dashboard");
       } else if (user.role === "faculty") {
-        router.push("/faculty/dashboard");
+        if (user.designation === "hod") {
+          router.push("/hod/dashboard");
+        } else {
+          router.push("/faculty/dashboard");
+        }
       } else if (user.role === "student") {
         router.push("/student/dashboard");
       }
@@ -54,10 +58,10 @@ export default function Home() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-neutral-950 font-sans relative overflow-hidden">
+    <div className="flex min-h-screen flex-col bg-background font-sans relative overflow-hidden">
       {/* Background visual accents */}
-      <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-blue-900/10 dark:bg-blue-900/5 blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-blue-800/10 dark:bg-blue-800/5 blur-[100px] pointer-events-none"></div>
+      <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full dark:bg-blue-900/5 blur-[120px] pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full dark:bg-blue-800/5 blur-[100px] pointer-events-none"></div>
 
       {/* Floating Theme Toggle */}
       <div className="absolute top-4 right-4 z-20">
@@ -85,10 +89,10 @@ export default function Home() {
                   className="w-16 h-16 rounded-full border border-slate-200 dark:border-neutral-800 object-cover bg-white shadow-md shadow-blue-500/5" 
                 />
                 <div>
-                  <h1 className="font-display text-2xl md:text-3xl font-extrabold tracking-tight text-white">
+                  <h1 className="font-display text-2xl md:text-3xl font-extrabold tracking-tight text-text-primary">
                     Sreyas Institute of Engineering & Technology
                   </h1>
-                  <span className="text-[10px] tracking-wider uppercase font-bold text-neutral-300 block mt-0.5">
+                  <span className="text-[10px] tracking-wider uppercase font-bold text-text-muted block mt-0.5">
                     Affiliated to JNTUH | Approved by AICTE | Accredited by NAAC
                   </span>
                 </div>
@@ -112,7 +116,7 @@ export default function Home() {
             </div>
 
             {/* Quick Contact Footer Info */}
-            <div className="hidden lg:flex flex-col gap-1.5 text-[10px] text-neutral-500 pt-4 border-t border-slate-200 dark:border-neutral-900">
+            <div className="hidden lg:flex flex-col gap-1.5 text-[10px] text-text-muted pt-4 border-t border-border-subtle">
               <div className="flex items-center gap-1.5">
                 <MapPin size={10} className="text-blue-500 shrink-0" />
                 <span>Bandlaguda, Nagole, Hyderabad, Telangana 500068</span>
@@ -139,7 +143,7 @@ export default function Home() {
                 <div className="flex justify-center mb-3">
                   <img src="/college_logo.jpeg" className="w-12 h-12 rounded-full border border-slate-200 dark:border-neutral-800 object-cover bg-white shadow-sm" alt="logo" />
                 </div>
-                <h2 className="font-display font-extrabold text-xl text-white">
+                <h2 className="font-display font-extrabold text-xl text-text-primary">
                   Sreyas Institute of Engineering and Technology
                 </h2>
                 <p className="text-[10px] uppercase font-bold text-blue-500 tracking-wider mt-1 font-mono">
@@ -150,8 +154,8 @@ export default function Home() {
               {/* Sign In Form */}
               <div className="glass-card rounded-xl border border-slate-200 dark:border-neutral-800 p-6 md:p-8 shadow-xl shadow-neutral-950/20 dark:shadow-none transition-all duration-300">
                 <div className="mb-6">
-                  <h3 className="font-display font-bold text-xl text-white">Academic ERP Portal</h3>
-                  <p className="text-xs text-neutral-400 mt-1.5 leading-normal">
+                  <h3 className="font-display font-bold text-xl text-text-primary">Academic ERP Portal</h3>
+                  <p className="text-xs text-text-muted mt-1.5 leading-normal">
                     Enter your academic credentials below to access your courses, registers, and grading dashboards.
                   </p>
                 </div>
@@ -164,7 +168,7 @@ export default function Home() {
                   )}
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">Username</label>
+                    <label className="text-[10px] uppercase font-bold text-text-muted tracking-wider">Username</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-500">
                         <User size={14} />
@@ -182,7 +186,7 @@ export default function Home() {
 
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center">
-                      <label className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">Password</label>
+                      <label className="text-[10px] uppercase font-bold text-text-muted tracking-wider">Password</label>
                       <a 
                         href="#forgot" 
                         onClick={(e) => { e.preventDefault(); alert("Contact college IT helpdesk at helpdesk@sreyas.ac.in to reset credentials."); }} 
@@ -225,8 +229,8 @@ export default function Home() {
                     <span className="text-[9px] text-neutral-500">{announcements[0].date}</span>
                   </div>
                   <div className="mt-2">
-                    <span className="font-semibold text-white text-xs block truncate">{announcements[0].title}</span>
-                    <span className="text-[10px] text-neutral-400 leading-normal block mt-1 line-clamp-2">
+                    <span className="font-semibold text-text-primary text-xs block truncate">{announcements[0].title}</span>
+                    <span className="text-[10px] text-text-muted leading-normal block mt-1 line-clamp-2">
                       {announcements[0].desc}
                     </span>
                   </div>
@@ -250,7 +254,7 @@ export default function Home() {
       </main>
 
       {/* Footer institutional copyright */}
-      <footer className="text-center py-6 border-t border-slate-200 dark:border-neutral-900 text-[10px] text-neutral-500 mt-auto z-10 font-mono">
+      <footer className="text-center py-6 border-t border-border-subtle text-[10px] text-text-muted mt-auto z-10 font-mono">
         © 2026 Sreyas Institute of Engineering and Technology. AIS Single Sign-On Portal.
       </footer>
     </div>

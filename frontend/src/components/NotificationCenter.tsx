@@ -65,25 +65,25 @@ const NOTIFICATION_TYPES: NotificationType[] = [
 export function getNotificationBadgeStyles(type: NotificationType) {
   switch (type) {
     case "Announcement":
-      return "bg-purple-500/10 border-purple-500/20 text-purple-400";
+      return "dark:bg-purple-500/10 bg-purple-50 dark:text-purple-400 text-purple-700 dark:border-purple-500/20 border-purple-200";
     case "Assignment":
-      return "bg-blue-500/10 border-blue-500/20 text-blue-400";
+      return "dark:bg-blue-500/10 bg-blue-50 dark:text-blue-400 text-blue-700 dark:border-blue-500/20 border-blue-200";
     case "Grade Released":
-      return "bg-emerald-500/10 border-emerald-500/20 text-emerald-400";
+      return "dark:bg-emerald-500/10 bg-emerald-50 dark:text-emerald-400 text-emerald-700 dark:border-emerald-500/20 border-emerald-200";
     case "Event":
-      return "bg-amber-500/10 border-amber-500/20 text-amber-400";
+      return "dark:bg-amber-500/10 bg-amber-50 dark:text-amber-400 text-amber-700 dark:border-amber-500/20 border-amber-200";
     case "Internship":
-      return "bg-cyan-500/10 border-cyan-500/20 text-cyan-400";
+      return "dark:bg-cyan-500/10 bg-cyan-50 dark:text-cyan-400 text-cyan-700 dark:border-cyan-500/20 border-cyan-200";
     case "Job Opportunity":
-      return "bg-indigo-500/10 border-indigo-500/20 text-indigo-400";
+      return "dark:bg-indigo-500/10 bg-indigo-50 dark:text-indigo-400 text-indigo-700 dark:border-indigo-500/20 border-indigo-200";
     case "Placement Drive":
-      return "bg-pink-500/10 border-pink-500/20 text-pink-400";
+      return "dark:bg-pink-500/10 bg-pink-50 dark:text-pink-400 text-pink-700 dark:border-pink-500/20 border-pink-200";
     case "Reminder":
-      return "bg-orange-500/10 border-orange-500/20 text-orange-400";
+      return "dark:bg-orange-500/10 bg-orange-50 dark:text-orange-400 text-orange-700 dark:border-orange-500/20 border-orange-200";
     case "Academic Alert":
-      return "bg-rose-500/10 border-rose-500/20 text-rose-450 font-bold";
+      return "dark:bg-rose-500/10 bg-rose-50 dark:text-rose-455 text-rose-700 dark:border-rose-500/20 border-rose-200 font-bold";
     default:
-      return "bg-neutral-500/10 border-neutral-500/20 text-neutral-400";
+      return "dark:bg-neutral-500/10 bg-neutral-100 dark:text-neutral-400 text-text-secondary dark:border-neutral-500/20 border-border-subtle";
   }
 }
 
@@ -218,11 +218,11 @@ export const NotificationCenter: React.FC = () => {
       {/* Title & Top Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="font-display font-bold text-2xl text-white flex items-center gap-2">
+          <h2 className="font-display font-bold text-2xl dark:text-white text-text-primary flex items-center gap-2">
             <Bell size={24} className="text-blue-500 animate-pulse" />
             <span>Notification Center</span>
           </h2>
-          <p className="text-xs text-neutral-455 mt-1">
+          <p className="text-xs dark:text-neutral-400 text-text-secondary mt-1">
             Stay updated with real-time college notifications, exam results, assignments, and campus drives.
           </p>
         </div>
@@ -230,7 +230,7 @@ export const NotificationCenter: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={fetchNotifications}
-            className="p-2 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-405 hover:text-white transition flex items-center gap-2 text-xs font-semibold cursor-pointer"
+            className="p-2 rounded-lg dark:bg-neutral-900 bg-surface border dark:border-neutral-800 border-border-subtle dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary transition flex items-center gap-2 text-xs font-semibold cursor-pointer"
             title="Refresh List"
           >
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
@@ -240,7 +240,7 @@ export const NotificationCenter: React.FC = () => {
           <button
             onClick={markAllPageAsRead}
             disabled={notifications.filter(n => !n.isRead).length === 0}
-            className="px-3 py-2 rounded-lg bg-blue-600/10 border border-blue-500/20 text-blue-400 hover:bg-blue-600 hover:text-white transition text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="px-3 py-2 rounded-lg dark:bg-blue-600/10 bg-blue-50 border dark:border-blue-500/20 border-blue-200 dark:text-blue-400 text-blue-750 dark:hover:bg-blue-600 hover:bg-blue-600 dark:hover:text-white hover:text-white transition text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             Mark Page as Read
           </button>
@@ -248,16 +248,16 @@ export const NotificationCenter: React.FC = () => {
       </div>
 
       {/* Tabs & Type Filter Panel */}
-      <div className="glass-card border border-neutral-800 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className="glass-card border border-border-subtle rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
         
         {/* Tabs */}
-        <div className="flex rounded-lg bg-neutral-950 border border-neutral-850 p-1 w-full md:w-auto">
+        <div className="flex rounded-lg dark:bg-neutral-950 bg-neutral-100 border dark:border-neutral-855 border-border-subtle p-1 w-full md:w-auto">
           <button
             onClick={() => { setActiveTab("all"); setPage(1); }}
             className={`flex-1 md:flex-initial px-4 py-1.5 text-xs font-bold rounded cursor-pointer transition ${
               activeTab === "all"
                 ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                : "text-neutral-400 hover:text-neutral-200"
+                : "dark:text-neutral-400 text-text-secondary dark:hover:text-neutral-200 hover:text-text-primary"
             }`}
           >
             All History
@@ -267,7 +267,7 @@ export const NotificationCenter: React.FC = () => {
             className={`flex-1 md:flex-initial px-4 py-1.5 text-xs font-bold rounded cursor-pointer transition relative ${
               activeTab === "unread"
                 ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                : "text-neutral-400 hover:text-neutral-200"
+                : "dark:text-neutral-400 text-text-secondary dark:hover:text-neutral-200 hover:text-text-primary"
             }`}
           >
             Unread
@@ -277,7 +277,7 @@ export const NotificationCenter: React.FC = () => {
             className={`flex-1 md:flex-initial px-4 py-1.5 text-xs font-bold rounded cursor-pointer transition ${
               activeTab === "important"
                 ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                : "text-neutral-400 hover:text-neutral-200"
+                : "dark:text-neutral-400 text-text-secondary dark:hover:text-neutral-200 hover:text-text-primary"
             }`}
           >
             Important
@@ -285,12 +285,12 @@ export const NotificationCenter: React.FC = () => {
         </div>
 
         {/* Filter Dropdown */}
-        <div className="flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded-lg px-3 py-1.5 w-full md:w-auto relative">
-          <span className="text-[10px] text-neutral-500 font-bold uppercase shrink-0">Type Filter:</span>
+        <div className="flex items-center gap-2 dark:bg-neutral-955 bg-surface border dark:border-neutral-850 border-border-subtle rounded-lg px-3 py-1.5 w-full md:w-auto relative">
+          <span className="text-[10px] dark:text-neutral-500 text-text-muted font-bold uppercase shrink-0">Type Filter:</span>
           <select
             value={typeFilter}
             onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
-            className="bg-transparent text-white cursor-pointer py-0.5 pr-6 appearance-none focus:outline-none text-xs font-bold w-full md:w-44"
+            className="bg-transparent dark:text-white text-text-primary cursor-pointer py-0.5 pr-6 appearance-none focus:outline-none text-xs font-bold w-full md:w-44"
           >
             <option value="ALL">All Announcement Types</option>
             {NOTIFICATION_TYPES.map((t) => (
@@ -299,7 +299,7 @@ export const NotificationCenter: React.FC = () => {
               </option>
             ))}
           </select>
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none dark:text-neutral-500 text-text-muted">
             ▼
           </div>
         </div>
@@ -308,20 +308,20 @@ export const NotificationCenter: React.FC = () => {
 
       {/* Main Content Area */}
       {loading ? (
-        <div className="glass-card border border-neutral-800 rounded-xl p-16 text-center text-neutral-500 font-mono text-xs shadow-xl">
+        <div className="glass-card border border-border-subtle rounded-xl p-16 text-center dark:text-neutral-500 text-text-muted font-mono text-xs shadow-xl">
           <div className="animate-spin inline-block w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mb-3"></div>
           <div>Syncing and loading notification matrices...</div>
         </div>
       ) : error ? (
-        <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-455 text-xs font-semibold font-mono flex items-center gap-2">
+        <div className="p-4 rounded-lg dark:bg-rose-500/10 bg-rose-50 border dark:border-rose-500/20 border-rose-205 dark:text-rose-455 text-rose-750 text-xs font-semibold font-mono flex items-center gap-2">
           <AlertCircle size={16} />
           <span>Error loading Notification Desk: {error}</span>
         </div>
       ) : notifications.length === 0 ? (
-        <div className="glass-card border border-neutral-800 rounded-xl p-16 text-center text-neutral-500 font-mono text-xs flex flex-col items-center shadow-xl">
-          <Bell className="mx-auto mb-4 text-neutral-700 animate-bounce" size={32} />
-          <h3 className="font-bold text-white text-sm mb-1">Your Inbox is Clean</h3>
-          <p className="max-w-xs mx-auto text-[10px] text-neutral-450 mt-1 leading-normal">
+        <div className="glass-card border border-border-subtle rounded-xl p-16 text-center dark:text-neutral-500 text-text-muted font-mono text-xs flex flex-col items-center shadow-xl">
+          <Bell className="mx-auto mb-4 dark:text-neutral-700 text-text-muted animate-bounce" size={32} />
+          <h3 className="font-bold dark:text-white text-text-primary text-sm mb-1">Your Inbox is Clean</h3>
+          <p className="max-w-xs mx-auto text-[10px] dark:text-neutral-450 text-text-secondary mt-1 leading-normal">
             No notification matches the selected filters. Any announcements sent by the Registrar or faculty will appear here.
           </p>
         </div>
@@ -335,8 +335,8 @@ export const NotificationCenter: React.FC = () => {
                 key={n.id}
                 className={`relative group rounded-xl border p-4 transition-all shadow-sm flex gap-4 ${
                   n.isRead
-                    ? "bg-neutral-950/20 border-neutral-900 hover:bg-neutral-900/10"
-                    : "bg-neutral-900/60 border-neutral-800 hover:bg-neutral-850/80 ring-1 ring-blue-500/5"
+                    ? "dark:bg-neutral-950/20 bg-surface/40 dark:border-neutral-900 border-border-subtle dark:hover:bg-neutral-900/10 hover:bg-surface-hover/20"
+                    : "dark:bg-neutral-900/60 bg-surface dark:border-neutral-800 border-border-subtle dark:hover:bg-neutral-850/80 hover:bg-surface-hover ring-1 ring-blue-500/5"
                 }`}
               >
                 {/* Visual Unread dot accent */}
@@ -345,7 +345,7 @@ export const NotificationCenter: React.FC = () => {
                 )}
 
                 {/* Left Type Icon */}
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 bg-neutral-950 border-neutral-850`}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center border shrink-0 dark:bg-neutral-950 bg-neutral-100 dark:border-neutral-850 border-border-subtle`}>
                   {icon}
                 </div>
 
@@ -356,12 +356,12 @@ export const NotificationCenter: React.FC = () => {
                       {n.type}
                     </span>
                     {n.isImportant && (
-                      <span className="flex items-center gap-0.5 text-amber-400 bg-amber-500/10 border border-amber-550/20 px-1.5 py-0.5 rounded text-[8px] font-bold font-mono">
+                      <span className="flex items-center gap-0.5 dark:text-amber-400 text-amber-700 dark:bg-amber-500/10 bg-amber-50 border dark:border-amber-550/20 border-amber-205 px-1.5 py-0.5 rounded text-[8px] font-bold font-mono">
                         <Star size={8} fill="currentColor" />
                         <span>IMPORTANT</span>
                       </span>
                     )}
-                    <span className="text-[9px] font-mono text-neutral-500 flex items-center gap-1">
+                    <span className="text-[9px] font-mono dark:text-neutral-500 text-text-muted flex items-center gap-1">
                       <Clock size={10} />
                       {new Date(n.createdAt).toLocaleDateString("en-IN", {
                         day: "2-digit",
@@ -373,20 +373,20 @@ export const NotificationCenter: React.FC = () => {
                     </span>
                   </div>
 
-                  <h4 className={`text-xs font-bold transition-colors ${n.isRead ? "text-neutral-300" : "text-white"}`}>
+                  <h4 className={`text-xs font-bold transition-colors ${n.isRead ? "dark:text-neutral-300 text-text-secondary" : "dark:text-white text-text-primary"}`}>
                     {n.title}
                   </h4>
-                  <p className="text-[10px] text-neutral-450 leading-relaxed max-w-3xl whitespace-pre-line">
+                  <p className="text-[10px] dark:text-neutral-450 text-text-secondary leading-relaxed max-w-3xl whitespace-pre-line">
                     {n.message}
                   </p>
 
-                  <div className="flex items-center gap-4 text-[9px] text-neutral-500 pt-1 font-mono">
-                    <span>Sender: <strong className="text-neutral-400 font-semibold">{n.createdByName}</strong></span>
+                  <div className="flex items-center gap-4 text-[9px] dark:text-neutral-500 text-text-muted pt-1 font-mono">
+                    <span>Sender: <strong className="dark:text-neutral-400 text-text-secondary font-semibold">{n.createdByName}</strong></span>
                     {n.departmentName && (
-                      <span>Dept: <strong className="text-neutral-400 font-semibold">{n.departmentName}</strong></span>
+                      <span>Dept: <strong className="dark:text-neutral-400 text-text-secondary font-semibold">{n.departmentName}</strong></span>
                     )}
                     {n.semester && (
-                      <span>Semester: <strong className="text-neutral-400 font-semibold">{n.semester}</strong></span>
+                      <span>Semester: <strong className="dark:text-neutral-400 text-text-secondary font-semibold">{n.semester}</strong></span>
                     )}
                   </div>
                 </div>
@@ -398,8 +398,8 @@ export const NotificationCenter: React.FC = () => {
                     disabled={actionLoadingId === n.id}
                     className={`p-1.5 rounded border text-[10px] font-bold transition-all shrink-0 cursor-pointer flex items-center justify-center gap-1.5 ${
                       n.isRead
-                        ? "bg-neutral-900 border-neutral-800 text-neutral-450 hover:bg-neutral-800 hover:text-white"
-                        : "bg-blue-600/10 border-blue-500/20 text-blue-400 hover:bg-blue-600 hover:text-white shadow-sm"
+                        ? "dark:bg-neutral-900 bg-surface dark:border-neutral-800 border-border-subtle dark:text-neutral-450 text-text-secondary dark:hover:bg-neutral-800 hover:bg-surface-hover dark:hover:text-white hover:text-text-primary"
+                        : "dark:bg-blue-600/10 bg-blue-50 dark:border-blue-500/20 border-blue-200 dark:text-blue-400 text-blue-700 dark:hover:bg-blue-600 hover:bg-blue-600 dark:hover:text-white hover:text-white shadow-sm"
                     }`}
                     title={n.isRead ? "Mark as Unread" : "Mark as Read"}
                   >
@@ -425,26 +425,26 @@ export const NotificationCenter: React.FC = () => {
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-neutral-900 pt-4 mt-2">
-              <span className="text-[10px] font-mono text-neutral-500">
-                Showing <strong className="text-neutral-400">{(page - 1) * limit + 1}</strong> - <strong className="text-neutral-400">{Math.min(page * limit, totalCount)}</strong> of <strong className="text-neutral-400">{totalCount}</strong> notices
+            <div className="flex items-center justify-between border-t dark:border-neutral-900 border-border-subtle pt-4 mt-2">
+              <span className="text-[10px] font-mono dark:text-neutral-500 text-text-muted">
+                Showing <strong className="dark:text-neutral-400 text-text-secondary">{(page - 1) * limit + 1}</strong> - <strong className="dark:text-neutral-400 text-text-secondary">{Math.min(page * limit, totalCount)}</strong> of <strong className="dark:text-neutral-400 text-text-secondary">{totalCount}</strong> notices
               </span>
 
-              <div className="flex items-center gap-1 bg-neutral-950 border border-neutral-850 p-0.5 rounded">
+              <div className="flex items-center gap-1 dark:bg-neutral-950 bg-neutral-100 border dark:border-neutral-850 border-border-subtle p-0.5 rounded">
                 <button
                   disabled={page === 1}
                   onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                  className="p-1 rounded text-neutral-400 hover:text-white hover:bg-neutral-850 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition"
+                  className="p-1 rounded dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary dark:hover:bg-neutral-850 hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition"
                 >
                   <ChevronLeft size={16} />
                 </button>
-                <span className="px-3 text-[10px] font-bold font-mono text-neutral-300">
+                <span className="px-3 text-[10px] font-bold font-mono dark:text-neutral-300 text-text-secondary">
                   {page} / {totalPages}
                 </span>
                 <button
                   disabled={page === totalPages}
                   onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-                  className="p-1 rounded text-neutral-400 hover:text-white hover:bg-neutral-850 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition"
+                  className="p-1 rounded dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary dark:hover:bg-neutral-850 hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition"
                 >
                   <ChevronRight size={16} />
                 </button>
@@ -453,7 +453,6 @@ export const NotificationCenter: React.FC = () => {
           )}
         </div>
       )}
-
     </div>
   );
 };

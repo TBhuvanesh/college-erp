@@ -387,11 +387,11 @@ export default function AdminExaminations() {
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
-      case "Scheduled": return "text-blue-400 bg-blue-500/10 border-blue-500/20";
-      case "Ongoing": return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20 animate-pulse";
-      case "Completed": return "text-neutral-400 bg-neutral-500/10 border-neutral-500/20";
-      case "Cancelled": return "text-rose-400 bg-rose-500/10 border-rose-500/20";
-      default: return "text-neutral-400 bg-neutral-500/10 border-neutral-500/20";
+      case "Scheduled": return "dark:text-blue-400 text-blue-700 bg-blue-500/10 border-blue-500/20";
+      case "Ongoing": return "dark:text-emerald-400 text-emerald-700 bg-emerald-500/10 border-emerald-500/20 animate-pulse";
+      case "Completed": return "dark:text-neutral-450 text-text-secondary bg-neutral-500/10 border-neutral-505/20";
+      case "Cancelled": return "dark:text-rose-400 text-rose-700 bg-rose-500/10 border-rose-500/20";
+      default: return "dark:text-neutral-450 text-text-secondary bg-neutral-500/10 border-neutral-505/20";
     }
   };
 
@@ -409,8 +409,8 @@ export default function AdminExaminations() {
       {/* Header and create triggers */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="font-display font-bold text-2xl text-white">Examinations Control Center</h2>
-          <p className="text-xs text-neutral-400 mt-1">
+          <h2 className="font-display font-bold text-2xl text-text-primary">Examinations Control Center</h2>
+          <p className="text-xs text-text-muted mt-1">
             Configure examination timetables, assign invigilators, cancel classes, and track evaluation cycles globally.
           </p>
         </div>
@@ -425,7 +425,7 @@ export default function AdminExaminations() {
           </button>
           <button
             onClick={handleClearFilters}
-            className="px-4 py-2 text-xs font-semibold rounded bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-355 cursor-pointer transition flex items-center gap-1.5"
+            className="px-4 py-2 text-xs font-semibold rounded bg-surface hover:bg-surface-elevated border border-border-subtle text-text-muted cursor-pointer transition flex items-center gap-1.5"
           >
             <RefreshCw size={12} />
             <span>Clear Filters</span>
@@ -442,45 +442,45 @@ export default function AdminExaminations() {
 
       {/* Statistics dashboard */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="glass-card rounded-xl p-4 border border-neutral-800 text-center">
-          <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider block">Total Scheduled</span>
-          <span className="block text-2xl font-bold text-white mt-1 font-mono">{stats.total}</span>
+        <div className="bg-surface rounded-xl p-4 border border-border-subtle text-center">
+          <span className="text-[10px] text-text-muted uppercase font-bold tracking-wider block">Total Scheduled</span>
+          <span className="block text-2xl font-bold text-text-primary mt-1 font-mono">{stats.total}</span>
         </div>
-        <div className="glass-card rounded-xl p-4 border border-blue-500/10 bg-blue-500/5 text-center">
-          <span className="text-[10px] text-blue-400 uppercase font-bold tracking-wider block">Scheduled</span>
-          <span className="block text-2xl font-bold text-blue-400 mt-1 font-mono">{stats.scheduled}</span>
+        <div className="bg-surface rounded-xl p-4 border dark:border-blue-500/10 border-blue-500/20 dark:bg-blue-500/5 bg-blue-500/10 text-center">
+          <span className="text-[10px] dark:text-blue-400 text-blue-750 uppercase font-bold tracking-wider block">Scheduled</span>
+          <span className="block text-2xl font-bold dark:text-blue-400 text-blue-750 mt-1 font-mono">{stats.scheduled}</span>
         </div>
-        <div className="glass-card rounded-xl p-4 border border-emerald-500/10 bg-emerald-500/5 text-center">
-          <span className="text-[10px] text-emerald-400 uppercase font-bold tracking-wider block">Ongoing</span>
-          <span className="block text-2xl font-bold text-emerald-400 mt-1 font-mono">{stats.ongoing}</span>
+        <div className="bg-surface rounded-xl p-4 border dark:border-emerald-500/10 border-emerald-500/20 dark:bg-emerald-500/5 bg-emerald-500/10 text-center">
+          <span className="text-[10px] dark:text-emerald-400 text-emerald-750 uppercase font-bold tracking-wider block">Ongoing</span>
+          <span className="block text-2xl font-bold dark:text-emerald-400 text-emerald-750 mt-1 font-mono">{stats.ongoing}</span>
         </div>
-        <div className="glass-card rounded-xl p-4 border border-neutral-800 text-center">
-          <span className="text-[10px] text-neutral-400 uppercase font-bold tracking-wider block">Completed</span>
-          <span className="block text-2xl font-bold text-neutral-400 mt-1 font-mono">{stats.completed}</span>
+        <div className="bg-surface rounded-xl p-4 border border-border-subtle text-center">
+          <span className="text-[10px] text-text-muted uppercase font-bold tracking-wider block">Completed</span>
+          <span className="block text-2xl font-bold text-text-muted mt-1 font-mono">{stats.completed}</span>
         </div>
-        <div className="glass-card rounded-xl p-4 border border-rose-500/10 bg-rose-500/5 text-center">
-          <span className="text-[10px] text-rose-400 uppercase font-bold tracking-wider block">Cancelled</span>
-          <span className="block text-2xl font-bold text-rose-400 mt-1 font-mono">{stats.cancelled}</span>
+        <div className="bg-surface rounded-xl p-4 border dark:border-rose-500/10 border-rose-500/20 dark:bg-rose-500/5 bg-rose-500/10 text-center">
+          <span className="text-[10px] dark:text-rose-400 text-rose-750 uppercase font-bold tracking-wider block">Cancelled</span>
+          <span className="block text-2xl font-bold dark:text-rose-400 text-rose-750 mt-1 font-mono">{stats.cancelled}</span>
         </div>
       </div>
 
       {/* Directory filters panel */}
-      <div className="glass-card border border-neutral-800 rounded-xl p-4 space-y-4">
-        <div className="flex items-center gap-1.5 text-xs text-neutral-400 pb-2 border-b border-neutral-900">
+      <div className="bg-surface border border-border-subtle rounded-xl p-4 space-y-4">
+        <div className="flex items-center gap-1.5 text-xs text-text-muted pb-2 border-b border-border-subtle">
           <SlidersHorizontal size={14} className="text-blue-500" />
-          <span className="font-semibold text-white">Search Filters Panel</span>
+          <span className="font-semibold text-text-primary">Search Filters Panel</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
           {/* Subject Filter */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-neutral-500">Subject</label>
-            <div className="flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-2.5 text-xs text-white">
-              <BookOpen size={12} className="text-neutral-500 shrink-0" />
+            <label className="text-[10px] uppercase font-bold text-text-muted">Subject</label>
+            <div className="flex items-center gap-2 bg-background border border-border-subtle rounded px-2.5 text-xs text-text-primary">
+              <BookOpen size={12} className="text-text-muted shrink-0" />
               <select
                 value={subjectFilter}
                 onChange={(e) => handleFilterChange(setSubjectFilter, e.target.value)}
-                className="bg-transparent text-white cursor-pointer py-2.5 flex-1 focus:outline-none"
+                className="bg-transparent text-text-primary cursor-pointer py-2.5 flex-1 focus:outline-none"
                 disabled={loadingDependencies}
               >
                 <option value="ALL">All Subjects</option>
@@ -493,13 +493,13 @@ export default function AdminExaminations() {
 
           {/* Faculty Filter */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-neutral-500">Invigilator</label>
-            <div className="flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-2.5 text-xs text-white">
-              <GraduationCap size={12} className="text-neutral-500 shrink-0" />
+            <label className="text-[10px] uppercase font-bold text-text-muted">Invigilator</label>
+            <div className="flex items-center gap-2 bg-background border border-border-subtle rounded px-2.5 text-xs text-text-primary">
+              <GraduationCap size={12} className="text-text-muted shrink-0" />
               <select
                 value={facultyFilter}
                 onChange={(e) => handleFilterChange(setFacultyFilter, e.target.value)}
-                className="bg-transparent text-white cursor-pointer py-2.5 flex-1 focus:outline-none"
+                className="bg-transparent text-text-primary cursor-pointer py-2.5 flex-1 focus:outline-none"
                 disabled={loadingDependencies}
               >
                 <option value="ALL">All Faculty</option>
@@ -512,13 +512,13 @@ export default function AdminExaminations() {
 
           {/* Semester Filter */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-neutral-500">Semester</label>
-            <div className="flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-2.5 text-xs text-white">
-              <Filter size={12} className="text-neutral-500 shrink-0" />
+            <label className="text-[10px] uppercase font-bold text-text-muted">Semester</label>
+            <div className="flex items-center gap-2 bg-background border border-border-subtle rounded px-2.5 text-xs text-text-primary">
+              <Filter size={12} className="text-text-muted shrink-0" />
               <select
                 value={semesterFilter}
                 onChange={(e) => handleFilterChange(setSemesterFilter, e.target.value)}
-                className="bg-transparent text-white cursor-pointer py-2.5 flex-1 focus:outline-none"
+                className="bg-transparent text-text-primary cursor-pointer py-2.5 flex-1 focus:outline-none"
               >
                 <option value="ALL">All Semesters</option>
                 {[1,2,3,4,5,6,7,8,9,10,11,12].map(sem => (
@@ -530,25 +530,25 @@ export default function AdminExaminations() {
 
           {/* Section Filter */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-neutral-500">Section</label>
+            <label className="text-[10px] uppercase font-bold text-text-muted">Section</label>
             <input
               type="text"
               placeholder="e.g. A, B..."
               value={sectionFilter}
               onChange={(e) => handleFilterChange(setSectionFilter, e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-neutral-700"
+              className="w-full px-3 py-2 text-xs bg-background border border-border-subtle rounded text-text-primary focus:outline-none focus:border-neutral-700"
             />
           </div>
 
           {/* Status Filter */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-neutral-500">Status</label>
-            <div className="flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-2.5 text-xs text-white">
-              <Filter size={12} className="text-neutral-500 shrink-0" />
+            <label className="text-[10px] uppercase font-bold text-text-muted">Status</label>
+            <div className="flex items-center gap-2 bg-background border border-border-subtle rounded px-2.5 text-xs text-text-primary">
+              <Filter size={12} className="text-text-muted shrink-0" />
               <select
                 value={statusFilter}
                 onChange={(e) => handleFilterChange(setStatusFilter, e.target.value)}
-                className="bg-transparent text-white cursor-pointer py-2.5 flex-1 focus:outline-none"
+                className="bg-transparent text-text-primary cursor-pointer py-2.5 flex-1 focus:outline-none"
               >
                 <option value="ALL">All Status</option>
                 {["Scheduled", "Ongoing", "Completed", "Cancelled"].map(st => (
@@ -560,25 +560,25 @@ export default function AdminExaminations() {
 
           {/* Date Filter */}
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-neutral-500">Exam Date</label>
+            <label className="text-[10px] uppercase font-bold text-text-muted">Exam Date</label>
             <input
               type="date"
               value={dateFilter}
               onChange={(e) => handleFilterChange(setDateFilter, e.target.value)}
-              className="w-full px-3 py-2.5 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-neutral-700 font-mono"
+              className="w-full px-3 py-2.5 text-xs bg-background border border-border-subtle rounded text-text-primary focus:outline-none focus:border-neutral-700 font-mono"
             />
           </div>
         </div>
       </div>
 
       {/* Records table / list grids */}
-      <div className="glass-card border border-neutral-800 rounded-xl overflow-hidden">
+      <div className="bg-surface border border-border-subtle rounded-xl overflow-hidden">
         
         {/* Desktop View */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-neutral-900/50 border-b border-neutral-800 text-neutral-400 font-semibold">
+              <tr className="bg-surface/50 border-b border-border-subtle text-text-muted font-semibold">
                 <th className="px-4 py-3 font-mono">Exam Type</th>
                 <th className="px-4 py-3">Subject Course</th>
                 <th className="px-4 py-3">Sem & Sec</th>
@@ -590,10 +590,10 @@ export default function AdminExaminations() {
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-900 text-neutral-300">
+            <tbody className="divide-y divide-border-subtle text-text-secondary">
               {loadingList ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-neutral-500">
+                  <td colSpan={9} className="text-center py-12 text-text-muted">
                     <Loader2 className="animate-spin text-blue-500 mx-auto mb-2" size={20} />
                     <span className="font-mono text-[10px]">Scanning database logs...</span>
                   </td>
@@ -602,16 +602,16 @@ export default function AdminExaminations() {
                 exams.map((exam) => {
                   const isTerminal = ["Completed", "Cancelled"].includes(exam.status);
                   return (
-                    <tr key={exam.id} className="hover:bg-neutral-900/20 transition">
-                      <td className="px-4 py-3 font-mono font-bold text-white text-[10px]">{exam.examType}</td>
+                    <tr key={exam.id} className="hover:bg-surface/20 transition">
+                      <td className="px-4 py-3 font-mono font-bold text-text-primary text-[10px]">{exam.examType}</td>
                       <td className="px-4 py-3">
-                        <span className="font-semibold text-white block">{exam.subjectName}</span>
-                        <span className="text-[10px] text-neutral-500 font-mono">{exam.subjectCode}</span>
+                        <span className="font-semibold text-text-primary block">{exam.subjectName}</span>
+                        <span className="text-[10px] text-text-muted font-mono">{exam.subjectCode}</span>
                       </td>
                       <td className="px-4 py-3 font-semibold">Sem {exam.semester} - Section {exam.section}</td>
-                      <td className="px-4 py-3 text-neutral-400">{exam.facultyName}</td>
+                      <td className="px-4 py-3 text-text-muted">{exam.facultyName}</td>
                       <td className="px-4 py-3 font-mono">{exam.examDate}</td>
-                      <td className="px-4 py-3 font-mono text-neutral-400">{exam.startTime} - {exam.endTime}</td>
+                      <td className="px-4 py-3 font-mono text-text-muted">{exam.startTime} - {exam.endTime}</td>
                       <td className="px-4 py-3 font-mono text-center">{exam.maximumMarks}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold border capitalize ${getStatusBadgeColor(exam.status)}`}>
@@ -625,12 +625,12 @@ export default function AdminExaminations() {
                             <button
                               onClick={() => openEditDrawer(exam)}
                               title="Edit Schedule details"
-                              className="p-1.5 rounded bg-neutral-800 hover:bg-neutral-750 border border-neutral-700 text-neutral-400 hover:text-white cursor-pointer transition"
+                              className="p-1.5 rounded bg-surface-elevated hover:bg-surface-hover border dark:border-neutral-700 border-border-subtle text-text-muted hover:text-text-primary cursor-pointer transition"
                             >
                               <Edit size={12} />
                             </button>
                           ) : (
-                            <span className="p-1.5 rounded bg-neutral-900/40 border border-neutral-850 text-neutral-600 block cursor-not-allowed">
+                            <span className="p-1.5 rounded bg-surface/40 border border-border-subtle text-neutral-600 block cursor-not-allowed">
                               <Lock size={12} />
                             </span>
                           )}
@@ -641,14 +641,14 @@ export default function AdminExaminations() {
                               <button
                                 onClick={() => transitionStatus(exam.id, "Ongoing")}
                                 title="Advance to Ongoing status"
-                                className="p-1.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 cursor-pointer transition"
+                                className="p-1.5 rounded dark:bg-emerald-500/10 bg-emerald-50 hover:bg-emerald-500/20 border dark:border-emerald-500/20 border-emerald-200 text-emerald-600 dark:text-emerald-400 cursor-pointer transition"
                               >
                                 <Play size={12} />
                               </button>
                               <button
                                 onClick={() => transitionStatus(exam.id, "Cancelled")}
                                 title="Cancel Examination schedule"
-                                className="p-1.5 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 cursor-pointer transition"
+                                className="p-1.5 rounded dark:bg-rose-500/10 bg-rose-50 hover:bg-rose-500/20 border dark:border-rose-500/20 border-rose-200 text-rose-600 dark:text-rose-400 cursor-pointer transition"
                               >
                                 <X size={12} />
                               </button>
@@ -660,14 +660,14 @@ export default function AdminExaminations() {
                               <button
                                 onClick={() => transitionStatus(exam.id, "Completed")}
                                 title="Mark cycle Completed"
-                                className="p-1.5 rounded bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 cursor-pointer transition"
+                                className="p-1.5 rounded dark:bg-blue-500/10 bg-blue-50 hover:bg-blue-500/20 border dark:border-blue-500/20 border-blue-200 text-blue-600 dark:text-blue-400 cursor-pointer transition"
                               >
                                 <CheckSquare size={12} />
                               </button>
                               <button
                                 onClick={() => transitionStatus(exam.id, "Cancelled")}
                                 title="Cancel active session"
-                                className="p-1.5 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 cursor-pointer transition"
+                                className="p-1.5 rounded dark:bg-rose-500/10 bg-rose-50 hover:bg-rose-500/20 border dark:border-rose-500/20 border-rose-200 text-rose-600 dark:text-rose-400 cursor-pointer transition"
                               >
                                 <X size={12} />
                               </button>
@@ -682,7 +682,7 @@ export default function AdminExaminations() {
                                 setDeleteConfirmOpen(true);
                               }}
                               title="Delete examination schedule record"
-                              className="p-1.5 rounded bg-neutral-800 hover:bg-neutral-750 border border-neutral-700 text-rose-500 hover:text-rose-400 cursor-pointer transition"
+                              className="p-1.5 rounded bg-surface-elevated hover:bg-surface-hover border dark:border-neutral-700 border-border-subtle text-rose-500 hover:text-rose-600 cursor-pointer transition"
                             >
                               <Trash2 size={12} />
                             </button>
@@ -694,7 +694,7 @@ export default function AdminExaminations() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-neutral-500 font-mono">
+                  <td colSpan={9} className="text-center py-12 text-text-muted font-mono">
                     No examination records found in database.
                   </td>
                 </tr>
@@ -704,9 +704,9 @@ export default function AdminExaminations() {
         </div>
 
         {/* Mobile Cards View */}
-        <div className="block md:hidden divide-y divide-neutral-900">
+        <div className="block md:hidden divide-y divide-border-subtle">
           {loadingList ? (
-            <div className="text-center py-12 text-neutral-500">
+            <div className="text-center py-12 text-text-muted">
               <Loader2 className="animate-spin text-blue-500 mx-auto mb-2" size={20} />
               <span className="font-mono text-[10px]">Scanning database logs...</span>
             </div>
@@ -718,7 +718,7 @@ export default function AdminExaminations() {
                   <div className="flex items-start justify-between">
                     <div>
                       <span className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider font-mono">{exam.examType}</span>
-                      <h4 className="text-sm font-bold text-white leading-tight mt-0.5">{exam.subjectName}</h4>
+                      <h4 className="text-sm font-bold dark:text-white text-text-primary leading-tight mt-0.5">{exam.subjectName}</h4>
                       <span className="text-[10px] text-neutral-500 font-mono mt-0.5 block">
                         {exam.subjectCode} / Section {exam.section}
                       </span>
@@ -728,41 +728,41 @@ export default function AdminExaminations() {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-y-2.5 gap-x-4 text-[10px] text-neutral-350 font-mono pt-2 border-t border-neutral-900">
+                  <div className="grid grid-cols-2 gap-y-2.5 gap-x-4 text-[10px] dark:text-neutral-300 text-text-secondary font-mono pt-2 border-t dark:border-neutral-900 border-border-subtle">
                     <div>
-                      <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Invigilator</span>
-                      <span className="font-sans text-neutral-200">{exam.facultyName}</span>
+                      <span className="dark:text-neutral-500 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Invigilator</span>
+                      <span className="font-sans dark:text-neutral-205 text-text-primary">{exam.facultyName}</span>
                     </div>
                     <div>
-                      <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Semester</span>
+                      <span className="dark:text-neutral-500 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Semester</span>
                       <span>Semester {exam.semester}</span>
                     </div>
                     <div>
-                      <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Date</span>
+                      <span className="dark:text-neutral-505 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Date</span>
                       <span>{exam.examDate}</span>
                     </div>
                     <div>
-                      <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Time slot</span>
+                      <span className="dark:text-neutral-505 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Time slot</span>
                       <span>{exam.startTime} - {exam.endTime}</span>
                     </div>
                     <div className="col-span-2">
-                      <span className="text-neutral-500 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Maximum Marks</span>
+                      <span className="dark:text-neutral-505 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Maximum Marks</span>
                       <span>{exam.maximumMarks} Marks</span>
                     </div>
                   </div>
 
                   {/* Actions mobile panel */}
-                  <div className="flex flex-wrap gap-2 justify-end pt-2 border-t border-neutral-900">
+                  <div className="flex flex-wrap gap-2 justify-end pt-2 border-t dark:border-neutral-900 border-border-subtle">
                     {!isTerminal ? (
                       <button
                         onClick={() => openEditDrawer(exam)}
-                        className="px-3 py-1.5 rounded bg-neutral-800 hover:bg-neutral-750 text-neutral-300 border border-neutral-700 text-[10px] font-semibold cursor-pointer transition flex items-center gap-1"
+                        className="px-3 py-1.5 rounded dark:bg-neutral-800 bg-neutral-100 dark:hover:bg-neutral-750 hover:bg-neutral-200 dark:text-neutral-300 text-text-primary border dark:border-neutral-700 border-border-subtle text-[10px] font-semibold cursor-pointer transition flex items-center gap-1"
                       >
                         <Edit size={11} />
                         <span>Reschedule</span>
                       </button>
                     ) : (
-                      <span className="px-3 py-1.5 rounded bg-neutral-950 text-neutral-600 border border-neutral-900 text-[10px] font-semibold cursor-not-allowed flex items-center gap-1">
+                      <span className="px-3 py-1.5 rounded dark:bg-neutral-950 bg-neutral-50 dark:text-neutral-600 text-text-muted border dark:border-neutral-900 border-border-subtle text-[10px] font-semibold cursor-not-allowed flex items-center gap-1">
                         <Lock size={11} />
                         <span>Locked</span>
                       </span>
@@ -772,14 +772,14 @@ export default function AdminExaminations() {
                       <>
                         <button
                           onClick={() => transitionStatus(exam.id, "Ongoing")}
-                          className="px-3 py-1.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold cursor-pointer transition flex items-center gap-1"
+                          className="px-3 py-1.5 rounded dark:bg-emerald-500/10 bg-emerald-50 dark:hover:bg-emerald-500/20 hover:bg-emerald-100 dark:text-emerald-400 text-emerald-700 border dark:border-emerald-500/20 border-emerald-200 text-[10px] font-semibold cursor-pointer transition flex items-center gap-1"
                         >
                           <Play size={11} />
                           <span>Start</span>
                         </button>
                         <button
                           onClick={() => transitionStatus(exam.id, "Cancelled")}
-                          className="px-3 py-1.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] font-semibold cursor-pointer transition flex items-center gap-1"
+                          className="px-3 py-1.5 rounded dark:bg-rose-500/10 bg-rose-50 dark:hover:bg-rose-500/20 hover:bg-rose-100 dark:text-rose-400 text-rose-700 border dark:border-rose-500/20 border-rose-200 text-[10px] font-semibold cursor-pointer transition flex items-center gap-1"
                         >
                           <X size={11} />
                           <span>Cancel</span>
@@ -791,14 +791,14 @@ export default function AdminExaminations() {
                       <>
                         <button
                           onClick={() => transitionStatus(exam.id, "Completed")}
-                          className="px-3 py-1.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 text-[10px] font-semibold cursor-pointer transition flex items-center gap-1"
+                          className="px-3 py-1.5 rounded dark:bg-blue-500/10 bg-blue-50 dark:hover:bg-blue-500/20 hover:bg-blue-100 dark:text-blue-400 text-blue-700 border dark:border-blue-500/20 border-blue-200 text-[10px] font-semibold cursor-pointer transition flex items-center gap-1"
                         >
                           <CheckSquare size={11} />
                           <span>Complete</span>
                         </button>
                         <button
                           onClick={() => transitionStatus(exam.id, "Cancelled")}
-                          className="px-3 py-1.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] font-semibold cursor-pointer transition flex items-center gap-1"
+                          className="px-3 py-1.5 rounded dark:bg-rose-500/10 bg-rose-50 dark:hover:bg-rose-500/20 hover:bg-rose-100 dark:text-rose-400 text-rose-700 border dark:border-rose-500/20 border-rose-200 text-[10px] font-semibold cursor-pointer transition flex items-center gap-1"
                         >
                           <X size={11} />
                           <span>Cancel</span>
@@ -812,7 +812,7 @@ export default function AdminExaminations() {
                           setExamToDelete({ id: exam.id, subjectName: exam.subjectName, examType: exam.examType });
                           setDeleteConfirmOpen(true);
                         }}
-                        className="p-1.5 rounded bg-neutral-800 hover:bg-neutral-750 border border-neutral-750 text-rose-500 hover:text-rose-400 transition"
+                        className="p-1.5 rounded dark:bg-neutral-800 bg-neutral-105 dark:hover:bg-neutral-750 hover:bg-neutral-200 border dark:border-neutral-750 border-border-subtle text-rose-500 hover:text-rose-600 transition"
                       >
                         <Trash2 size={12} />
                       </button>
@@ -830,25 +830,25 @@ export default function AdminExaminations() {
 
         {/* Pagination Block */}
         {!loadingList && totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-neutral-850 p-4 bg-neutral-950/30">
-            <div className="text-[10px] font-mono text-neutral-500">
+          <div className="flex items-center justify-between border-t dark:border-neutral-850 border-border-subtle p-4 dark:bg-neutral-950/30 bg-neutral-50">
+            <div className="text-[10px] font-mono dark:text-neutral-500 text-text-muted">
               Showing {(page - 1) * limit + 1} - {Math.min(page * limit, totalRecords)} of {totalRecords} exams
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage(p => Math.max(p - 1, 1))}
                 disabled={page === 1}
-                className="p-1.5 rounded bg-neutral-905 border border-neutral-850 hover:bg-neutral-800 disabled:opacity-40 text-neutral-400 hover:text-white cursor-pointer disabled:cursor-not-allowed transition"
+                className="p-1.5 rounded dark:bg-neutral-900 bg-neutral-100 border dark:border-neutral-850 border-border-subtle hover:bg-neutral-200 disabled:opacity-40 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary cursor-pointer disabled:cursor-not-allowed transition"
               >
                 <ChevronLeft size={14} />
               </button>
-              <span className="text-[10px] font-mono text-white font-bold px-2">
+              <span className="text-[10px] font-mono dark:text-white text-text-primary font-bold px-2">
                 {page} / {totalPages}
               </span>
               <button
                 onClick={() => setPage(p => Math.min(p + 1, totalPages))}
                 disabled={page === totalPages}
-                className="p-1.5 rounded bg-neutral-905 border border-neutral-850 hover:bg-neutral-800 disabled:opacity-40 text-neutral-400 hover:text-white cursor-pointer disabled:cursor-not-allowed transition"
+                className="p-1.5 rounded dark:bg-neutral-900 bg-neutral-100 border dark:border-neutral-850 border-border-subtle hover:bg-neutral-200 disabled:opacity-40 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary cursor-pointer disabled:cursor-not-allowed transition"
               >
                 <ChevronRight size={14} />
               </button>
@@ -864,16 +864,16 @@ export default function AdminExaminations() {
           <div className="absolute inset-0 cursor-default" onClick={() => setDrawerOpen(false)}></div>
 
           {/* Drawer Panel */}
-          <div className="relative w-full max-w-md h-full bg-neutral-900 border-l border-neutral-800 p-6 flex flex-col shadow-2xl z-10 overflow-y-auto">
+          <div className="relative w-full max-w-md h-full dark:bg-neutral-900 bg-surface border-l dark:border-neutral-800 border-border-subtle p-6 flex flex-col shadow-2xl z-10 overflow-y-auto">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-neutral-800 pb-4 mb-4">
-              <h3 className="font-display font-bold text-white text-lg flex items-center gap-2">
+            <div className="flex items-center justify-between border-b dark:border-neutral-800 border-border-subtle pb-4 mb-4">
+              <h3 className="font-display font-bold dark:text-white text-text-primary text-lg flex items-center gap-2">
                 <Sparkles size={18} className="text-blue-500" />
                 <span>{editingExam ? "Edit Examination details" : "Schedule New Examination"}</span>
               </h3>
               <button
                 onClick={() => setDrawerOpen(false)}
-                className="p-1 rounded bg-neutral-850 hover:bg-neutral-800 text-neutral-400 hover:text-white cursor-pointer"
+                className="p-1 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary cursor-pointer border dark:border-neutral-800 border-border-subtle"
               >
                 <X size={18} />
               </button>
@@ -891,13 +891,13 @@ export default function AdminExaminations() {
                 
                 {/* Subject selection (Read-only if editing) */}
                 <div>
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Subject Course <span className="text-rose-500">*</span></label>
+                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Subject Course <span className="text-rose-500">*</span></label>
                   <select
                     required
                     disabled={!!editingExam || subjects.length === 0}
                     value={formSubjectId}
                     onChange={(e) => setFormSubjectId(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white disabled:opacity-50 focus:outline-none focus:border-blue-600 transition cursor-pointer"
+                    className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle dark:text-white text-text-primary disabled:opacity-50 focus:outline-none focus:border-blue-600 transition cursor-pointer"
                   >
                     <option value="">Select Subject</option>
                     {subjects.map(s => (
@@ -908,13 +908,13 @@ export default function AdminExaminations() {
 
                 {/* Faculty selection (Read-only if editing) */}
                 <div>
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Invigilator Faculty <span className="text-rose-500">*</span></label>
+                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Invigilator Faculty <span className="text-rose-500">*</span></label>
                   <select
                     required
                     disabled={!!editingExam || faculty.length === 0}
                     value={formFacultyId}
                     onChange={(e) => setFormFacultyId(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white disabled:opacity-50 focus:outline-none focus:border-blue-600 transition cursor-pointer"
+                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle dark:text-white text-text-primary disabled:opacity-50 focus:outline-none focus:border-blue-600 transition cursor-pointer"
                   >
                     <option value="">Assign Faculty</option>
                     {faculty.map(f => (
@@ -925,26 +925,26 @@ export default function AdminExaminations() {
 
                 {/* Target Section (Always editable) */}
                 <div>
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Target Section <span className="text-rose-500">*</span></label>
+                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Target Section <span className="text-rose-500">*</span></label>
                   <input
                     type="text"
                     required
                     value={formSection}
                     onChange={(e) => setFormSection(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                     placeholder="e.g. A"
                   />
                 </div>
 
                 {/* Exam Type (Read-only if editing) */}
                 <div>
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Evaluation Cycle <span className="text-rose-500">*</span></label>
+                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Evaluation Cycle <span className="text-rose-500">*</span></label>
                   <select
                     required
                     disabled={!!editingExam}
                     value={formExamType}
                     onChange={(e) => setFormExamType(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white disabled:opacity-50 focus:outline-none focus:border-blue-600 transition cursor-pointer"
+                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle dark:text-white text-text-primary disabled:opacity-50 focus:outline-none focus:border-blue-600 transition cursor-pointer"
                   >
                     {["Mid-1", "Mid-2", "Lab Exam", "Internal", "End Semester"].map(t => (
                       <option key={t} value={t}>{t}</option>
@@ -954,43 +954,43 @@ export default function AdminExaminations() {
 
                 {/* Date Picker */}
                 <div>
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Exam Date <span className="text-rose-500">*</span></label>
+                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Exam Date <span className="text-rose-500">*</span></label>
                   <input
                     type="date"
                     required
                     value={formDate}
                     onChange={(e) => setFormDate(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                   />
                 </div>
 
                 {/* Time picker selectors */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Start Time <span className="text-rose-500">*</span></label>
+                    <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Start Time <span className="text-rose-500">*</span></label>
                     <input
                       type="time"
                       required
                       value={formStartTime}
                       onChange={(e) => setFormStartTime(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+                      className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">End Time <span className="text-rose-500">*</span></label>
+                    <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">End Time <span className="text-rose-500">*</span></label>
                     <input
                       type="time"
                       required
                       value={formEndTime}
                       onChange={(e) => setFormEndTime(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+                      className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                     />
                   </div>
                 </div>
 
                 {/* Maximum Marks */}
                 <div>
-                  <label className="block text-[10px] font-bold text-neutral-400 uppercase mb-1">Maximum Marks <span className="text-rose-500">*</span></label>
+                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Maximum Marks <span className="text-rose-500">*</span></label>
                   <input
                     type="number"
                     required
@@ -998,7 +998,7 @@ export default function AdminExaminations() {
                     max={200}
                     value={formMaxMarks}
                     onChange={(e) => setFormMaxMarks(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition"
+                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                     placeholder="e.g. 50"
                   />
                 </div>
@@ -1006,11 +1006,11 @@ export default function AdminExaminations() {
               </div>
 
               {/* Drawer actions */}
-              <div className="flex items-center gap-3 pt-6 border-t border-neutral-800 mt-6">
+              <div className="flex items-center gap-3 pt-6 border-t dark:border-neutral-800 border-border-subtle mt-6">
                 <button
                   type="button"
                   onClick={() => setDrawerOpen(false)}
-                  className="flex-1 py-2 text-xs font-semibold rounded bg-neutral-800 hover:bg-neutral-750 text-neutral-300 hover:text-white cursor-pointer transition text-center"
+                  className="flex-1 py-2 text-xs font-semibold rounded dark:bg-neutral-800 bg-neutral-100 dark:hover:bg-neutral-750 hover:bg-neutral-200 dark:text-neutral-300 text-text-primary border dark:border-neutral-800 border-border-subtle cursor-pointer transition text-center"
                 >
                   Cancel
                 </button>
@@ -1031,10 +1031,10 @@ export default function AdminExaminations() {
       {/* Delete confirmation dialogue modal overlay */}
       {deleteConfirmOpen && examToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-xl max-w-sm w-full mx-4 shadow-2xl animate-scale-up space-y-4">
-            <h3 className="font-display font-bold text-white text-base">De-register Examination?</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              Are you sure you want to delete the scheduled <strong className="text-white">{examToDelete.examType}</strong> exam for <strong className="text-white">{examToDelete.subjectName}</strong>? This action will clear the schedule from students&apos; rosters and cannot be undone.
+          <div className="dark:bg-neutral-900 bg-surface border dark:border-neutral-800 border-border-subtle p-6 rounded-xl max-w-sm w-full mx-4 shadow-2xl animate-scale-up space-y-4">
+            <h3 className="font-display font-bold dark:text-white text-text-primary text-base">De-register Examination?</h3>
+            <p className="text-xs dark:text-neutral-400 text-text-secondary leading-relaxed">
+              Are you sure you want to delete the scheduled <strong className="dark:text-white text-text-primary">{examToDelete.examType}</strong> exam for <strong className="dark:text-white text-text-primary">{examToDelete.subjectName}</strong>? This action will clear the schedule from students&apos; rosters and cannot be undone.
             </p>
             <div className="flex items-center gap-3 pt-2">
               <button
@@ -1042,7 +1042,7 @@ export default function AdminExaminations() {
                   setDeleteConfirmOpen(false);
                   setExamToDelete(null);
                 }}
-                className="flex-1 py-2 rounded bg-neutral-800 hover:bg-neutral-750 text-neutral-300 font-bold text-xs cursor-pointer transition"
+                className="flex-1 py-2 rounded dark:bg-neutral-800 bg-neutral-100 hover:bg-neutral-200 dark:text-neutral-300 text-text-primary border dark:border-neutral-800 border-border-subtle font-bold text-xs cursor-pointer transition"
               >
                 No, Keep
               </button>

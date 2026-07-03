@@ -29,7 +29,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   };
 
   return (
-    <div className="flex min-h-screen bg-neutral-950 text-neutral-100 font-sans">
+    <div className="flex min-h-screen bg-background text-foreground font-sans">
       {/* Desktop Left Sidebar */}
       <Sidebar />
 
@@ -51,16 +51,16 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       {mobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity">
           {/* Bottom sheet card */}
-          <div className="absolute bottom-0 left-0 right-0 max-h-[70vh] bg-neutral-900 border-t border-neutral-850 rounded-t-2xl p-5 overflow-y-auto flex flex-col gap-4 animate-slide-up">
+          <div className="absolute bottom-0 left-0 right-0 max-h-[70vh] bg-surface border-t border-border-subtle rounded-t-2xl p-5 overflow-y-auto flex flex-col gap-4 animate-slide-up">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+            <div className="flex items-center justify-between border-b border-border-subtle pb-3">
               <div className="flex flex-col">
                 <span className="text-xs uppercase font-bold text-indigo-400">Simulation settings</span>
-                <span className="text-sm font-semibold text-white">Active role: {currentRole}</span>
+                <span className="text-sm font-semibold text-text-primary">Active role: {currentRole}</span>
               </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}
-                className="p-1.5 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-400 hover:text-white cursor-pointer"
+                className="p-1.5 rounded-full bg-surface-elevated border border-border-subtle text-text-muted hover:text-text-primary cursor-pointer"
               >
                 <X size={16} />
               </button>
@@ -68,7 +68,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
 
             {/* Content actions */}
             <div className="py-2 space-y-3">
-              <p className="text-xs text-neutral-400 leading-normal">
+              <p className="text-xs text-text-secondary leading-normal">
                 To test the complete Golden Path flow, use the &quot;Switch Role&quot; dropdown in the header to jump between Admin, Faculty, and Student viewports. 
               </p>
               
@@ -76,7 +76,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                 <Link
                   href={`/${currentRole.toLowerCase()}/profile`}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full flex items-center justify-center gap-2.5 py-3 rounded-lg border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 text-blue-450 text-sm font-semibold cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2.5 py-3 rounded-lg border dark:border-blue-500/20 border-blue-200 dark:bg-blue-500/5 bg-blue-50 dark:hover:bg-blue-500/10 hover:bg-blue-100 dark:text-blue-450 text-blue-700 text-sm font-semibold cursor-pointer"
                 >
                   <User size={16} />
                   My Profile & Settings

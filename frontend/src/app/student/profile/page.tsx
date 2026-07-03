@@ -63,11 +63,11 @@ export default function StudentProfilePage() {
         <span className="text-[9px] uppercase font-bold text-blue-500 tracking-wider font-mono">
           Student Portal
         </span>
-        <h2 className="font-display font-bold text-xl text-white flex items-center gap-2">
-          <User size={20} className="text-neutral-400" />
+        <h2 className="font-display font-bold text-xl dark:text-white text-text-primary flex items-center gap-2">
+          <User size={20} className="dark:text-neutral-450 text-text-secondary" />
           <span>My Profile & Settings</span>
         </h2>
-        <p className="text-[10px] text-neutral-400">
+        <p className="text-[10px] dark:text-neutral-400 text-text-secondary">
           View your academic records and manage account preferences.
         </p>
       </div>

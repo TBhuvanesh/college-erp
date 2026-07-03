@@ -172,7 +172,7 @@ export const TopHeader: React.FC = () => {
               <div className="flex items-center justify-between px-2 py-1.5 border-b border-border-subtle mb-1.5">
                 <span className="text-[10px] font-bold text-text-primary uppercase tracking-wider font-mono">University Notices</span>
                 {unreadCount > 0 && (
-                  <span className="text-[8px] bg-accent-blue-soft text-accent-blue border border-accent-blue/20 px-1.5 py-0.5 rounded font-bold">
+                  <span className="text-[8px] dark:bg-accent-blue-soft bg-blue-50 dark:text-accent-blue text-blue-700 border border-accent-blue/20 px-1.5 py-0.5 rounded font-bold">
                     {unreadCount} Unread
                   </span>
                 )}

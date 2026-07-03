@@ -225,18 +225,18 @@ export default function AdminOpportunitiesDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="font-display font-bold text-2xl text-white flex items-center gap-2">
+          <h2 className="font-display font-bold text-2xl dark:text-white text-text-primary flex items-center gap-2">
             <Briefcase className="text-blue-500" />
             <span>Opportunity Administration</span>
           </h2>
-          <p className="text-xs text-neutral-450 mt-1">
+          <p className="text-xs dark:text-neutral-450 text-text-secondary mt-1">
             Admin Console: Complete lifecycle CRUD management for campus-wide professional, placement, and extracurricular opportunities.
           </p>
         </div>
 
         <button
           onClick={handleCreateOpen}
-          className="py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/15 cursor-pointer flex items-center justify-center gap-2 self-start sm:self-auto transition"
+          className="py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/15 cursor-pointer flex items-center justify-center gap-2 self-start sm:self-auto transition select-none"
         >
           <PlusCircle size={16} />
           <span>Publish Opportunity</span>
@@ -244,7 +244,7 @@ export default function AdminOpportunitiesDashboard() {
       </div>
 
       {error && (
-        <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-450 text-xs font-semibold rounded-lg flex items-center gap-2">
+        <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-455 text-xs font-semibold rounded-lg flex items-center gap-2">
           <AlertCircle size={16} />
           <span>{error}</span>
         </div>
@@ -252,33 +252,33 @@ export default function AdminOpportunitiesDashboard() {
 
       {/* Analytics Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="glass-card p-4 rounded-xl border border-neutral-850 bg-neutral-900/20 flex items-center justify-between">
+        <div className="glass-card p-4 rounded-xl dark:border-neutral-800 border-border-subtle bg-surface flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider">Total Mapped</span>
-            <h4 className="text-2xl font-bold font-sans text-white">{totalCount}</h4>
+            <span className="text-[10px] dark:text-neutral-500 text-text-muted uppercase font-bold tracking-wider">Total Mapped</span>
+            <h4 className="text-2xl font-bold font-sans dark:text-white text-text-primary">{totalCount}</h4>
           </div>
           <BarChart3 className="text-blue-500 shrink-0" size={24} />
         </div>
-        <div className="glass-card p-4 rounded-xl border border-neutral-850 bg-emerald-500/[0.02] flex items-center justify-between">
+        <div className="glass-card p-4 rounded-xl dark:border-neutral-800 border-border-subtle bg-surface flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider">Active Slots</span>
-            <h4 className="text-2xl font-bold font-sans text-emerald-400">{activeCount}</h4>
+            <span className="text-[10px] dark:text-neutral-500 text-text-muted uppercase font-bold tracking-wider">Active Slots</span>
+            <h4 className="text-2xl font-bold font-sans text-emerald-555 dark:text-emerald-400">{activeCount}</h4>
           </div>
-          <CheckCircle className="text-emerald-450 shrink-0" size={24} />
+          <CheckCircle className="text-emerald-500 dark:text-emerald-450 shrink-0" size={24} />
         </div>
-        <div className="glass-card p-4 rounded-xl border border-neutral-850 bg-rose-500/[0.02] flex items-center justify-between">
+        <div className="glass-card p-4 rounded-xl dark:border-neutral-800 border-border-subtle bg-surface flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider">Closed</span>
-            <h4 className="text-2xl font-bold font-sans text-rose-400">{closedCount}</h4>
+            <span className="text-[10px] dark:text-neutral-500 text-text-muted uppercase font-bold tracking-wider">Closed</span>
+            <h4 className="text-2xl font-bold font-sans text-rose-600 dark:text-rose-450">{closedCount}</h4>
           </div>
-          <XCircle className="text-rose-455 shrink-0" size={24} />
+          <XCircle className="text-rose-500 dark:text-rose-455 shrink-0" size={24} />
         </div>
-        <div className="glass-card p-4 rounded-xl border border-neutral-850 bg-neutral-900/40 flex items-center justify-between">
+        <div className="glass-card p-4 rounded-xl dark:border-neutral-800 border-border-subtle bg-surface flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-wider">Archived</span>
-            <h4 className="text-2xl font-bold font-sans text-neutral-400">{archivedCount}</h4>
+            <span className="text-[10px] dark:text-neutral-500 text-text-muted uppercase font-bold tracking-wider">Archived</span>
+            <h4 className="text-2xl font-bold font-sans dark:text-neutral-400 text-text-secondary">{archivedCount}</h4>
           </div>
-          <FolderArchive className="text-neutral-500 shrink-0" size={24} />
+          <FolderArchive className="dark:text-neutral-500 text-text-secondary shrink-0" size={24} />
         </div>
       </div>
 
@@ -294,16 +294,16 @@ export default function AdminOpportunitiesDashboard() {
       {/* Grid Table */}
       <div>
         {loading ? (
-          <div className="text-center py-20 text-neutral-400">
+          <div className="text-center py-20 dark:text-neutral-400 text-text-secondary">
             <Loader2 className="animate-spin text-blue-500 mx-auto mb-3" size={30} />
             <span className="font-mono text-xs">Querying global administrative database...</span>
           </div>
         ) : filteredList.length > 0 ? (
-          <div className="glass-card border border-neutral-800 rounded-xl overflow-hidden bg-neutral-900/40">
+          <div className="glass-card dark:border-neutral-800 border-border-subtle bg-surface rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-neutral-900/60 border-b border-neutral-800 text-neutral-400 font-semibold">
+                  <tr className="dark:bg-neutral-900/60 bg-neutral-100 border-b dark:border-neutral-800 border-border-subtle dark:text-neutral-400 text-text-secondary font-semibold">
                     <th className="px-4 py-3.5">Title & Type</th>
                     <th className="px-4 py-3.5">Department</th>
                     <th className="px-4 py-3.5">Eligibility</th>
@@ -314,28 +314,28 @@ export default function AdminOpportunitiesDashboard() {
                     <th className="px-4 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-900 text-neutral-300">
+                <tbody className="divide-y dark:divide-neutral-900 divide-border-subtle dark:text-neutral-300 text-text-secondary">
                   {filteredList.map((opp) => (
-                    <tr key={opp.id} className="hover:bg-neutral-900/30 transition">
+                    <tr key={opp.id} className="dark:hover:bg-neutral-900/30 hover:bg-neutral-100/50 transition">
                       <td className="px-4 py-3.5">
-                        <span className="font-bold text-white block text-sm">{opp.title}</span>
-                        <span className="text-[10px] text-blue-450 font-mono mt-0.5 inline-block px-1.5 py-0.5 rounded bg-blue-500/5 border border-blue-500/10">
+                        <span className="font-bold dark:text-white text-text-primary block text-sm">{opp.title}</span>
+                        <span className="text-[10px] dark:text-blue-450 text-blue-650 font-mono mt-0.5 inline-block px-1.5 py-0.5 rounded bg-blue-500/5 border border-blue-500/10">
                           {opp.type}
                         </span>
                       </td>
-                      <td className="px-4 py-3.5 font-medium text-neutral-300">
+                      <td className="px-4 py-3.5 font-medium dark:text-neutral-300 text-text-secondary">
                         {opp.departmentName || "All Departments"}
                       </td>
-                      <td className="px-4 py-3.5 font-mono text-[10px] text-neutral-450">
+                      <td className="px-4 py-3.5 font-mono text-[10px] dark:text-neutral-455 text-text-muted">
                         {opp.eligibleYears && opp.eligibleYears.length > 0
                           ? opp.eligibleYears.join(", ")
                           : "All Years"}
                       </td>
-                      <td className="px-4 py-3.5 text-neutral-350 flex items-center gap-1.5 mt-2">
-                        <Building2 size={13} className="text-neutral-500" />
+                      <td className="px-4 py-3.5 dark:text-neutral-350 text-text-secondary flex items-center gap-1.5 mt-2">
+                        <Building2 size={13} className="dark:text-neutral-500 text-text-muted" />
                         <span>{opp.organizer || "N/A"}</span>
                       </td>
-                      <td className="px-4 py-3.5 font-mono text-neutral-450">
+                      <td className="px-4 py-3.5 font-mono dark:text-neutral-450 text-text-secondary">
                         {formatDate(opp.deadline)}
                       </td>
                       <td className="px-4 py-3.5">
@@ -343,14 +343,14 @@ export default function AdminOpportunitiesDashboard() {
                           {opp.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3.5 font-medium text-neutral-400">
+                      <td className="px-4 py-3.5 font-medium dark:text-neutral-400 text-text-secondary">
                         {opp.createdByName}
                       </td>
                       <td className="px-4 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleEditOpen(opp)}
-                            className="p-1.5 rounded bg-neutral-850 hover:bg-neutral-800 text-blue-400 hover:text-blue-300 border border-neutral-800 transition cursor-pointer"
+                            className="p-1.5 rounded dark:bg-neutral-900 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary border dark:border-neutral-800 border-border-subtle transition cursor-pointer"
                             title="Edit"
                           >
                             <Edit size={13} />
@@ -358,7 +358,7 @@ export default function AdminOpportunitiesDashboard() {
                           {opp.status !== "Archived" && (
                             <button
                               onClick={() => handleArchiveOpportunity(opp.id)}
-                              className="p-1.5 rounded bg-neutral-850 hover:bg-neutral-800 text-amber-500 hover:text-amber-400 border border-neutral-800 transition cursor-pointer"
+                              className="p-1.5 rounded dark:bg-neutral-900 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary border dark:border-neutral-800 border-border-subtle transition cursor-pointer"
                               title="Archive"
                             >
                               <Archive size={13} />
@@ -366,7 +366,7 @@ export default function AdminOpportunitiesDashboard() {
                           )}
                           <button
                             onClick={() => handleDeleteOpportunity(opp.id)}
-                            className="p-1.5 rounded bg-neutral-850 hover:bg-neutral-800 text-rose-500 hover:text-rose-400 border border-neutral-800 transition cursor-pointer"
+                            className="p-1.5 rounded dark:bg-neutral-900 bg-neutral-105 dark:hover:bg-neutral-800 hover:bg-rose-50 dark:text-rose-500 text-rose-600 dark:hover:text-rose-400 border dark:border-neutral-800 border-border-subtle transition cursor-pointer"
                             title="Delete"
                           >
                             <Trash2 size={13} />
@@ -380,8 +380,8 @@ export default function AdminOpportunitiesDashboard() {
             </div>
           </div>
         ) : (
-          <div className="text-center py-16 glass-card border border-neutral-800 rounded-xl text-neutral-500 font-mono text-xs flex flex-col items-center justify-center gap-2">
-            <Inbox size={20} className="text-neutral-600" />
+          <div className="text-center py-16 glass-card dark:border-neutral-800 border-border-subtle bg-surface rounded-xl dark:text-neutral-500 text-text-muted font-mono text-xs flex flex-col items-center justify-center gap-2">
+            <Inbox size={20} className="dark:text-neutral-650 text-text-muted" />
             <span>No opportunities logged in register.</span>
           </div>
         )}

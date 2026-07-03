@@ -356,8 +356,8 @@ export default function AdminAnnouncements() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="font-display font-bold text-2xl text-white">Institutional Notices Desk</h2>
-          <p className="text-xs text-neutral-400 mt-1">
+          <h2 className="font-display font-bold text-2xl dark:text-white text-text-primary">Institutional Notices Desk</h2>
+          <p className="text-xs dark:text-neutral-400 text-text-secondary mt-1">
             Dispatch urgent notices, configure audience scopes, and audit publication schedules.
           </p>
         </div>
@@ -380,30 +380,30 @@ export default function AdminAnnouncements() {
       </div>
 
       {/* Search & Filter Controls */}
-      <div className="glass-card border border-neutral-800 rounded-xl p-4 flex flex-col md:flex-row gap-3">
+      <div className="glass-card dark:border-neutral-800 border-border-subtle bg-surface rounded-xl p-4 flex flex-col md:flex-row gap-3">
         {/* Title Search */}
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-neutral-500" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 dark:text-neutral-500 text-text-muted" />
           <input
             type="text"
             placeholder="Search notice registry by title keywords..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-blue-600 transition"
+            className="w-full pl-9 pr-4 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
           />
         </div>
 
         {/* Filter Audience */}
-        <div className="w-full md:w-44 flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-2.5 text-xs text-white">
-          <Filter size={12} className="text-neutral-500" />
-          <span className="text-neutral-500">Audience:</span>
+        <div className="w-full md:w-44 flex items-center gap-2 dark:bg-neutral-950 bg-background border dark:border-neutral-850 border-border-subtle rounded px-2.5 text-xs dark:text-white text-text-primary">
+          <Filter size={12} className="dark:text-neutral-500 text-text-muted" />
+          <span className="dark:text-neutral-500 text-text-secondary">Audience:</span>
           <select
             value={audienceFilter}
             onChange={e => {
               setAudienceFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-transparent text-white cursor-pointer py-2 flex-1 focus:outline-none"
+            className="bg-transparent dark:text-white text-text-primary cursor-pointer py-2 flex-1 focus:outline-none"
           >
             <option value="ALL">All Targets</option>
             <option value="All">All Roles</option>
@@ -416,16 +416,16 @@ export default function AdminAnnouncements() {
         </div>
 
         {/* Filter Priority */}
-        <div className="w-full md:w-36 flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-2.5 text-xs text-white">
-          <Filter size={12} className="text-neutral-500" />
-          <span className="text-neutral-500">Priority:</span>
+        <div className="w-full md:w-36 flex items-center gap-2 dark:bg-neutral-950 bg-background border dark:border-neutral-850 border-border-subtle rounded px-2.5 text-xs dark:text-white text-text-primary">
+          <Filter size={12} className="dark:text-neutral-500 text-text-muted" />
+          <span className="dark:text-neutral-500 text-text-secondary">Priority:</span>
           <select
             value={priorityFilter}
             onChange={e => {
               setPriorityFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-transparent text-white cursor-pointer py-2 flex-1 focus:outline-none"
+            className="bg-transparent dark:text-white text-text-primary cursor-pointer py-2 flex-1 focus:outline-none"
           >
             <option value="ALL">All Levels</option>
             <option value="Urgent">Urgent</option>
@@ -436,16 +436,16 @@ export default function AdminAnnouncements() {
         </div>
 
         {/* Filter Status */}
-        <div className="w-full md:w-36 flex items-center gap-2 bg-neutral-950 border border-neutral-850 rounded px-2.5 text-xs text-white">
-          <Filter size={12} className="text-neutral-500" />
-          <span className="text-neutral-500">Status:</span>
+        <div className="w-full md:w-36 flex items-center gap-2 dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded px-2.5 text-xs dark:text-white text-text-primary">
+          <Filter size={12} className="dark:text-neutral-500 text-text-muted" />
+          <span className="dark:text-neutral-500 text-text-secondary">Status:</span>
           <select
             value={statusFilter}
             onChange={e => {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-transparent text-white cursor-pointer py-2 flex-1 focus:outline-none"
+            className="bg-transparent dark:text-white text-text-primary cursor-pointer py-2 flex-1 focus:outline-none"
           >
             <option value="ALL">All Status</option>
             <option value="Draft">Draft</option>
@@ -456,16 +456,16 @@ export default function AdminAnnouncements() {
       </div>
 
       {/* Registry Table */}
-      <div className="glass-card border border-neutral-800 rounded-xl overflow-hidden">
+      <div className="glass-card dark:border-neutral-800 border-border-subtle bg-surface rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            <p className="text-xs text-neutral-500 mt-2 font-mono">Loading announcements database register...</p>
+            <p className="text-xs dark:text-neutral-500 text-text-muted mt-2 font-mono">Loading announcements database register...</p>
           </div>
         ) : error ? (
           <div className="p-8 text-center bg-rose-500/[0.01]">
             <AlertTriangle className="w-8 h-8 mx-auto text-rose-500 mb-2" />
-            <p className="text-xs text-rose-400 font-semibold">{error}</p>
+            <p className="text-xs text-rose-455 font-semibold">{error}</p>
             <button
               onClick={fetchAnnouncements}
               className="mt-3 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-neutral-800 hover:bg-neutral-750 text-white rounded transition"
@@ -477,25 +477,25 @@ export default function AdminAnnouncements() {
           <div className="overflow-x-auto relative">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-neutral-900/50 border-b border-neutral-800 text-neutral-400 font-semibold sticky top-0 backdrop-blur-md z-10 select-none">
-                  <th className="px-4 py-3 text-[10px] uppercase font-bold text-neutral-500">Notice Title</th>
-                  <th className="px-4 py-3 text-[10px] uppercase font-bold text-neutral-500">Target Audience</th>
-                  <th className="px-4 py-3 text-[10px] uppercase font-bold text-neutral-500">Priority</th>
-                  <th className="px-4 py-3 text-[10px] uppercase font-bold text-neutral-500">Status</th>
-                  <th className="px-4 py-3 text-[10px] uppercase font-bold text-neutral-500">Publish Date</th>
-                  <th className="px-4 py-3 text-[10px] uppercase font-bold text-neutral-500">Expiry Date</th>
-                  <th className="px-4 py-3 text-right text-[10px] uppercase font-bold text-neutral-500">Actions</th>
+                <tr className="dark:bg-neutral-900/50 bg-neutral-100 border-b dark:border-neutral-800 border-border-subtle dark:text-neutral-400 text-text-secondary font-semibold sticky top-0 backdrop-blur-md z-10 select-none">
+                  <th className="px-4 py-3 text-[10px] uppercase font-bold dark:text-neutral-550 text-text-secondary">Notice Title</th>
+                  <th className="px-4 py-3 text-[10px] uppercase font-bold dark:text-neutral-555 text-text-secondary">Target Audience</th>
+                  <th className="px-4 py-3 text-[10px] uppercase font-bold dark:text-neutral-555 text-text-secondary">Priority</th>
+                  <th className="px-4 py-3 text-[10px] uppercase font-bold dark:text-neutral-555 text-text-secondary">Status</th>
+                  <th className="px-4 py-3 text-[10px] uppercase font-bold dark:text-neutral-555 text-text-secondary">Publish Date</th>
+                  <th className="px-4 py-3 text-[10px] uppercase font-bold dark:text-neutral-555 text-text-secondary">Expiry Date</th>
+                  <th className="px-4 py-3 text-right text-[10px] uppercase font-bold dark:text-neutral-555 text-text-secondary">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-900 text-neutral-300">
+              <tbody className="divide-y dark:divide-neutral-900 divide-border-subtle dark:text-neutral-300 text-text-secondary">
                 {announcements.length > 0 ? (
                   announcements.map(ann => (
-                    <tr key={ann.id} className="hover:bg-neutral-900/30 transition duration-150 group">
+                    <tr key={ann.id} className="dark:hover:bg-neutral-900/30 hover:bg-neutral-100/50 transition duration-150 group">
                       {/* Title */}
                       <td className="px-4 py-3.5 max-w-[220px]">
                         <div>
-                          <div className="font-semibold text-white leading-tight truncate">{ann.title}</div>
-                          <div className="text-[10px] text-neutral-500 truncate mt-0.5" title={ann.content}>
+                          <div className="font-semibold dark:text-white text-text-primary leading-tight truncate">{ann.title}</div>
+                          <div className="text-[10px] dark:text-neutral-500 text-text-muted truncate mt-0.5" title={ann.content}>
                             {ann.content}
                           </div>
                         </div>
@@ -504,14 +504,14 @@ export default function AdminAnnouncements() {
                       {/* Audience */}
                       <td className="px-4 py-3.5">
                         <div className="space-y-0.5">
-                          <span className="font-semibold text-neutral-200">{ann.targetAudience}</span>
+                          <span className="font-semibold dark:text-neutral-200 text-text-secondary">{ann.targetAudience}</span>
                           {ann.departmentName && (
-                            <span className="text-[9px] text-blue-400 font-mono block">
+                            <span className="text-[9px] text-blue-500 dark:text-blue-400 font-mono block">
                               Dept: {ann.departmentName}
                             </span>
                           )}
                           {ann.semester && (
-                            <span className="text-[9px] text-indigo-400 font-mono block">
+                            <span className="text-[9px] text-indigo-600 dark:text-indigo-400 font-mono block">
                               Sem: Semester {ann.semester}
                             </span>
                           )}
@@ -541,11 +541,11 @@ export default function AdminAnnouncements() {
                       </td>
 
                       {/* Publish Date */}
-                      <td className="px-4 py-3.5 font-mono text-[10px] text-neutral-450">{ann.publishDate}</td>
+                      <td className="px-4 py-3.5 font-mono text-[10px] dark:text-neutral-450 text-text-secondary">{ann.publishDate}</td>
 
                       {/* Expiry Date */}
-                      <td className="px-4 py-3.5 font-mono text-[10px] text-neutral-450">
-                        {ann.expiryDate || <span className="text-neutral-600 italic">Indefinite</span>}
+                      <td className="px-4 py-3.5 font-mono text-[10px] dark:text-neutral-455 text-text-secondary">
+                        {ann.expiryDate || <span className="dark:text-neutral-600 text-text-muted italic">Indefinite</span>}
                       </td>
 
                       {/* Actions */}
@@ -557,7 +557,7 @@ export default function AdminAnnouncements() {
                               onClick={() => handleStatusTransition(ann.id, "Published")}
                               disabled={statusLoadingId === ann.id}
                               title="Publish Bulletin"
-                              className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer disabled:opacity-40 transition flex items-center gap-1 text-[10px] shadow-lg shadow-emerald-600/10 select-none"
+                              className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-semibold cursor-pointer disabled:opacity-40 transition flex items-center gap-1 text-[10px] shadow-lg shadow-emerald-600/10 select-none border-none"
                             >
                               <Send size={9} />
                               <span>Publish</span>
@@ -570,7 +570,7 @@ export default function AdminAnnouncements() {
                               onClick={() => handleStatusTransition(ann.id, "Expired")}
                               disabled={statusLoadingId === ann.id}
                               title="Expire Bulletin"
-                              className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-750 border border-neutral-750 text-neutral-450 hover:text-white font-semibold cursor-pointer disabled:opacity-40 transition flex items-center gap-1 text-[10px] select-none"
+                              className="px-2 py-1 rounded dark:bg-neutral-800 bg-neutral-100 hover:bg-neutral-750 dark:border-neutral-750 border-border-subtle dark:text-neutral-450 text-text-secondary hover:text-white font-semibold cursor-pointer disabled:opacity-40 transition flex items-center gap-1 text-[10px] select-none"
                             >
                               <Lock size={9} />
                               <span>Expire</span>
@@ -583,7 +583,7 @@ export default function AdminAnnouncements() {
                               setIsDetailsOpen(true);
                             }}
                             title="Preview Content"
-                            className="p-1.5 rounded hover:bg-neutral-800 text-neutral-400 hover:text-white transition cursor-pointer"
+                            className="p-1.5 rounded dark:hover:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary border dark:border-transparent border-border-subtle transition cursor-pointer"
                           >
                             <Eye size={12} />
                           </button>
@@ -591,7 +591,7 @@ export default function AdminAnnouncements() {
                           <button
                             onClick={() => openEditDrawer(ann)}
                             title="Edit Notice"
-                            className="p-1.5 rounded hover:bg-neutral-800 text-neutral-400 hover:text-white transition cursor-pointer"
+                            className="p-1.5 rounded dark:hover:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary border dark:border-transparent border-border-subtle transition cursor-pointer"
                           >
                             <Edit size={12} />
                           </button>
@@ -602,7 +602,7 @@ export default function AdminAnnouncements() {
                               setIsDeleteOpen(true);
                             }}
                             title="Delete Notice"
-                            className="p-1.5 rounded hover:bg-neutral-800 text-neutral-500 hover:text-rose-450 transition cursor-pointer"
+                            className="p-1.5 rounded dark:hover:bg-neutral-805 hover:bg-rose-50 dark:text-neutral-500 text-text-muted dark:hover:text-rose-450 hover:text-rose-650 border dark:border-transparent border-border-subtle transition cursor-pointer"
                           >
                             <Trash2 size={12} />
                           </button>
@@ -612,7 +612,7 @@ export default function AdminAnnouncements() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="text-center py-12 text-neutral-500 font-mono">
+                    <td colSpan={7} className="text-center py-12 dark:text-neutral-500 text-text-muted font-mono">
                       No matching announcements found in the bulletin index.
                     </td>
                   </tr>
@@ -624,22 +624,22 @@ export default function AdminAnnouncements() {
 
         {/* Pagination Footer */}
         {totalPages > 1 && !loading && (
-          <div className="px-4 py-3 bg-neutral-950/80 border-t border-neutral-900 flex items-center justify-between select-none">
-            <span className="text-[10px] text-neutral-500 font-mono">
+          <div className="px-4 py-3 dark:bg-neutral-955/80 bg-neutral-100 border-t dark:border-neutral-900 border-border-subtle flex items-center justify-between select-none">
+            <span className="text-[10px] dark:text-neutral-500 text-text-muted font-mono">
               Page {page} of {totalPages} ({totalRecords} total bulletins)
             </span>
             <div className="flex items-center gap-1.5">
               <button
                 disabled={page <= 1}
                 onClick={() => setPage(p => Math.max(p - 1, 1))}
-                className="p-1.5 rounded bg-neutral-900 border border-neutral-850 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition text-neutral-300"
+                className="px-2.5 py-1 text-xs rounded dark:bg-neutral-900 bg-neutral-200 border dark:border-neutral-850 border-border-subtle hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition dark:text-neutral-300 text-text-primary"
               >
                 Previous
               </button>
               <button
                 disabled={page >= totalPages}
                 onClick={() => setPage(p => Math.min(p + 1, totalPages))}
-                className="p-1.5 rounded bg-neutral-900 border border-neutral-850 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition text-neutral-300"
+                className="px-2.5 py-1 text-xs rounded dark:bg-neutral-900 bg-neutral-200 border dark:border-neutral-850 border-border-subtle hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition dark:text-neutral-300 text-text-primary"
               >
                 Next
               </button>
@@ -652,18 +652,18 @@ export default function AdminAnnouncements() {
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm animate-fade-in flex justify-end">
           <div
-            className="w-full max-w-md bg-neutral-900 border-l border-neutral-800 h-full flex flex-col justify-between shadow-2xl relative animate-slide-left overflow-y-auto"
+            className="w-full max-w-md dark:bg-neutral-900 bg-surface border-l dark:border-neutral-800 border-border-subtle h-full flex flex-col justify-between shadow-2xl relative animate-slide-left overflow-y-auto"
             style={{ animationDuration: "250ms" }}
           >
             {/* Header */}
-            <div className="p-5 border-b border-neutral-850 flex items-center justify-between">
+            <div className="p-5 border-b dark:border-neutral-850 border-border-subtle flex items-center justify-between">
               <div>
-                <h3 className="font-display font-bold text-lg text-white">Create Announcement</h3>
-                <p className="text-[10px] text-neutral-500">Draft institutional broadcast alerts.</p>
+                <h3 className="font-display font-bold text-lg dark:text-white text-text-primary">Create Announcement</h3>
+                <p className="text-[10px] dark:text-neutral-500 text-text-secondary">Draft institutional broadcast alerts.</p>
               </div>
               <button
                 onClick={() => setIsCreateOpen(false)}
-                className="p-1 rounded bg-neutral-800 hover:bg-neutral-750 text-neutral-400 hover:text-white transition cursor-pointer"
+                className="p-1 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary transition cursor-pointer border dark:border-neutral-855 border-border-subtle"
               >
                 <X size={16} />
               </button>
@@ -672,44 +672,44 @@ export default function AdminAnnouncements() {
             {/* Form */}
             <form onSubmit={handleCreateAnnouncement} className="p-5 flex-1 space-y-4">
               {createError && (
-                <div className="p-2.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold">
+                <div className="p-2.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold">
                   {createError}
                 </div>
               )}
 
               {/* Title */}
               <div>
-                <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Bulletin Title</label>
+                <label className="block text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary mb-1.5">Bulletin Title</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Schedule Changes for Autumn Midterm"
                   value={cTitle}
                   onChange={e => setCTitle(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-blue-600 transition font-semibold"
+                  className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition font-semibold"
                 />
               </div>
 
               {/* Content */}
               <div>
-                <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Description Content</label>
+                <label className="block text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary mb-1.5">Description Content</label>
                 <textarea
                   required
                   rows={6}
                   placeholder="Enter notice details..."
                   value={cContent}
                   onChange={e => setCContent(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-blue-600 transition resize-none leading-normal"
+                  className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition resize-none leading-normal"
                 />
               </div>
 
               {/* Target Audience Select */}
               <div>
-                <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Target Audience</label>
+                <label className="block text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary mb-1.5">Target Audience</label>
                 <select
                   value={cTargetAudience}
                   onChange={e => setCTargetAudience(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-850 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-600 transition"
+                  className="w-full dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded px-3 py-2 text-xs dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                 >
                   <option value="All">All Roles</option>
                   <option value="Students">Students Only</option>
@@ -718,7 +718,7 @@ export default function AdminAnnouncements() {
                   <option value="Department Specific">Department Specific</option>
                   <option value="Semester Specific">Semester Specific</option>
                 </select>
-                <span className="text-[9px] text-neutral-500 mt-1 block italic leading-normal">
+                <span className="text-[9px] dark:text-neutral-500 text-text-muted mt-1 block italic leading-normal">
                   Audience target variables are immutable after notice creation.
                 </span>
               </div>
@@ -726,11 +726,11 @@ export default function AdminAnnouncements() {
               {/* Conditional Fields: Department */}
               {cTargetAudience === "Department Specific" && (
                 <div className="animate-fade-in">
-                  <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Target Department</label>
+                  <label className="block text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary mb-1.5">Target Department</label>
                   <select
                     value={cDepartmentId}
                     onChange={e => setCDepartmentId(e.target.value)}
-                    className="w-full bg-neutral-950 border border-neutral-850 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-600 transition"
+                    className="w-full dark:bg-neutral-955 bg-background border dark:border-neutral-855 border-border-subtle rounded px-3 py-2 text-xs dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                   >
                     {departments.map(d => (
                       <option key={d.id} value={d.id}>
@@ -744,11 +744,11 @@ export default function AdminAnnouncements() {
               {/* Conditional Fields: Semester */}
               {cTargetAudience === "Semester Specific" && (
                 <div className="animate-fade-in">
-                  <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Target Semester Batch</label>
+                  <label className="block text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary mb-1.5">Target Semester Batch</label>
                   <select
                     value={cSemester}
                     onChange={e => setCSemester(Number(e.target.value))}
-                    className="w-full bg-neutral-950 border border-neutral-850 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-600 transition"
+                    className="w-full dark:bg-neutral-955 bg-background border dark:border-neutral-855 border-border-subtle rounded px-3 py-2 text-xs dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
                       <option key={sem} value={sem}>
@@ -761,11 +761,11 @@ export default function AdminAnnouncements() {
 
               {/* Priority level */}
               <div>
-                <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Priority Level</label>
+                <label className="block text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary mb-1.5">Priority Level</label>
                 <select
                   value={cPriority}
                   onChange={e => setCPriority(e.target.value as any)}
-                  className="w-full bg-neutral-950 border border-neutral-850 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-600 transition"
+                  className="w-full dark:bg-neutral-955 bg-background border dark:border-neutral-855 border-border-subtle rounded px-3 py-2 text-xs dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                 >
                   <option value="Low">Low</option>
                   <option value="Medium">Medium</option>
@@ -777,34 +777,34 @@ export default function AdminAnnouncements() {
               {/* Dates */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Publish Date</label>
+                  <label className="block text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary mb-1.5">Publish Date</label>
                   <input
                     type="date"
                     required
                     value={cPublishDate}
                     onChange={e => setCPublishDate(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white font-mono focus:outline-none focus:border-blue-600 transition"
+                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-855 border-border-subtle rounded dark:text-white text-text-primary font-mono focus:outline-none focus:border-blue-600 transition"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Expiry Date</label>
+                  <label className="block text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary mb-1.5">Expiry Date</label>
                   <input
                     type="date"
                     placeholder="Optional"
                     value={cExpiryDate}
                     onChange={e => setCExpiryDate(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white font-mono focus:outline-none focus:border-blue-600 transition"
+                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-855 border-border-subtle rounded dark:text-white text-text-primary font-mono focus:outline-none focus:border-blue-600 transition"
                   />
                 </div>
               </div>
             </form>
 
             {/* Actions */}
-            <div className="p-5 border-t border-neutral-850 flex items-center gap-3">
+            <div className="p-5 border-t dark:border-neutral-855 border-border-subtle flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setIsCreateOpen(false)}
-                className="flex-1 py-2 text-xs font-semibold rounded bg-neutral-800 hover:bg-neutral-750 text-neutral-300 hover:text-white cursor-pointer transition text-center select-none"
+                className="flex-1 py-2 text-xs font-semibold rounded dark:bg-neutral-800 bg-neutral-100 dark:hover:bg-neutral-750 hover:bg-neutral-200 dark:text-neutral-300 text-text-primary border dark:border-neutral-800 border-border-subtle cursor-pointer transition text-center select-none"
               >
                 Cancel
               </button>
@@ -826,18 +826,18 @@ export default function AdminAnnouncements() {
       {isEditOpen && selectedAnnouncement && (
         <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm animate-fade-in flex justify-end">
           <div
-            className="w-full max-w-md bg-neutral-900 border-l border-neutral-800 h-full flex flex-col justify-between shadow-2xl relative animate-slide-left overflow-y-auto"
+            className="w-full max-w-md dark:bg-neutral-900 bg-surface border-l dark:border-neutral-800 border-border-subtle h-full flex flex-col justify-between shadow-2xl relative animate-slide-left overflow-y-auto"
             style={{ animationDuration: "250ms" }}
           >
             {/* Header */}
-            <div className="p-5 border-b border-neutral-850 flex items-center justify-between">
+            <div className="p-5 border-b dark:border-neutral-850 border-border-subtle flex items-center justify-between">
               <div>
-                <h3 className="font-display font-bold text-lg text-white">Edit Announcement Details</h3>
-                <p className="text-[10px] text-neutral-500">Notice #{selectedAnnouncement.id.substring(0, 8)} details.</p>
+                <h3 className="font-display font-bold text-lg dark:text-white text-text-primary">Edit Announcement Details</h3>
+                <p className="text-[10px] dark:text-neutral-500 text-text-secondary">Notice #{selectedAnnouncement.id.substring(0, 8)} details.</p>
               </div>
               <button
                 onClick={() => setIsEditOpen(false)}
-                className="p-1 rounded bg-neutral-800 hover:bg-neutral-750 text-neutral-400 hover:text-white transition cursor-pointer"
+                className="p-1 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary transition cursor-pointer border dark:border-neutral-850 border-border-subtle"
               >
                 <X size={16} />
               </button>
@@ -846,24 +846,24 @@ export default function AdminAnnouncements() {
             {/* Form */}
             <form onSubmit={handleEditAnnouncement} className="p-5 flex-1 space-y-4">
               {editError && (
-                <div className="p-2.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold">
+                <div className="p-2.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold">
                   {editError}
                 </div>
               )}
 
               {/* Read Only Scope Indicator */}
-              <div className="p-3 bg-neutral-950/60 border border-neutral-850 rounded text-neutral-400 text-[11px] leading-normal space-y-0.5">
+              <div className="p-3 dark:bg-neutral-950/60 bg-background border dark:border-neutral-855 border-border-subtle rounded dark:text-neutral-400 text-text-secondary text-[11px] leading-normal space-y-0.5">
                 <div>
-                  <span className="font-semibold text-white">Target Scope:</span> {selectedAnnouncement.targetAudience}
+                  <span className="font-semibold dark:text-white text-text-primary">Target Scope:</span> {selectedAnnouncement.targetAudience}
                 </div>
                 {selectedAnnouncement.departmentName && (
                   <div>
-                    <span className="font-semibold text-white">Department:</span> {selectedAnnouncement.departmentName}
+                    <span className="font-semibold dark:text-white text-text-primary">Department:</span> {selectedAnnouncement.departmentName}
                   </div>
                 )}
                 {selectedAnnouncement.semester && (
                   <div>
-                    <span className="font-semibold text-white">Semester Batch:</span> Semester{" "}
+                    <span className="font-semibold dark:text-white text-text-primary">Semester Batch:</span> Semester{" "}
                     {selectedAnnouncement.semester}
                   </div>
                 )}
@@ -871,37 +871,37 @@ export default function AdminAnnouncements() {
 
               {/* Title */}
               <div>
-                <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Bulletin Title</label>
+                <label className="block text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary mb-1.5">Bulletin Title</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Schedule Changes for Autumn Midterm"
                   value={eTitle}
                   onChange={e => setETitle(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-blue-600 transition font-semibold"
+                  className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition font-semibold"
                 />
               </div>
 
               {/* Content */}
               <div>
-                <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Description Content</label>
+                <label className="block text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary mb-1.5">Description Content</label>
                 <textarea
                   required
                   rows={6}
                   placeholder="Enter notice details..."
                   value={eContent}
                   onChange={e => setEContent(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white focus:outline-none focus:border-blue-600 transition resize-none leading-normal"
+                  className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-855 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition resize-none leading-normal"
                 />
               </div>
 
               {/* Priority level */}
               <div>
-                <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Priority Level</label>
+                <label className="block text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary mb-1.5">Priority Level</label>
                 <select
                   value={ePriority}
                   onChange={e => setEPriority(e.target.value as any)}
-                  className="w-full bg-neutral-950 border border-neutral-850 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-600 transition"
+                  className="w-full dark:bg-neutral-955 bg-background border dark:border-neutral-855 border-border-subtle rounded px-3 py-2 text-xs dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                 >
                   <option value="Low">Low</option>
                   <option value="Medium">Medium</option>
@@ -913,33 +913,33 @@ export default function AdminAnnouncements() {
               {/* Dates */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Publish Date</label>
+                  <label className="block text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary mb-1.5">Publish Date</label>
                   <input
                     type="date"
                     required
                     value={ePublishDate}
                     onChange={e => setEPublishDate(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white font-mono focus:outline-none focus:border-blue-600 transition"
+                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-855 border-border-subtle rounded dark:text-white text-text-primary font-mono focus:outline-none focus:border-blue-600 transition"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] uppercase font-bold text-neutral-400 mb-1.5">Expiry Date</label>
+                  <label className="block text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary mb-1.5">Expiry Date</label>
                   <input
                     type="date"
                     value={eExpiryDate}
                     onChange={e => setEExpiryDate(e.target.value)}
-                    className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-850 rounded text-white font-mono focus:outline-none focus:border-blue-600 transition"
+                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-855 border-border-subtle rounded dark:text-white text-text-primary font-mono focus:outline-none focus:border-blue-600 transition"
                   />
                 </div>
               </div>
             </form>
 
             {/* Actions */}
-            <div className="p-5 border-t border-neutral-850 flex items-center gap-3">
+            <div className="p-5 border-t dark:border-neutral-855 border-border-subtle flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setIsEditOpen(false)}
-                className="flex-1 py-2 text-xs font-semibold rounded bg-neutral-800 hover:bg-neutral-750 text-neutral-300 hover:text-white cursor-pointer transition text-center select-none"
+                className="flex-1 py-2 text-xs font-semibold rounded dark:bg-neutral-800 bg-neutral-100 dark:hover:bg-neutral-750 hover:bg-neutral-200 dark:text-neutral-300 text-text-primary border dark:border-neutral-800 border-border-subtle cursor-pointer transition text-center select-none"
               >
                 Cancel
               </button>
@@ -960,15 +960,15 @@ export default function AdminAnnouncements() {
       {/* Modal 3: View Full Notice preview details (Modal Dialog) */}
       {isDetailsOpen && selectedAnnouncement && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-lg bg-neutral-900 border border-neutral-800 rounded-xl p-6 shadow-2xl relative animate-scale-up">
+          <div className="w-full max-w-lg dark:bg-neutral-900 bg-surface border dark:border-neutral-800 border-border-subtle rounded-xl p-6 shadow-2xl relative animate-scale-up">
             <button
               onClick={() => setIsDetailsOpen(false)}
-              className="absolute right-4 top-4 p-1 rounded bg-neutral-800 hover:bg-neutral-750 text-neutral-400 hover:text-white transition cursor-pointer font-bold"
+              className="absolute right-4 top-4 p-1 rounded dark:bg-neutral-855 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary transition cursor-pointer font-bold border dark:border-neutral-850 border-border-subtle"
             >
               <X size={16} />
             </button>
 
-            <div className="space-y-1.5 pr-8 pb-4 border-b border-neutral-850">
+            <div className="space-y-1.5 pr-8 pb-4 border-b dark:border-neutral-855 border-border-subtle">
               <div className="flex flex-wrap items-center gap-2">
                 <span
                   className={`px-2 py-0.5 rounded text-[8px] font-bold border uppercase tracking-wider ${getPriorityBadgeStyle(
@@ -984,29 +984,29 @@ export default function AdminAnnouncements() {
                 >
                   {selectedAnnouncement.status}
                 </span>
-                <span className="px-2 py-0.5 rounded text-[8px] font-bold border border-neutral-800 bg-neutral-950 text-neutral-400">
+                <span className="px-2 py-0.5 rounded text-[8px] font-bold border dark:border-neutral-800 border-border-subtle dark:bg-neutral-950 bg-background dark:text-neutral-400 text-text-secondary">
                   Target: {selectedAnnouncement.targetAudience}
                 </span>
               </div>
-              <h3 className="font-display font-bold text-lg text-white leading-tight">
+              <h3 className="font-display font-bold text-lg dark:text-white text-text-primary leading-tight">
                 {selectedAnnouncement.title}
               </h3>
-              <div className="text-[10px] text-neutral-500 font-mono">
+              <div className="text-[10px] dark:text-neutral-500 text-text-muted font-mono">
                 AY Context Publish: {selectedAnnouncement.publishDate} • By: {selectedAnnouncement.createdByName}
               </div>
             </div>
 
             <div className="py-5 max-h-[350px] overflow-y-auto pr-1">
-              <p className="text-xs text-neutral-300 whitespace-pre-wrap leading-relaxed font-sans">
+              <p className="text-xs dark:text-neutral-300 text-text-secondary whitespace-pre-wrap leading-relaxed font-sans">
                 {selectedAnnouncement.content}
               </p>
             </div>
 
-            <div className="pt-4 border-t border-neutral-850 flex justify-end">
+            <div className="pt-4 border-t dark:border-neutral-850 border-border-subtle flex justify-end">
               <button
                 type="button"
                 onClick={() => setIsDetailsOpen(false)}
-                className="px-4 py-2 text-xs font-semibold rounded bg-neutral-800 hover:bg-neutral-750 text-neutral-350 hover:text-white transition cursor-pointer select-none"
+                className="px-4 py-2 text-xs font-semibold rounded dark:bg-neutral-800 bg-neutral-100 dark:hover:bg-neutral-750 hover:bg-neutral-200 dark:text-neutral-300 text-text-primary border dark:border-neutral-800 border-border-subtle cursor-pointer transition select-none"
               >
                 Close Preview
               </button>
@@ -1018,25 +1018,25 @@ export default function AdminAnnouncements() {
       {/* Modal 4: Delete Announcement Confirmation (Modal dialog) */}
       {isDeleteOpen && selectedAnnouncement && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-xl p-5 shadow-2xl relative animate-scale-up">
+          <div className="w-full max-w-sm dark:bg-neutral-900 bg-surface border dark:border-neutral-800 border-border-subtle rounded-xl p-5 shadow-2xl relative animate-scale-up">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500">
+              <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-505">
                 <AlertTriangle size={20} />
               </div>
               <div>
-                <h3 className="font-display font-bold text-white text-base">Delete Announcement</h3>
-                <p className="text-[10px] text-rose-450 mt-0.5">Destructive administrative action.</p>
+                <h3 className="font-display font-bold dark:text-white text-text-primary text-base">Delete Announcement</h3>
+                <p className="text-[10px] text-rose-600 dark:text-rose-450 mt-0.5">Destructive administrative action.</p>
               </div>
             </div>
 
             {deleteError && (
-              <div className="p-2.5 mb-4 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold">
+              <div className="p-2.5 mb-4 rounded bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold">
                 {deleteError}
               </div>
             )}
 
-            <p className="text-xs text-neutral-350 leading-normal mb-6">
-              Are you sure you want to delete the notice <strong className="text-white">&quot;{selectedAnnouncement.title}&quot;</strong>? This will remove the notice from all bulletin boards and databases immediately.
+            <p className="text-xs dark:text-neutral-300 text-text-secondary leading-normal mb-6">
+              Are you sure you want to delete the notice <strong className="dark:text-white text-text-primary">&quot;{selectedAnnouncement.title}&quot;</strong>? This will remove the notice from all bulletin boards and databases immediately.
             </p>
 
             <div className="flex items-center gap-3">
@@ -1044,7 +1044,7 @@ export default function AdminAnnouncements() {
                 type="button"
                 disabled={submittingDelete}
                 onClick={() => setIsDeleteOpen(false)}
-                className="flex-1 py-2 text-xs font-semibold rounded bg-neutral-800 hover:bg-neutral-750 text-neutral-350 hover:text-white cursor-pointer transition select-none text-center"
+                className="flex-1 py-2 text-xs font-semibold rounded dark:bg-neutral-800 bg-neutral-100 dark:hover:bg-neutral-750 hover:bg-neutral-200 dark:text-neutral-300 text-text-primary border dark:border-neutral-800 border-border-subtle cursor-pointer transition select-none text-center"
               >
                 Cancel
               </button>
@@ -1052,7 +1052,7 @@ export default function AdminAnnouncements() {
                 type="button"
                 disabled={submittingDelete}
                 onClick={handleDeleteAnnouncement}
-                className="flex-1 py-2 text-xs font-semibold rounded bg-rose-600 hover:bg-rose-505 text-white cursor-pointer transition text-center flex items-center justify-center gap-1.5 select-none"
+                className="flex-1 py-2 text-xs font-semibold rounded bg-rose-600 hover:bg-rose-500 text-white cursor-pointer transition text-center flex items-center justify-center gap-1.5 select-none"
               >
                 {submittingDelete && <Loader2 size={12} className="animate-spin" />}
                 <span>Delete notice</span>
