@@ -92,7 +92,7 @@ async function seed(): Promise<void> {
   console.log('\n[1/12] Resetting database tables (Truncate Cascade)...');
   await query(`
     TRUNCATE TABLE 
-      users, departments, programs, subjects, faculty, students, 
+      users, departments, programs, subjects, faculty, students, accountants,
       faculty_subject_assignments, attendance, internal_marks, exams, 
       results, fees, fee_payments, announcements, documents, 
       parsed_events, academic_calendar_events, refresh_tokens, audit_logs 
@@ -154,6 +154,11 @@ async function seed(): Promise<void> {
   await query(
     `INSERT INTO users (id, email, password_hash, role, full_name) VALUES ($1, $2, $3, $4, $5)`,
     [accountantUserId, 'accountant@college.erp', accountantHash, 'accountant', 'Chief Accountant']
+  );
+  const accountantId = uuidv4();
+  await query(
+    `INSERT INTO accountants (id, user_id, employee_number, full_name) VALUES ($1, $2, $3, $4)`,
+    [accountantId, accountantUserId, 'EMP-ACC001', 'Chief Accountant']
   );
   logStep('accountant user', 1);
 

@@ -21,6 +21,7 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
       isActive: true,
       designation: payload.designation,
       departmentId: payload.departmentId,
+      facultyId: payload.facultyId,
     };
     next();
   } catch (err) {

@@ -1,7 +1,7 @@
 import { query } from '../config/database';
 import { AppError } from '../errors/AppError';
 import { getStudentSummary } from './attendance.service';
-import { getStudentDues } from './fee.service';
+import { getStudentDues, ensureAllStudentsHaveFees } from './fee.service';
 import { getStudentResults } from './result.service';
 import { getStudentTimetable } from './examination.service';
 
@@ -1089,6 +1089,7 @@ export async function getHODDashboardStats(userId: string) {
 }
 
 export async function getAccountantDashboardStats() {
+  await ensureAllStudentsHaveFees();
   const [studCountRes, collectedRes, pendingRes, paidCountRes, partialCountRes, transactionsRes] = await Promise.all([
     query<{ count: string }>('SELECT COUNT(*)::text AS count FROM students WHERE deleted_at IS NULL'),
     query<{ total: string }>('SELECT COALESCE(SUM(paid_amount), 0)::text AS total FROM fees WHERE deleted_at IS NULL'),

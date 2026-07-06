@@ -132,8 +132,18 @@ export async function getMarksById(id: string): Promise<InternalMarksRecord> {
 export async function getRoster(
   subjectId: string,
   section: string,
-  assessmentType: AssessmentType
+  assessmentType: AssessmentType,
+  userId: string
 ): Promise<RosterMarksEntry[]> {
+  const facultyId = await resolveFacultyId(userId);
+  const assigned = await isFacultyAssigned(facultyId, subjectId, section);
+  if (!assigned) {
+    throw AppError.forbidden(
+      'You are not assigned to teach this subject and section',
+      'NOT_ASSIGNED'
+    );
+  }
+
   // Verify subject exists and retrieve program_id + semester
   const { rows: sub } = await query<{ program_id: string; semester: number }>(
     `SELECT program_id, semester FROM subjects WHERE id = $1 AND deleted_at IS NULL`,

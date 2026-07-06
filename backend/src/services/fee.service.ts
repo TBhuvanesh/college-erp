@@ -167,11 +167,50 @@ export async function getFeeById(id: string): Promise<FeeDetail> {
 }
 
 /**
+ * Automatically initializes tuition fee records for any students who do not have one.
+ */
+export async function ensureAllStudentsHaveFees(): Promise<void> {
+  const { rows: missingStudents } = await query<{ id: string; semester: number; academic_year: string }>(
+    `SELECT s.id, s.semester, s.academic_year
+     FROM students s
+     LEFT JOIN fees f ON f.student_id = s.id AND f.fee_type = 'Tuition Fee' AND f.deleted_at IS NULL
+     WHERE f.id IS NULL AND s.deleted_at IS NULL`
+  );
+
+  if (missingStudents.length === 0) return;
+
+  const dueDate = '2026-07-15';
+  const defaultTotalFee = 106000.00;
+  const paymentStatus = computePaymentStatus(0, defaultTotalFee, dueDate);
+
+  for (const stud of missingStudents) {
+    await query(
+      `INSERT INTO fees
+         (student_id, academic_year, semester, fee_type, total_amount,
+          paid_amount, pending_amount, due_date, payment_status, remarks)
+       VALUES ($1, $2, $3, 'Tuition Fee', $4, 0, $4, $5, $6, 'Automatically Initialized Tuition Fee')
+       ON CONFLICT DO NOTHING`,
+      [
+        stud.id,
+        stud.academic_year || '2026-2027',
+        stud.semester,
+        defaultTotalFee,
+        dueDate,
+        paymentStatus,
+      ]
+    );
+  }
+}
+
+/**
  * Lists fee records with optional filters.
  * Lazily refreshes overdue statuses before returning so admins always see
  * accurate status without requiring a scheduled job.
  */
 export async function listFees(filters: ListFeesQuery): Promise<PaginatedFees> {
+  // Ensure every student has a fee record before listing
+  await ensureAllStudentsHaveFees();
+
   // Refresh any stale Pending/Partially Paid records whose due date has passed
   await query(
     `UPDATE fees

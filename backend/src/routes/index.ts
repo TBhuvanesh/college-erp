@@ -24,6 +24,7 @@ import lmsSubmissionRouter from './lmsSubmission.routes';
 import opportunityHubRouter from './opportunityHub.routes';
 import notificationRouter from './notification.routes';
 import calendarEntryRouter from './calendarEntry.routes';
+import accountantRouter from './accountant.routes';
 
 const router = Router();
 
@@ -31,6 +32,7 @@ router.use('/auth', authRouter);
 router.use('/search', searchRouter);
 router.use('/profile', profileRouter);
 router.use('/dashboard', dashboardRouter);
+router.use('/accountants', accountantRouter);
 router.use('/departments', departmentsRouter);
 router.use('/students', studentsRouter);
 router.use('/faculty', facultyRouter);

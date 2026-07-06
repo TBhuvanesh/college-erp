@@ -83,6 +83,7 @@ export interface Announcement {
 interface SimulationContextType {
   students: Student[];
   faculty: Faculty[];
+  accountants: Accountant[];
   courses: Course[];
   invoices: Invoice[];
   attendanceLogs: AttendanceRecord[];
@@ -101,6 +102,10 @@ interface SimulationContextType {
   
   addStudent: (student: Omit<Student, "id" | "dateOnboarded">) => Student;
   addFaculty: (fac: Omit<Faculty, "id">) => Faculty;
+  addAccountant: (acc: Omit<Accountant, "id" | "status">) => Accountant;
+  updateAccountant: (id: string, acc: Partial<Accountant>) => void;
+  deleteAccountant: (id: string) => void;
+  toggleAccountantStatus: (id: string) => void;
   generateInvoice: (invoice: Omit<Invoice, "id" | "dateGenerated" | "status">) => Invoice;
   markInvoiceAsPaid: (invoiceId: string) => void;
   logAttendance: (records: Omit<AttendanceRecord, "id" | "date">[]) => void;
@@ -161,6 +166,26 @@ const INITIAL_FACULTY: Faculty[] = [
     assignedSubjects: [
       { subjectId: "cs-303", subjectName: "CS-303: Computer Organization & Architecture", semester: "Semester 3" }
     ],
+    status: "Active"
+  }
+];
+
+export interface Accountant {
+  id: string;
+  name: string;
+  employeeId: string;
+  email: string;
+  phoneNumber?: string;
+  status: "Active" | "Inactive";
+}
+
+const INITIAL_ACCOUNTANTS: Accountant[] = [
+  {
+    id: "acc-chief",
+    name: "Chief Accountant",
+    employeeId: "EMP-ACC001",
+    email: "accountant@college.erp",
+    phoneNumber: "9876543210",
     status: "Active"
   }
 ];
@@ -384,6 +409,14 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return INITIAL_GRADES;
   });
 
+  const [accountants, setAccountants] = useState<Accountant[]>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("erp_accountants");
+      return stored ? JSON.parse(stored) : INITIAL_ACCOUNTANTS;
+    }
+    return INITIAL_ACCOUNTANTS;
+  });
+
   const [currentRole, setCurrentRole] = useState<"Admin" | "Faculty" | "Student" | "HOD" | "Accountant">(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("erp_current_role") as "Admin" | "Faculty" | "Student" | "HOD" | "Accountant") || "Admin";
@@ -452,6 +485,12 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   useEffect(() => {
     if (initialized) {
+      localStorage.setItem("erp_accountants", JSON.stringify(accountants));
+    }
+  }, [accountants, initialized]);
+
+  useEffect(() => {
+    if (initialized) {
       localStorage.setItem("erp_grades", JSON.stringify(grades));
     }
   }, [grades, initialized]);
@@ -495,6 +534,28 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
     setFaculty(prev => [...prev, newFac]);
     return newFac;
+  };
+
+  const addAccountant = (accData: Omit<Accountant, "id" | "status">): Accountant => {
+    const newAcc: Accountant = {
+      ...accData,
+      id: `acc-${Math.random().toString(36).substr(2, 9)}`,
+      status: "Active"
+    };
+    setAccountants(prev => [...prev, newAcc]);
+    return newAcc;
+  };
+
+  const updateAccountant = (id: string, accData: Partial<Accountant>) => {
+    setAccountants(prev => prev.map(acc => acc.id === id ? { ...acc, ...accData } : acc));
+  };
+
+  const deleteAccountant = (id: string) => {
+    setAccountants(prev => prev.filter(acc => acc.id !== id));
+  };
+
+  const toggleAccountantStatus = (id: string) => {
+    setAccountants(prev => prev.map(acc => acc.id === id ? { ...acc, status: acc.status === "Active" ? "Inactive" : "Active" } : acc));
   };
 
   const generateInvoice = (invData: Omit<Invoice, "id" | "dateGenerated" | "status">): Invoice => {
@@ -572,6 +633,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const resetDatabase = () => {
     setStudents(INITIAL_STUDENTS);
     setFaculty(INITIAL_FACULTY);
+    setAccountants(INITIAL_ACCOUNTANTS);
     setInvoices(INITIAL_INVOICES);
     setAttendanceLogs(INITIAL_ATTENDANCE);
     setGrades(INITIAL_GRADES);
@@ -589,6 +651,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       value={{
         students,
         faculty,
+        accountants,
         courses,
         invoices,
         attendanceLogs,
@@ -602,6 +665,10 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setCurrentFacultyId: handleSetFacultyId,
         addStudent,
         addFaculty,
+        addAccountant,
+        updateAccountant,
+        deleteAccountant,
+        toggleAccountantStatus,
         generateInvoice,
         markInvoiceAsPaid,
         logAttendance,

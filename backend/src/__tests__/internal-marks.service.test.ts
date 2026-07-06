@@ -77,6 +77,10 @@ describe('getMarksById', () => {
 
 describe('getRoster', () => {
   it('returns roster with marks details pre-populated', async () => {
+    // resolveFacultyId
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: FACULTY_ID }], rowCount: 1 });
+    // isFacultyAssigned
+    mockIsFacultyAssigned.mockResolvedValueOnce(true);
     // subject lookup
     mockQuery.mockResolvedValueOnce({
       rows: [{ program_id: 'prog-id', semester: 1 }],
@@ -93,7 +97,7 @@ describe('getRoster', () => {
       rowCount: 2,
     });
 
-    const roster = await marksService.getRoster(SUBJECT_ID, 'A', 'Mid-1');
+    const roster = await marksService.getRoster(SUBJECT_ID, 'A', 'Mid-1', FACULTY_USER_ID);
 
     expect(roster).toHaveLength(2);
     expect(roster[0].marksId).toBe(MARKS_RECORD_ID);
@@ -104,11 +108,23 @@ describe('getRoster', () => {
   });
 
   it('throws 404 when subject does not exist', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: FACULTY_ID }], rowCount: 1 });
+    mockIsFacultyAssigned.mockResolvedValueOnce(true);
     mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
-    await expect(marksService.getRoster(SUBJECT_ID, 'A', 'Mid-1')).rejects.toMatchObject({
+    await expect(marksService.getRoster(SUBJECT_ID, 'A', 'Mid-1', FACULTY_USER_ID)).rejects.toMatchObject({
       statusCode: 404,
       message: 'Subject not found',
+    });
+  });
+
+  it('throws 403 when faculty is not assigned to the roster subject and section', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: FACULTY_ID }], rowCount: 1 });
+    mockIsFacultyAssigned.mockResolvedValueOnce(false);
+
+    await expect(marksService.getRoster(SUBJECT_ID, 'A', 'Mid-1', FACULTY_USER_ID)).rejects.toMatchObject({
+      statusCode: 403,
+      code: 'NOT_ASSIGNED',
     });
   });
 });

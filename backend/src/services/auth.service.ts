@@ -24,6 +24,16 @@ interface RefreshTokenRow {
   is_active: boolean;
 }
 
+interface FacultyAuthRow {
+  id: string;
+  employee_number: string;
+  full_name: string;
+  department_id: string;
+  department_name: string;
+  department_code: string;
+  designation: string;
+}
+
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
@@ -37,6 +47,31 @@ async function getTimingDummyHash(): Promise<string> {
     timingDummyHash = await hashPassword('__timing_safe_dummy_never_matches__');
   }
   return timingDummyHash;
+}
+
+async function getFacultyAuthProfile(userId: string): Promise<AuthUser['facultyProfile'] | undefined> {
+  const { rows } = await query<FacultyAuthRow>(
+    `SELECT f.id, f.employee_number, f.full_name, f.department_id,
+            d.name AS department_name, d.code AS department_code,
+            f.designation
+     FROM faculty f
+     JOIN departments d ON d.id = f.department_id
+     WHERE f.user_id = $1 AND f.deleted_at IS NULL`,
+    [userId]
+  );
+
+  const faculty = rows[0];
+  if (!faculty) return undefined;
+
+  return {
+    id: faculty.id,
+    employeeNumber: faculty.employee_number,
+    fullName: faculty.full_name,
+    departmentId: faculty.department_id,
+    departmentName: faculty.department_name,
+    departmentCode: faculty.department_code,
+    designation: faculty.designation,
+  };
 }
 
 export async function login(
@@ -65,27 +100,25 @@ export async function login(
     throw AppError.forbidden('Account is deactivated. Contact your administrator.', 'ACCOUNT_DEACTIVATED');
   }
 
-  const tokens = await issueTokenPair(user.id, user.email, user.role);
-
-  let designation: string | undefined;
-  let departmentId: string | undefined;
-
-  if (user.role === 'faculty') {
-    const { rows: facRows } = await query<{ designation: string; department_id: string }>(
-      'SELECT designation, department_id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-      [user.id]
-    );
-    if (facRows[0]) {
-      designation = facRows[0].designation;
-      departmentId = facRows[0].department_id;
-    }
-  }
+  const facultyProfile = user.role === 'faculty'
+    ? await getFacultyAuthProfile(user.id)
+    : undefined;
+  const tokens = await issueTokenPair(user.id, user.email, user.role, facultyProfile);
 
   await query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
 
   return {
     tokens,
-    user: { id: user.id, email: user.email, role: user.role, isActive: user.is_active, designation, departmentId },
+    user: {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      isActive: user.is_active,
+      designation: facultyProfile?.designation,
+      departmentId: facultyProfile?.departmentId,
+      facultyId: facultyProfile?.id,
+      facultyProfile,
+    },
   };
 }
 
@@ -136,21 +169,10 @@ export async function refresh(
     [tokenHash]
   );
 
-  const tokens = await issueTokenPair(stored.user_id, stored.email, stored.role);
-
-  let designation: string | undefined;
-  let departmentId: string | undefined;
-
-  if (stored.role === 'faculty') {
-    const { rows: facRows } = await query<{ designation: string; department_id: string }>(
-      'SELECT designation, department_id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-      [stored.user_id]
-    );
-    if (facRows[0]) {
-      designation = facRows[0].designation;
-      departmentId = facRows[0].department_id;
-    }
-  }
+  const facultyProfile = stored.role === 'faculty'
+    ? await getFacultyAuthProfile(stored.user_id)
+    : undefined;
+  const tokens = await issueTokenPair(stored.user_id, stored.email, stored.role, facultyProfile);
 
   return {
     tokens,
@@ -159,8 +181,10 @@ export async function refresh(
       email: stored.email,
       role: stored.role,
       isActive: stored.is_active,
-      designation,
-      departmentId,
+      designation: facultyProfile?.designation,
+      departmentId: facultyProfile?.departmentId,
+      facultyId: facultyProfile?.id,
+      facultyProfile,
     },
   };
 }
@@ -183,26 +207,20 @@ export async function logoutAll(userId: string): Promise<void> {
 async function issueTokenPair(
   userId: string,
   email: string,
-  role: Role
+  role: Role,
+  facultyProfile?: AuthUser['facultyProfile']
 ): Promise<TokenPair> {
   const tokenId = uuidv4();
   const refreshToken = signRefreshToken({ sub: userId, tokenId });
 
-  let designation: string | undefined;
-  let departmentId: string | undefined;
-
-  if (role === 'faculty') {
-    const { rows } = await query<{ designation: string; department_id: string }>(
-      'SELECT designation, department_id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-      [userId]
-    );
-    if (rows[0]) {
-      designation = rows[0].designation;
-      departmentId = rows[0].department_id;
-    }
-  }
-
-  const accessToken = signAccessToken({ sub: userId, email, role, designation, departmentId });
+  const accessToken = signAccessToken({
+    sub: userId,
+    email,
+    role,
+    designation: facultyProfile?.designation,
+    departmentId: facultyProfile?.departmentId,
+    facultyId: facultyProfile?.id,
+  });
   const tokenHash = hashToken(refreshToken);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 

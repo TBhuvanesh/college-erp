@@ -16,7 +16,7 @@ export const getRoster = asyncHandler(async (req: Request, res: Response) => {
   if (!subjectId || !section || !assessmentType) {
     throw AppError.badRequest('Missing subjectId, section, or assessmentType query parameters');
   }
-  const roster = await marksService.getRoster(subjectId, section, assessmentType);
+  const roster = await marksService.getRoster(subjectId, section, assessmentType, req.user!.id);
   sendSuccess(res, { roster, total: roster.length });
 });
 

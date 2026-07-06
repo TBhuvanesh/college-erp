@@ -59,7 +59,7 @@ export const getMyAssignments = asyncHandler(async (req: Request, res: Response)
 
 export const getRoster = asyncHandler(async (req: Request, res: Response) => {
   const { subjectId, section, date } = req.query as unknown as RosterQuery;
-  const roster = await attendanceService.getRoster(subjectId, section, date);
+  const roster = await attendanceService.getRoster(subjectId, section, date, req.user!.id);
   sendSuccess(res, { roster, total: roster.length });
 });
 

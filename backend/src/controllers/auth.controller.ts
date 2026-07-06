@@ -33,7 +33,9 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
       email: user.email, 
       role: user.role, 
       designation: (user as any).designation, 
-      departmentId: (user as any).departmentId 
+      departmentId: (user as any).departmentId,
+      facultyId: user.facultyId,
+      facultyProfile: user.facultyProfile,
     },
   });
 });
@@ -56,7 +58,9 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
       email: user.email, 
       role: user.role, 
       designation: user.designation, 
-      departmentId: user.departmentId 
+      departmentId: user.departmentId,
+      facultyId: user.facultyId,
+      facultyProfile: user.facultyProfile,
     },
   });
 });

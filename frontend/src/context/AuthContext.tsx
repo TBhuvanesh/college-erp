@@ -9,6 +9,16 @@ export interface UserProfile {
   role: "admin" | "faculty" | "student" | "accountant";
   designation?: string;
   departmentId?: string;
+  facultyId?: string;
+  facultyProfile?: {
+    id: string;
+    employeeNumber: string;
+    fullName: string;
+    departmentId: string;
+    departmentName: string;
+    departmentCode: string;
+    designation: string;
+  };
 }
 
 interface AuthContextType {
@@ -30,7 +40,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const { setCurrentRole, setCurrentStudentId, setCurrentFacultyId } = useSimulation();
 
-  const syncSimulationState = useCallback((role: "admin" | "faculty" | "student" | "accountant", designation?: string) => {
+  const syncSimulationState = useCallback((userProfile: UserProfile) => {
+    const { role, designation } = userProfile;
     if (role === "admin") {
       setCurrentRole("Admin");
     } else if (role === "faculty") {
@@ -39,7 +50,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setCurrentRole("Faculty");
       }
-      setCurrentFacultyId("fac-amit");
+      if (userProfile.facultyProfile?.id) {
+        setCurrentFacultyId(userProfile.facultyProfile.id);
+      }
     } else if (role === "student") {
       setCurrentRole("Student");
       setCurrentStudentId("stud-rahul");
@@ -64,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const { accessToken: newAccessToken, user: newUser } = json.data;
           setAccessToken(newAccessToken);
           setUser(newUser);
-          syncSimulationState(newUser.role, newUser.designation);
+          syncSimulationState(newUser);
         }
       }
     } catch (err) {
@@ -100,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { accessToken: newAccessToken, user: newUser } = json.data;
     setAccessToken(newAccessToken);
     setUser(newUser);
-    syncSimulationState(newUser.role, newUser.designation);
+    syncSimulationState(newUser);
   };
 
   const logout = async () => {

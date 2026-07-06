@@ -27,6 +27,7 @@ const MIGRATION_FILES = [
   '019_notification_calendar.sql',
   '020_add_hod_designation.sql',
   '021_add_accountant_role.sql',
+  '022_add_accountants_table.sql',
 ];
 
 async function runMigrations(): Promise<void> {

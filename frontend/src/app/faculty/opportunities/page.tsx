@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useSimulation } from "@/context/SimulationContext";
 import { apiFetch } from "@/lib/api";
 import {
   fetchOpportunities,
@@ -29,10 +28,6 @@ import {
 
 export default function FacultyOpportunitiesDashboard() {
   const { user, accessToken } = useAuth();
-  const { faculty, currentFacultyId } = useSimulation();
-
-  // Active faculty fallback
-  const activeFaculty = faculty.find((f) => f.id === currentFacultyId) || faculty[0];
 
   // API State
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);

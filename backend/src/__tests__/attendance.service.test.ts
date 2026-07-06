@@ -77,6 +77,10 @@ describe('getAttendanceById', () => {
 
 describe('getRoster', () => {
   it('returns roster with attendance status pre-populated', async () => {
+    // resolveFacultyId
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: FACULTY_ID }], rowCount: 1 });
+    // isFacultyAssigned
+    mockIsFacultyAssigned.mockResolvedValueOnce(true);
     // subject lookup
     mockQuery.mockResolvedValueOnce({
       rows: [{ program_id: 'prog-id', semester: 1 }],
@@ -93,7 +97,7 @@ describe('getRoster', () => {
       rowCount: 2,
     });
 
-    const roster = await attendanceService.getRoster(SUBJECT_ID, 'A', PAST_DATE);
+    const roster = await attendanceService.getRoster(SUBJECT_ID, 'A', PAST_DATE, FACULTY_USER_ID);
 
     expect(roster).toHaveLength(2);
     expect(roster[0].attendanceId).toBe(ATTENDANCE_ID);
@@ -103,20 +107,34 @@ describe('getRoster', () => {
   });
 
   it('returns empty array when no students are enrolled in the section', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: FACULTY_ID }], rowCount: 1 });
+    mockIsFacultyAssigned.mockResolvedValueOnce(true);
     mockQuery.mockResolvedValueOnce({ rows: [{ program_id: 'prog-id', semester: 1 }], rowCount: 1 });
     mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
-    const roster = await attendanceService.getRoster(SUBJECT_ID, 'B', PAST_DATE);
+    const roster = await attendanceService.getRoster(SUBJECT_ID, 'B', PAST_DATE, FACULTY_USER_ID);
 
     expect(roster).toHaveLength(0);
   });
 
   it('throws 404 when subject does not exist', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: FACULTY_ID }], rowCount: 1 });
+    mockIsFacultyAssigned.mockResolvedValueOnce(true);
     mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
-    await expect(attendanceService.getRoster(SUBJECT_ID, 'A', PAST_DATE)).rejects.toMatchObject({
+    await expect(attendanceService.getRoster(SUBJECT_ID, 'A', PAST_DATE, FACULTY_USER_ID)).rejects.toMatchObject({
       statusCode: 404,
       message: 'Subject not found',
+    });
+  });
+
+  it('throws 403 when faculty is not assigned to the roster subject and section', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: FACULTY_ID }], rowCount: 1 });
+    mockIsFacultyAssigned.mockResolvedValueOnce(false);
+
+    await expect(attendanceService.getRoster(SUBJECT_ID, 'A', PAST_DATE, FACULTY_USER_ID)).rejects.toMatchObject({
+      statusCode: 403,
+      code: 'NOT_ASSIGNED',
     });
   });
 });

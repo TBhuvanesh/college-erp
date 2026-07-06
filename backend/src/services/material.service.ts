@@ -75,7 +75,7 @@ function toMaterial(r: MaterialRow): CourseMaterial {
     fileName:     r.file_name,
     fileType:     r.file_type,
     fileSize:     Number(r.file_size),
-    downloadUrl:  `/api/materials/${r.id}/download`,
+    downloadUrl:  `/api/lms/materials/${r.id}/download`,
     createdAt:    r.created_at,
     updatedAt:    r.updated_at,
   };

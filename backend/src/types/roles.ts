@@ -7,6 +7,11 @@ export const PERMISSIONS = {
   'users:read': ['admin', 'faculty', 'student', 'accountant'],
   'users:update': ['admin'],
   'users:delete': ['admin'],
+  // Accountant management
+  'accountants:create': ['admin'],
+  'accountants:read': ['admin'],
+  'accountants:update': ['admin'],
+  'accountants:delete': ['admin'],
   // Academic structure
   'departments:create': ['admin'],
   'departments:read': ['admin', 'faculty', 'student'],

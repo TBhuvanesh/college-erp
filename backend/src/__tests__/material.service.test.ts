@@ -81,7 +81,7 @@ describe('createMaterial', () => {
     expect(result.id).toBe(MATERIAL_ID);
     expect(result.title).toBe('Introduction to Algorithms');
     expect(result.fileType).toBe('pdf');
-    expect(result.downloadUrl).toBe(`/api/materials/${MATERIAL_ID}/download`);
+    expect(result.downloadUrl).toBe(`/api/lms/materials/${MATERIAL_ID}/download`);
 
     const insertCall = mockQuery.mock.calls[2];
     expect(insertCall[0]).toMatch(/INSERT INTO course_materials/);

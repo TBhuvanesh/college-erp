@@ -149,7 +149,7 @@ export type RecordPaymentInput = z.infer<typeof recordPaymentSchema>;
 
 export const listFeesQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(1000).default(20),
+  limit: z.coerce.number().int().min(1).max(1000).default(1000),
   studentId: z.string().uuid().optional(),
   academicYear: academicYearField.optional(),
   semester: z.coerce.number().int().min(1).max(12).optional(),

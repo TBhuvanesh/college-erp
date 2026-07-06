@@ -1,5 +1,11 @@
 import { apiFetch } from "@/lib/api";
 
+interface ApiSuccess<T> {
+  success: true;
+  data: T;
+  message?: string;
+}
+
 // Enums
 export type LmsFileType = "pdf" | "ppt" | "pptx" | "doc" | "docx";
 export type SubmissionStatus = "Submitted" | "Late Submission" | "Evaluated";
@@ -91,7 +97,12 @@ export async function listMaterials(
   if (filters.page) query.append("page", filters.page.toString());
   if (filters.limit) query.append("limit", filters.limit.toString());
 
-  return apiFetch<PaginatedMaterials>(`/lms/materials?${query.toString()}`, {}, token);
+  const res = await apiFetch<ApiSuccess<PaginatedMaterials>>(
+    `/lms/materials?${query.toString()}`,
+    {},
+    token
+  );
+  return res.data;
 }
 
 export async function createMaterial(
@@ -99,7 +110,7 @@ export async function createMaterial(
   token: string
 ): Promise<CourseMaterial> {
   // apiFetch will auto-handle multi-part headers since options.body is a FormData
-  const res = await apiFetch<{ material: CourseMaterial }>(
+  const res = await apiFetch<ApiSuccess<{ material: CourseMaterial }>>(
     "/lms/materials",
     {
       method: "POST",
@@ -107,7 +118,7 @@ export async function createMaterial(
     },
     token
   );
-  return res.material;
+  return res.data.material;
 }
 
 export async function updateMaterial(
@@ -115,7 +126,7 @@ export async function updateMaterial(
   formData: FormData,
   token: string
 ): Promise<CourseMaterial> {
-  const res = await apiFetch<{ material: CourseMaterial }>(
+  const res = await apiFetch<ApiSuccess<{ material: CourseMaterial }>>(
     `/lms/materials/${id}`,
     {
       method: "PUT",
@@ -123,7 +134,7 @@ export async function updateMaterial(
     },
     token
   );
-  return res.material;
+  return res.data.material;
 }
 
 export async function deleteMaterial(id: string, token: string): Promise<void> {
@@ -141,19 +152,28 @@ export async function listAssignments(
   if (filters.page) query.append("page", filters.page.toString());
   if (filters.limit) query.append("limit", filters.limit.toString());
 
-  return apiFetch<PaginatedAssignments>(`/lms/assignments?${query.toString()}`, {}, token);
+  const res = await apiFetch<ApiSuccess<PaginatedAssignments>>(
+    `/lms/assignments?${query.toString()}`,
+    {},
+    token
+  );
+  return res.data;
 }
 
 export async function getAssignment(id: string, token: string): Promise<Assignment> {
-  const res = await apiFetch<{ assignment: Assignment }>(`/lms/assignments/${id}`, {}, token);
-  return res.assignment;
+  const res = await apiFetch<ApiSuccess<{ assignment: Assignment }>>(
+    `/lms/assignments/${id}`,
+    {},
+    token
+  );
+  return res.data.assignment;
 }
 
 export async function createAssignment(
   data: { title: string; description?: string; subjectId: string; dueDate: string; maxMarks: number },
   token: string
 ): Promise<Assignment> {
-  const res = await apiFetch<{ assignment: Assignment }>(
+  const res = await apiFetch<ApiSuccess<{ assignment: Assignment }>>(
     "/lms/assignments",
     {
       method: "POST",
@@ -161,7 +181,7 @@ export async function createAssignment(
     },
     token
   );
-  return res.assignment;
+  return res.data.assignment;
 }
 
 export async function updateAssignment(
@@ -169,7 +189,7 @@ export async function updateAssignment(
   data: { title?: string; description?: string; dueDate?: string; maxMarks?: number },
   token: string
 ): Promise<Assignment> {
-  const res = await apiFetch<{ assignment: Assignment }>(
+  const res = await apiFetch<ApiSuccess<{ assignment: Assignment }>>(
     `/lms/assignments/${id}`,
     {
       method: "PUT",
@@ -177,7 +197,7 @@ export async function updateAssignment(
     },
     token
   );
-  return res.assignment;
+  return res.data.assignment;
 }
 
 export async function deleteAssignment(id: string, token: string): Promise<void> {
@@ -197,19 +217,28 @@ export async function listSubmissions(
   if (filters.page) query.append("page", filters.page.toString());
   if (filters.limit) query.append("limit", filters.limit.toString());
 
-  return apiFetch<PaginatedSubmissions>(`/lms/submissions?${query.toString()}`, {}, token);
+  const res = await apiFetch<ApiSuccess<PaginatedSubmissions>>(
+    `/lms/submissions?${query.toString()}`,
+    {},
+    token
+  );
+  return res.data;
 }
 
 export async function getSubmission(id: string, token: string): Promise<Submission> {
-  const res = await apiFetch<{ submission: Submission }>(`/lms/submissions/${id}`, {}, token);
-  return res.submission;
+  const res = await apiFetch<ApiSuccess<{ submission: Submission }>>(
+    `/lms/submissions/${id}`,
+    {},
+    token
+  );
+  return res.data.submission;
 }
 
 export async function submitAssignment(
   formData: FormData,
   token: string
 ): Promise<Submission> {
-  const res = await apiFetch<{ submission: Submission }>(
+  const res = await apiFetch<ApiSuccess<{ submission: Submission }>>(
     "/lms/submissions",
     {
       method: "POST",
@@ -217,7 +246,7 @@ export async function submitAssignment(
     },
     token
   );
-  return res.submission;
+  return res.data.submission;
 }
 
 export async function gradeSubmission(
@@ -225,7 +254,7 @@ export async function gradeSubmission(
   data: { marks: number; feedback?: string },
   token: string
 ): Promise<Submission> {
-  const res = await apiFetch<{ submission: Submission }>(
+  const res = await apiFetch<ApiSuccess<{ submission: Submission }>>(
     `/lms/submissions/${id}`,
     {
       method: "PUT",
@@ -233,7 +262,7 @@ export async function gradeSubmission(
     },
     token
   );
-  return res.submission;
+  return res.data.submission;
 }
 
 // Helper to download files with Authorization header

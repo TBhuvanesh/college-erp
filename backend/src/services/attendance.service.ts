@@ -144,8 +144,18 @@ export async function getAttendanceById(id: string): Promise<AttendanceRecord> {
 export async function getRoster(
   subjectId: string,
   section: string,
-  date: string
+  date: string,
+  userId: string
 ): Promise<RosterEntry[]> {
+  const facultyId = await resolveFacultyId(userId);
+  const assigned = await isFacultyAssigned(facultyId, subjectId, section);
+  if (!assigned) {
+    throw AppError.forbidden(
+      'You are not assigned to teach this subject and section',
+      'NOT_ASSIGNED'
+    );
+  }
+
   // Verify subject exists and retrieve program_id + semester for enrollment join
   const { rows: sub } = await query<{ program_id: string; semester: number }>(
     `SELECT program_id, semester FROM subjects WHERE id = $1 AND deleted_at IS NULL`,

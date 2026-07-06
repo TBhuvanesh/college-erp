@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useSimulation } from "@/context/SimulationContext";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
 import { 
@@ -30,14 +29,8 @@ import { UpcomingEventsWidget } from "@/components/Dashboard/UpcomingEventsWidge
 import { UnifiedEvent } from "@/components/CalendarView";
 
 export default function FacultyDashboard() {
-  const { accessToken } = useAuth();
-  const { 
-    faculty, 
-    currentFacultyId
-  } = useSimulation();
-
-  // Find active faculty profile (simulation context fallback)
-  const activeFaculty = faculty.find(f => f.id === currentFacultyId) || faculty[0];
+  const { user, accessToken } = useAuth();
+  const authFaculty = user?.facultyProfile;
 
   // API State
   const [apiWorkload, setApiWorkload] = useState<any[]>([]);
@@ -201,7 +194,7 @@ export default function FacultyDashboard() {
     }
   };
 
-  if (!activeFaculty) {
+  if (!authFaculty) {
     return <div className="text-text-muted font-mono text-center py-10">No active faculty profile loaded.</div>;
   }
 
@@ -215,7 +208,7 @@ export default function FacultyDashboard() {
       subjectId: sub.subjectId,
       subjectName: sub.subjectName,
       subjectCode: sub.subjectCode,
-      batch: `${activeFaculty.department} - Sem ${sub.semester} (Sec ${sub.section})`,
+      batch: `${authFaculty.departmentCode || authFaculty.departmentName} - Sem ${sub.semester} (Sec ${sub.section})`,
       section: sub.section,
       location: idx === 0 ? "Lab Block LH-402" : "Seminar Hall SH-101",
       isLogged,
@@ -329,9 +322,9 @@ export default function FacultyDashboard() {
       {/* Welcome banner */}
       <div className="p-5 rounded-xl border dark:border-blue-500/20 border-blue-200 dark:bg-blue-500/5 bg-blue-50 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h2 className="font-display font-bold text-xl text-text-primary">Welcome back, {activeFaculty.name}!</h2>
+          <h2 className="font-display font-bold text-xl text-text-primary">Welcome back, {authFaculty.fullName}!</h2>
           <p className="text-xs text-text-muted mt-1">
-            Department: {activeFaculty.department} Engineering / Faculty ID: {activeFaculty.employeeId}
+            Department: {authFaculty.departmentName} / Faculty ID: {authFaculty.employeeNumber}
           </p>
         </div>
         <div className="flex items-center gap-1.5 bg-surface border border-border-subtle px-3 py-1.5 rounded-lg text-xs font-semibold text-text-primary">

@@ -176,6 +176,11 @@ async function buildScopeConditions(
     return conditions;
   }
 
+  if (role === 'accountant') {
+    conditions.push(`n.target_role = 'all'`);
+    return conditions;
+  }
+
   if (role === 'faculty') {
     conditions.push(`n.target_role IN ('all', 'faculty')`);
     const deptId = await resolveFacultyDept(userId);

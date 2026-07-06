@@ -25,30 +25,28 @@ export const Sidebar: React.FC = () => {
   const pathname = usePathname() || "";
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const {
     currentRole,
     students,
-    faculty,
     currentStudentId,
-    currentFacultyId,
     resetDatabase
   } = useSimulation();
 
   const activeStudent = students.find(s => s.id === currentStudentId);
-  const activeFaculty = faculty.find(f => f.id === currentFacultyId);
+  const authFaculty = user?.facultyProfile;
 
   const getUserName = () => {
     if (currentRole === "Admin") return "Admin Control";
     if (currentRole === "Accountant") return "Accounts Office";
-    if (currentRole === "Faculty" || currentRole === "HOD") return activeFaculty?.name || "Dr. Amit Verma";
+    if (currentRole === "Faculty" || currentRole === "HOD") return authFaculty?.fullName || user?.email || "Faculty";
     return activeStudent?.name || "Rahul Sharma";
   };
 
   const getUserSub = () => {
     if (currentRole === "Admin") return "Super User";
     if (currentRole === "Accountant") return "Chief Accountant";
-    if (currentRole === "Faculty" || currentRole === "HOD") return activeFaculty?.employeeId || "EMP-CS203";
+    if (currentRole === "Faculty" || currentRole === "HOD") return authFaculty?.employeeNumber || "Faculty";
     return activeStudent?.rollNo || "2026CSE001";
   };
 
@@ -76,6 +74,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { name: "Student Registry", href: "/admin/students", icon: Users },
         { name: "Faculty Roster", href: "/admin/faculty", icon: GraduationCap },
+        { name: "Accountant Registry", href: "/admin/accountants", icon: Users },
       ]
     },
     {
@@ -147,6 +146,7 @@ export const Sidebar: React.FC = () => {
       section: "Overview",
       items: [
         { name: "Dashboard", href: "/hod/dashboard", icon: LayoutDashboard },
+        { name: "Opportunity Hub", href: "/faculty/opportunities", icon: Briefcase },
       ]
     },
     {
@@ -157,10 +157,21 @@ export const Sidebar: React.FC = () => {
       ]
     },
     {
-      section: "Academics",
+      section: "Academics (Admin)",
       items: [
         { name: "Class Schedules", href: "/hod/classes", icon: BookOpen },
         { name: "Attendance Registry", href: "/hod/attendance", icon: Calendar },
+      ]
+    },
+    {
+      section: "Teaching Desk",
+      items: [
+        { name: "Teaching Workload", href: "/faculty/subjects", icon: BookOpen },
+        { name: "Attendance Register", href: "/faculty/attendance", icon: Users },
+        { name: "Internal Marks", href: "/faculty/grades", icon: FileText },
+        { name: "Examinations", href: "/faculty/examinations", icon: Calendar },
+        { name: "Results Entry", href: "/faculty/results", icon: GraduationCap },
+        { name: "Academic Calendar", href: "/faculty/calendar", icon: Calendar },
       ]
     }
   ];

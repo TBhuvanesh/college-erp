@@ -1,57 +1,139 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useSimulation } from "@/context/SimulationContext";
-import { GraduationCap, BookOpen, AlertCircle, FileText, Sparkles } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { apiFetch } from "@/lib/api";
+import { GraduationCap, BookOpen, AlertCircle, FileText, Sparkles, Loader2 } from "lucide-react";
+
+type AssessmentType = "Mid-1" | "Mid-2" | "Assignment" | "Lab" | "Internal";
+
+interface AssignmentDetail {
+  id: string;
+  subjectId: string;
+  subjectCode: string;
+  subjectName: string;
+  semester: number;
+  section: string;
+  isActive: boolean;
+}
+
+interface RosterEntry {
+  studentId: string;
+  fullName: string;
+  rollNumber: string;
+  obtainedMarks: number | null;
+}
 
 export default function FacultyGrades() {
-  const { faculty, currentFacultyId, students, submitGrades, grades } = useSimulation();
+  const { accessToken } = useAuth();
 
-  // Find active faculty profile
-  const activeFaculty = faculty.find(f => f.id === currentFacultyId) || faculty[0];
-
-  const subjects = activeFaculty?.assignedSubjects || [];
-
-  // States
-  const [selectedSubjId, setSelectedSubjId] = useState(subjects[0]?.subjectId || "");
-  const [examType, setExamType] = useState<"Midterm" | "Final">("Midterm");
+  const [assignments, setAssignments] = useState<AssignmentDetail[]>([]);
+  const [selectedSubjId, setSelectedSubjId] = useState("");
+  const [selectedSection, setSelectedSection] = useState("");
+  const [examType, setExamType] = useState<AssessmentType>("Mid-1");
   const [maxMarks, setMaxMarks] = useState(100);
   const [roster, setRoster] = useState<{ studentId: string; name: string; rollNo: string; marks: string }[]>([]);
   const [toastMsg, setToastMsg] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loadingAssignments, setLoadingAssignments] = useState(true);
+  const [loadingRoster, setLoadingRoster] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(""), 3000);
   };
 
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      if (!accessToken) return;
+      setLoadingAssignments(true);
+      setError(null);
+      try {
+        const res = await apiFetch("/attendance/my-assignments", {}, accessToken);
+        const activeAssignments: AssignmentDetail[] = res.success && res.data?.assignments
+          ? res.data.assignments.filter((a: AssignmentDetail) => a.isActive)
+          : [];
+        setAssignments(activeAssignments);
+        if (activeAssignments.length > 0) {
+          setSelectedSubjId(activeAssignments[0].subjectId);
+          setSelectedSection(activeAssignments[0].section);
+        }
+      } catch (err: any) {
+        setError(err.message || "Failed to load workload assignments.");
+      } finally {
+        setLoadingAssignments(false);
+      }
+    };
+
+    const timer = setTimeout(fetchAssignments, 0);
+    return () => clearTimeout(timer);
+  }, [accessToken]);
+
+  const subjects = useMemo(() => {
+    const map = new Map<string, { subjectId: string; subjectName: string; subjectCode: string }>();
+    assignments.forEach((assignment) => {
+      map.set(assignment.subjectId, {
+        subjectId: assignment.subjectId,
+        subjectName: assignment.subjectName,
+        subjectCode: assignment.subjectCode,
+      });
+    });
+    return Array.from(map.values());
+  }, [assignments]);
+
+  const sectionsForSelectedSubject = useMemo(
+    () => assignments.filter((a) => a.subjectId === selectedSubjId).map((a) => a.section),
+    [assignments, selectedSubjId]
+  );
+
   const activeSubject = subjects.find(s => s.subjectId === selectedSubjId);
 
-  // Populate grade inputs based on students in semester
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (activeSubject) {
-        const enrolled = students.filter(s => s.semester === activeSubject.semester && s.status === "Good Standing");
-        
-        // Look up if grades are already submitted in context
-        const existingGrades = grades.filter(
-          g => g.subjectId === selectedSubjId && g.type === examType
-        );
-
-        const initialRoster = enrolled.map(stud => {
-          const found = existingGrades.find(g => g.studentId === stud.id);
-          return {
-            studentId: stud.id,
-            name: stud.name,
-            rollNo: stud.rollNo,
-            marks: found ? found.marks.toString() : ""
-          };
-        });
-
-        setRoster(initialRoster);
+      if (selectedSubjId && sectionsForSelectedSubject.length > 0 && !sectionsForSelectedSubject.includes(selectedSection)) {
+        setSelectedSection(sectionsForSelectedSubject[0]);
       }
     }, 0);
     return () => clearTimeout(timer);
-  }, [selectedSubjId, examType, students, grades, activeSubject]);
+  }, [selectedSubjId, selectedSection, sectionsForSelectedSubject]);
+
+  const fetchRoster = useCallback(async () => {
+    if (!accessToken || !selectedSubjId || !selectedSection) return;
+    setLoadingRoster(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({
+        subjectId: selectedSubjId,
+        section: selectedSection,
+        assessmentType: examType,
+      });
+      const res = await apiFetch(`/internal-marks/roster?${params.toString()}`, {}, accessToken);
+      const rosterData: RosterEntry[] = res.success && res.data?.roster ? res.data.roster : [];
+      const firstWithMax = (res.data?.roster || []).find((r: any) => r.maximumMarks !== null);
+      if (firstWithMax) setMaxMarks(Number(firstWithMax.maximumMarks));
+      setRoster(
+        rosterData.map((student) => ({
+          studentId: student.studentId,
+          name: student.fullName,
+          rollNo: student.rollNumber,
+          marks: student.obtainedMarks !== null ? student.obtainedMarks.toString() : "",
+        }))
+      );
+    } catch (err: any) {
+      setError(err.message || "Failed to load internal marks roster.");
+      setRoster([]);
+    } finally {
+      setLoadingRoster(false);
+    }
+  }, [accessToken, selectedSubjId, selectedSection, examType]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchRoster();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchRoster]);
 
   const handleMarksChange = (studId: string, val: string) => {
     setRoster(prev =>
@@ -59,11 +141,10 @@ export default function FacultyGrades() {
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeSubject) return;
+    if (!activeSubject || !selectedSection || !accessToken) return;
 
-    // Validate scores are in range and entered
     const invalid = roster.some(item => {
       const parsed = parseFloat(item.marks);
       return isNaN(parsed) || parsed < 0 || parsed > maxMarks;
@@ -74,27 +155,45 @@ export default function FacultyGrades() {
       return;
     }
 
-    const payload = roster.map(item => ({
-      subjectId: activeSubject.subjectId,
-      subjectName: activeSubject.subjectName,
-      studentId: item.studentId,
-      type: examType,
-      marks: parseFloat(item.marks),
-      maxMarks: maxMarks
-    }));
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await apiFetch("/internal-marks/sessions", {
+        method: "POST",
+        body: JSON.stringify({
+          subjectId: activeSubject.subjectId,
+          section: selectedSection,
+          assessmentType: examType,
+          maximumMarks: maxMarks,
+          records: roster.map(item => ({
+            studentId: item.studentId,
+            obtainedMarks: parseFloat(item.marks),
+          })),
+        }),
+      }, accessToken);
 
-    submitGrades(payload);
-    triggerToast(`Internal marks published for ${activeSubject.subjectName} (${examType})!`);
+      if (res.success) {
+        triggerToast(`Internal marks published for ${activeSubject.subjectName} (${examType})!`);
+        fetchRoster();
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to save internal marks.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  if (!activeFaculty) {
-    return <div className="dark:text-neutral-500 text-text-muted font-mono text-center py-10">No active faculty profile loaded.</div>;
+  if (loadingAssignments) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 dark:text-neutral-400 text-text-secondary">
+        <Loader2 className="animate-spin text-blue-500 mb-3" size={30} />
+        <span className="font-mono text-xs">Loading faculty workload mappings...</span>
+      </div>
+    );
   }
 
   return (
     <div className="relative">
-      
-      {/* Toast Alert */}
       {toastMsg && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-emerald-600 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xl shadow-emerald-600/20 border border-emerald-400/20 animate-fade-in">
           <Sparkles size={14} className="animate-pulse" />
@@ -102,7 +201,6 @@ export default function FacultyGrades() {
         </div>
       )}
 
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
           <h2 className="font-display font-bold text-2xl dark:text-white text-text-primary">Internal Marks Register</h2>
@@ -110,9 +208,14 @@ export default function FacultyGrades() {
         </div>
       </div>
 
-      {/* Selections Controls Card */}
+      {error && (
+        <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold rounded-lg mb-6 flex items-center gap-2">
+          <AlertCircle size={16} />
+          <span>{error}</span>
+        </div>
+      )}
+
       <div className="glass-card border border-border-subtle rounded-xl p-4 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {/* Subject */}
         <div className="flex items-center gap-2 dark:bg-neutral-955 bg-surface border dark:border-neutral-850 border-border-subtle rounded px-2 text-xs dark:text-white text-text-primary">
           <BookOpen size={12} className="text-blue-400" />
           <span className="dark:text-neutral-500 text-text-muted">Subject:</span>
@@ -123,27 +226,28 @@ export default function FacultyGrades() {
           >
             {subjects.map(sub => (
               <option key={sub.subjectId} value={sub.subjectId} className="dark:bg-neutral-950 bg-surface dark:text-white text-text-primary">
-                {sub.subjectName}
+                {sub.subjectCode}: {sub.subjectName}
               </option>
             ))}
           </select>
         </div>
 
-        {/* Exam Type */}
         <div className="flex items-center gap-2 dark:bg-neutral-955 bg-surface border dark:border-neutral-855 border-border-subtle rounded px-2 text-xs dark:text-white text-text-primary">
           <FileText size={12} className="text-blue-400" />
           <span className="dark:text-neutral-505 text-text-muted">Evaluation:</span>
           <select
             value={examType}
-            onChange={e => setExamType(e.target.value as any)}
+            onChange={e => setExamType(e.target.value as AssessmentType)}
             className="bg-transparent dark:text-white text-text-primary cursor-pointer py-2.5 flex-1 focus:outline-none font-bold"
           >
-            <option value="Midterm">Midterm Examination</option>
-            <option value="Final">Final Examination</option>
+            <option value="Mid-1">Midterm Examination 1</option>
+            <option value="Mid-2">Midterm Examination 2</option>
+            <option value="Assignment">Assignment</option>
+            <option value="Lab">Lab</option>
+            <option value="Internal">Internal</option>
           </select>
         </div>
 
-        {/* Max Marks */}
         <div className="flex items-center gap-2 dark:bg-neutral-955 bg-surface border dark:border-neutral-855 border-border-subtle rounded px-2.5 text-xs dark:text-white text-text-primary">
           <GraduationCap size={12} className="text-blue-400" />
           <span className="dark:text-neutral-505 text-text-muted">Max Score:</span>
@@ -157,8 +261,6 @@ export default function FacultyGrades() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        
-        {/* Data spreadsheet grid table */}
         <div className="glass-card border border-border-subtle rounded-xl overflow-hidden">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -170,7 +272,13 @@ export default function FacultyGrades() {
               </tr>
             </thead>
             <tbody className="divide-y dark:divide-neutral-900 divide-border-subtle dark:text-neutral-300 text-text-secondary">
-              {roster.length > 0 ? (
+              {loadingRoster ? (
+                <tr>
+                  <td colSpan={4} className="text-center py-10 dark:text-neutral-500 text-text-muted font-mono text-xs">
+                    Loading internal marks roster...
+                  </td>
+                </tr>
+              ) : roster.length > 0 ? (
                 roster.map(student => {
                   const val = parseFloat(student.marks);
                   const isErr = student.marks !== "" && (isNaN(val) || val < 0 || val > maxMarks);
@@ -209,7 +317,7 @@ export default function FacultyGrades() {
               ) : (
                 <tr>
                   <td colSpan={4} className="text-center py-10 dark:text-neutral-500 text-text-muted font-mono text-xs">
-                    No students enrolled in this semester batch. Add some students in the Admin Portal!
+                    No students registered in this workload section.
                   </td>
                 </tr>
               )}
@@ -217,18 +325,17 @@ export default function FacultyGrades() {
           </table>
         </div>
 
-        {/* Action button submission */}
         {roster.length > 0 && (
           <div className="flex justify-end">
             <button
               type="submit"
-              className="px-6 py-2.5 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-lg shadow-blue-600/25 cursor-pointer transition"
+              disabled={submitting}
+              className="px-6 py-2.5 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold text-xs shadow-lg shadow-blue-600/25 cursor-pointer transition"
             >
-              Publish Internal Marks
+              {submitting ? "Saving..." : "Publish Internal Marks"}
             </button>
           </div>
         )}
-
       </form>
     </div>
   );
