@@ -38,15 +38,27 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const getDefaultDueDate = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7); // Default to 7 days from now
+    d.setHours(23, 59, 0, 0);   // Default to 11:59 PM
+    try {
+      return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+    } catch {
+      return "";
+    }
+  };
+
   const formatDatetimeLocal = (isoStr: string) => {
     if (!isoStr) return "";
     try {
       const d = new Date(isoStr);
       if (isNaN(d.getTime())) return "";
-      const pad = (num: number) => num.toString().padStart(2, "0");
-      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-        d.getHours()
-      )}:${pad(d.getMinutes())}`;
+      return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
     } catch {
       return "";
     }
@@ -65,7 +77,7 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
           setTitle("");
           setDescription("");
           setSubjectId(defaultSubjectId || "");
-          setDueDate("");
+          setDueDate(getDefaultDueDate());
           setMaxMarks(100);
         }
         setError(null);
@@ -222,7 +234,6 @@ export const AssignmentModal: React.FC<AssignmentModalProps> = ({
               </label>
               <input
                 type="datetime-local"
-                required
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-neutral-950 border border-neutral-800 rounded text-white focus:outline-none focus:border-blue-600 transition cursor-pointer"

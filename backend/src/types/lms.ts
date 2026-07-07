@@ -76,7 +76,9 @@ export const createAssignmentSchema = z.object({
   title:       z.string().trim().min(1).max(255),
   description: z.string().trim().max(2000).optional(),
   subjectId:   z.string().uuid('Invalid subject ID'),
-  dueDate:     z.string().datetime({ message: 'dueDate must be an ISO 8601 datetime string' }),
+  dueDate:     z.string()
+                .refine((val) => !isNaN(Date.parse(val)), { message: 'dueDate must be a valid date' })
+                .transform((val) => new Date(val).toISOString()),
   maxMarks:    z.coerce.number().positive('maxMarks must be greater than 0').max(1000),
 });
 export type CreateAssignmentInput = z.infer<typeof createAssignmentSchema>;
@@ -84,7 +86,10 @@ export type CreateAssignmentInput = z.infer<typeof createAssignmentSchema>;
 export const updateAssignmentSchema = z.object({
   title:       z.string().trim().min(1).max(255).optional(),
   description: z.string().trim().max(2000).optional(),
-  dueDate:     z.string().datetime().optional(),
+  dueDate:     z.string()
+                .refine((val) => !isNaN(Date.parse(val)), { message: 'dueDate must be a valid date' })
+                .transform((val) => new Date(val).toISOString())
+                .optional(),
   maxMarks:    z.coerce.number().positive().max(1000).optional(),
 });
 export type UpdateAssignmentInput = z.infer<typeof updateAssignmentSchema>;
