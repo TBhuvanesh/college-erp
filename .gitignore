@@ -29,6 +29,8 @@ yarn-error.log*
 **/*.log
 eslint-report*
 **/*report*
+!backend/src/**/*report*
+!frontend/src/**/*report*
 *.txt.bak
 
 

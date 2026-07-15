@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkSession = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/auth/refresh`, {
+      const res = await window.fetch(`${API_URL}/auth/refresh`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -81,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     } catch (err) {
-      console.error("Session restoration failed:", err);
+      console.warn("Session restoration failed:", err);
     } finally {
       setLoading(false);
     }
@@ -91,11 +91,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const timer = setTimeout(() => {
       checkSession();
     }, 0);
-    return () => clearTimeout(timer);
-  }, [checkSession]);
+
+    const handleTokenRefreshed = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { accessToken: newAccessToken, user: newUser } = customEvent.detail;
+      setAccessToken(newAccessToken);
+      setUser(newUser);
+      syncSimulationState(newUser);
+    };
+
+    const handleSessionExpired = () => {
+      setAccessToken(null);
+      setUser(null);
+    };
+
+    window.addEventListener("tokenRefreshed", handleTokenRefreshed);
+    window.addEventListener("sessionExpired", handleSessionExpired);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("tokenRefreshed", handleTokenRefreshed);
+      window.removeEventListener("sessionExpired", handleSessionExpired);
+    };
+  }, [checkSession, syncSimulationState]);
 
   const login = async (email: string, password: string) => {
-    const res = await fetch(`${API_URL}/auth/login`, {
+    const res = await window.fetch(`${API_URL}/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -118,16 +139,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await fetch(`${API_URL}/auth/logout`, {
+      await window.fetch(`${API_URL}/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
     } catch (err) {
-      console.error("Logout request failed:", err);
+      console.warn("Logout request failed:", err);
     } finally {
       setUser(null);
       setAccessToken(null);
-      // Clean redirect will be handled by components
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
     }
   };
 

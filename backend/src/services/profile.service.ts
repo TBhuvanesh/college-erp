@@ -34,6 +34,7 @@ interface FacultyRow extends UserBaseRow {
 }
 
 interface StudentRow extends UserBaseRow {
+  id: string;
   roll_number: string;
   semester: number;
   section: string | null;
@@ -138,6 +139,7 @@ async function fetchStudentProfile(userId: string): Promise<StudentProfile> {
        u.is_active,
        u.created_at,
        u.last_login,
+       s.id         AS id,
        s.roll_number,
        s.semester,
        s.section,
@@ -167,6 +169,7 @@ async function fetchStudentProfile(userId: string): Promise<StudentProfile> {
     isActive: r.is_active,
     createdAt: r.created_at,
     lastLogin: r.last_login,
+    id: r.id,
     rollNumber: r.roll_number,
     semester: r.semester,
     year: Math.ceil(r.semester / 2),

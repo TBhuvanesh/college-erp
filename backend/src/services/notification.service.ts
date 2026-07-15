@@ -25,6 +25,7 @@ interface NotificationRow {
   department_id: string | null;
   department_name: string | null;
   semester: number | null;
+  recipient_user_id: string | null;
   is_important: boolean;
   is_read: boolean;
   created_by: string;
@@ -49,6 +50,7 @@ const COLS = `
   n.department_id,
   d.name              AS department_name,
   n.semester,
+  n.recipient_user_id,
   n.is_important,
   n.created_by,
   u.full_name         AS created_by_name,
@@ -74,6 +76,7 @@ function toNotification(r: NotificationRow): Notification {
     departmentId:   r.department_id,
     departmentName: r.department_name,
     semester:       r.semester,
+    recipientUserId: r.recipient_user_id,
     isImportant:    r.is_important,
     isRead:         r.is_read ?? false,
     createdBy:      r.created_by,
@@ -176,17 +179,27 @@ async function buildScopeConditions(
     return conditions;
   }
 
+  // A single-recipient notification (e.g. "you've been assigned invigilation
+  // duty") is always visible to that recipient regardless of the broadcast
+  // targeting rules below.
+  params.push(userId);
+  const recipientIdx = params.length;
+  const recipientClause = `n.recipient_user_id = $${recipientIdx}`;
+
   if (role === 'accountant') {
-    conditions.push(`n.target_role = 'all'`);
+    conditions.push(`(n.target_role = 'all' OR ${recipientClause})`);
     return conditions;
   }
 
   if (role === 'faculty') {
-    conditions.push(`n.target_role IN ('all', 'faculty')`);
     const deptId = await resolveFacultyDept(userId);
     if (deptId) {
       params.push(deptId);
-      conditions.push(`(n.department_id IS NULL OR n.department_id = $${params.length})`);
+      conditions.push(
+        `((n.target_role IN ('all', 'faculty') AND (n.department_id IS NULL OR n.department_id = $${params.length})) OR ${recipientClause})`
+      );
+    } else {
+      conditions.push(`(n.target_role IN ('all', 'faculty') OR ${recipientClause})`);
     }
     return conditions;
   }
@@ -195,11 +208,9 @@ async function buildScopeConditions(
   const ctx = await resolveStudentCtx(userId);
   if (!ctx) throw AppError.notFound('Student profile not found');
 
-  conditions.push(`n.target_role IN ('all', 'student')`);
   params.push(ctx.departmentId, ctx.semester);
   conditions.push(
-    `(n.department_id IS NULL OR n.department_id = $${params.length - 1})`,
-    `(n.semester IS NULL OR n.semester = $${params.length})`
+    `((n.target_role IN ('all', 'student') AND (n.department_id IS NULL OR n.department_id = $${params.length - 1}) AND (n.semester IS NULL OR n.semester = $${params.length})) OR ${recipientClause})`
   );
   return conditions;
 }
@@ -247,8 +258,8 @@ export async function createNotification(
   const { rows } = await query<{ id: string }>(
     `INSERT INTO notifications
        (title, message, type, source_module, source_id, target_role,
-        department_id, semester, is_important, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        department_id, semester, recipient_user_id, is_important, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      RETURNING id`,
     [
       title,
@@ -259,6 +270,7 @@ export async function createNotification(
       data.targetRole,
       departmentId,
       data.semester ?? null,
+      data.recipientUserId ?? null,
       data.isImportant,
       userId,
     ]

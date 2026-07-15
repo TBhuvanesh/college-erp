@@ -56,6 +56,8 @@ interface SummaryRow {
   semester: number;
   total_classes: string; // pg returns bigint as string
   attended_classes: string;
+  faculty_id?: string;
+  faculty_name?: string;
 }
 
 interface HistoryRow {
@@ -263,6 +265,8 @@ export async function getStudentSummary(userId: string): Promise<StudentAttendan
        sub.code                                                  AS subject_code,
        sub.name                                                  AS subject_name,
        sub.semester,
+       f.id                                                      AS faculty_id,
+       f.full_name                                               AS faculty_name,
        COUNT(a.id)                                               AS total_classes,
        COUNT(a.id) FILTER (WHERE a.status = 'present')          AS attended_classes
      FROM students st
@@ -271,12 +275,18 @@ export async function getStudentSummary(userId: string): Promise<StudentAttendan
       AND sub.semester   = st.semester
       AND sub.deleted_at IS NULL
       AND sub.status    != 'archived'
+     LEFT JOIN faculty_subject_assignments fsa
+       ON fsa.subject_id = sub.id
+      AND fsa.deleted_at IS NULL
+     LEFT JOIN faculty f
+       ON f.id = fsa.faculty_id
+      AND f.deleted_at IS NULL
      LEFT JOIN attendance a
        ON a.subject_id = sub.id
       AND a.student_id = st.id
      WHERE st.user_id   = $1
        AND st.deleted_at IS NULL
-     GROUP BY sub.id, sub.code, sub.name, sub.semester
+     GROUP BY sub.id, sub.code, sub.name, sub.semester, f.id, f.full_name
      ORDER BY sub.semester ASC, sub.code ASC`,
     [userId]
   );
@@ -292,6 +302,8 @@ export async function getStudentSummary(userId: string): Promise<StudentAttendan
       totalClasses: total,
       attendedClasses: attended,
       percentage: total > 0 ? Math.round((attended / total) * 10000) / 100 : 0,
+      facultyId: r.faculty_id,
+      facultyName: r.faculty_name || "Assigned Faculty",
     };
   });
 

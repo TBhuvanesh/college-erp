@@ -1,12 +1,21 @@
 import { query } from '../config/database';
+import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
+import { z } from 'zod';
+import { DEPARTMENT_COLOR_PALETTE } from '../types/examSeating';
 
 export interface Department {
   id: string;
   name: string;
   code: string;
+  color: string | null;
   isActive: boolean;
 }
+
+export const updateDepartmentColorSchema = z.object({
+  color: z.enum(DEPARTMENT_COLOR_PALETTE),
+});
+export type UpdateDepartmentColorInput = z.infer<typeof updateDepartmentColorSchema>;
 
 export interface Program {
   id: string;
@@ -21,6 +30,7 @@ interface DepartmentRow {
   id: string;
   name: string;
   code: string;
+  color: string | null;
   is_active: boolean;
 }
 
@@ -34,7 +44,7 @@ interface ProgramRow {
 }
 
 function toDepartment(r: DepartmentRow): Department {
-  return { id: r.id, name: r.name, code: r.code, isActive: r.is_active };
+  return { id: r.id, name: r.name, code: r.code, color: r.color, isActive: r.is_active };
 }
 
 function toProgram(r: ProgramRow): Program {
@@ -50,7 +60,7 @@ function toProgram(r: ProgramRow): Program {
 
 export async function getDepartments(): Promise<Department[]> {
   const { rows } = await query<DepartmentRow>(
-    `SELECT id, name, code, is_active
+    `SELECT id, name, code, color, is_active
      FROM departments
      WHERE deleted_at IS NULL
      ORDER BY name`
@@ -60,12 +70,24 @@ export async function getDepartments(): Promise<Department[]> {
 
 export async function getDepartmentById(id: string): Promise<Department> {
   const { rows } = await query<DepartmentRow>(
-    `SELECT id, name, code, is_active
+    `SELECT id, name, code, color, is_active
      FROM departments
      WHERE id = $1 AND deleted_at IS NULL`,
     [id]
   );
   if (!rows[0]) throw AppError.notFound(`Department not found`);
+  return toDepartment(rows[0]);
+}
+
+export async function updateDepartmentColor(userId: string, id: string, data: UpdateDepartmentColorInput): Promise<Department> {
+  const { rows } = await query<DepartmentRow>(
+    `UPDATE departments SET color = $1 WHERE id = $2 AND deleted_at IS NULL RETURNING id, name, code, color, is_active`,
+    [data.color, id]
+  );
+  if (!rows[0]) throw AppError.notFound('Department not found');
+
+  await auditLog({ actorId: userId, action: 'UPDATE', resource: 'department', resourceId: id, changes: { color: data.color } });
+
   return toDepartment(rows[0]);
 }
 

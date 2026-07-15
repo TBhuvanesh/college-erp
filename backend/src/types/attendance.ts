@@ -54,6 +54,8 @@ export interface SubjectAttendanceSummary {
   totalClasses: number;
   attendedClasses: number;
   percentage: number;
+  facultyId?: string;
+  facultyName?: string;
 }
 
 export interface StudentAttendanceSummary {

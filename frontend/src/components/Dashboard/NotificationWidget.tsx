@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Bell, ArrowRight, Check, CheckCheck, Info, AlertTriangle, MessageSquare, Star } from "lucide-react";
+import { usePermission } from "@/context/PermissionContext";
 import { Notification } from "../NotificationCenter";
 
 interface NotificationWidgetProps {
@@ -40,9 +41,77 @@ export const NotificationWidget: React.FC<NotificationWidgetProps> = ({
   role
 }) => {
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const { rbacRole } = usePermission();
 
-  const unreadNotifs = notifications.filter((n) => !n.isRead).slice(0, 6);
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const filterNotifications = (notifs: Notification[]) => {
+    return notifs.filter((n) => {
+      const typeLower = (n.type || "").toLowerCase();
+      const titleLower = (n.title || "").toLowerCase();
+      const msgLower = (n.message || "").toLowerCase();
+      
+      if (rbacRole === "Student") {
+        return typeLower.includes("assignment") || 
+               typeLower.includes("homework") || 
+               typeLower.includes("grade") || 
+               typeLower.includes("result") ||
+               typeLower.includes("calendar") || 
+               typeLower.includes("event") ||
+               typeLower.includes("opportunity") ||
+               typeLower.includes("placement");
+      }
+      
+      if (rbacRole === "Faculty") {
+        return typeLower.includes("submission") || 
+               typeLower.includes("lesson") || 
+               typeLower.includes("workload") ||
+               typeLower.includes("mentor") ||
+               typeLower.includes("alert");
+      }
+      
+      if (rbacRole === "Placement Officer") {
+        return typeLower.includes("opportunity") || 
+               typeLower.includes("placement") || 
+               typeLower.includes("internship") || 
+               typeLower.includes("company");
+      }
+      
+      if (rbacRole === "Mentoring Head") {
+        return typeLower.includes("mentor") || 
+               typeLower.includes("alert") ||
+               typeLower.includes("system");
+      }
+
+      if (rbacRole === "Academic Coordinator") {
+        return typeLower.includes("calendar") || 
+               typeLower.includes("exam") ||
+               typeLower.includes("academic") ||
+               typeLower.includes("system");
+      }
+
+      if (rbacRole === "Super Admin") {
+        if (typeLower.includes("assignment") || typeLower.includes("homework") || typeLower.includes("grade") || typeLower.includes("lesson") || typeLower.includes("attendance")) {
+          return false;
+        }
+        return typeLower.includes("system") || 
+               typeLower.includes("alert") || 
+               typeLower.includes("user") || 
+               typeLower.includes("config");
+      }
+
+      if (rbacRole === "College Admin") {
+        if (typeLower.includes("submission") || typeLower.includes("lesson") || typeLower.includes("teaching")) {
+          return false;
+        }
+        return true;
+      }
+      
+      return true;
+    });
+  };
+
+  const filteredNotifs = filterNotifications(notifications);
+  const unreadNotifs = filteredNotifs.filter((n) => !n.isRead).slice(0, 6);
+  const unreadCount = filteredNotifs.filter((n) => !n.isRead).length;
 
   const handleMarkRead = async (id: string) => {
     if (!onMarkRead) return;
@@ -53,7 +122,8 @@ export const NotificationWidget: React.FC<NotificationWidgetProps> = ({
   };
 
   return (
-    <div className="rounded-2xl border border-border-subtle bg-surface overflow-hidden">
+    <div className="rounded-2xl border border-border-subtle bg-surface overflow-hidden font-sans">
+
 
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle/60">

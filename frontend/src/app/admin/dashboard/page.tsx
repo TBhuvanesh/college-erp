@@ -34,6 +34,12 @@ import { AssignmentWidget, FacultyAssignmentData } from "@/components/Dashboard/
 import { NotificationWidget } from "@/components/Dashboard/NotificationWidget";
 import { CalendarWidget } from "@/components/Dashboard/CalendarWidget";
 import { UnifiedEvent } from "@/components/CalendarView";
+import { AcademicSubNav } from "@/components/Analytics/AcademicSubNav";
+import { WeeklyWorkloadChart } from "@/components/Dashboard/WorkloadCharts";
+import { TodayFocus } from "@/components/UXL/TodayFocus";
+import { SmartProgressCard } from "@/components/UXL/SmartProgressCard";
+import { ActionCenter, ActionItem } from "@/components/UXL/ActionCenter";
+
 
 const BASE_DASHBOARD_TIME = Date.now();
 
@@ -413,6 +419,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6 relative pb-12">
+      <AcademicSubNav />
       {/* Toast Alert */}
       {toastMsg && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-blue-600 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xl shadow-blue-600/20 border border-blue-400/20 animate-fade-in">
@@ -421,46 +428,61 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Top Banner Message */}
-      <div className="p-4 rounded-xl border border-blue-500/20 bg-blue-500/5 flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold dark:text-blue-400 text-blue-700">Institutional ERP Administration Module</h2>
-          <p className="text-xs text-text-secondary mt-1 max-w-xl">
-            You are operating the administrative backend engine. Navigate sidebar routes or use the quick links below to manage student directories, faculty workload rosters, curricula, tuition billing, and exam schedules.
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5 bg-surface-elevated border border-border-subtle rounded-md px-2 py-1 text-[10px] dark:text-blue-400 text-blue-700 font-mono">
-          <Activity size={10} className="animate-pulse" />
-          <span>ACADEMIC YEAR: 2026-27</span>
-        </div>
-      </div>
+      {/* Top Focus Banner */}
+      <TodayFocus 
+        userName="Administrator" 
+        role="Super Admin"
+        metrics={[
+          { label: "Students", value: loading ? "—" : totalStudents, subtext: "Total enrolled" },
+          { label: "Faculty", value: loading ? "—" : activeFaculty, subtext: "Active staff" },
+          { label: "Subjects", value: loading ? "—" : totalSubjects, subtext: "Curriculum scheme" },
+          { label: "Avg Attendance", value: loading ? "—" : `${avgAttendance}%`, subtext: "Compliance status", colorClass: parseFloat(avgAttendance) >= 75 ? "text-emerald-500" : "text-red-500" }
+        ]}
+        subtitleText="Manage campus directories, course curriculums, fee invoicing, and review engine health analytics."
+      />
 
-      {loading && (
-        <div className="p-3 bg-blue-500/10 border border-blue-500/20 dark:text-blue-400 text-blue-700 text-xs font-mono rounded-lg flex items-center gap-2">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Syncing real-time database records...</span>
-        </div>
-      )}
+      {/* Smart Progress Metrics Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <SmartProgressCard 
+          title="Tuition Billing & Collections"
+          value={`₹${outstandingFees.toLocaleString("en-IN")} Dues`}
+          icon={DollarSign}
+          progress={65}
+          trend={{ value: "Outstanding", isPositive: false }}
+          details={[
+            { label: "Target Invoice Value", value: "₹24,50,000" },
+            { label: "Total Collected", value: "₹18,20,000", color: "text-emerald-500" }
+          ]}
+          actionText="View Fees Dashboard"
+          actionRoute="/admin/fees"
+        />
 
-      {/* Compact Metrics Strip */}
-      <div className="rounded-2xl border border-border-subtle bg-surface overflow-hidden divide-y sm:divide-y-0 sm:divide-x divide-border-subtle flex flex-col sm:flex-row">
-        {[
-          { label: "Students", value: loading ? "—" : totalStudents, icon: Users, cls: "dark:text-blue-400 text-blue-700" },
-          { label: "Faculty", value: loading ? "—" : activeFaculty, icon: GraduationCap, cls: "dark:text-emerald-400 text-emerald-700" },
-          { label: "Subjects", value: loading ? "—" : totalSubjects, icon: BookOpen, cls: "dark:text-indigo-400 text-indigo-700" },
-          { label: "Avg Attendance", value: loading ? "—" : `${avgAttendance}%`, icon: Percent, cls: "dark:text-amber-400 text-amber-700" },
-          { label: "Outstanding", value: loading ? "—" : `₹${outstandingFees.toLocaleString("en-IN")}`, icon: DollarSign, cls: "dark:text-rose-400 text-rose-700" },
-        ].map(({ label, value, icon: Icon, cls }) => (
-          <div key={label} className="flex-1 flex items-center gap-3 px-5 py-4">
-            <div className={`w-8 h-8 rounded-lg bg-surface-elevated border border-border-subtle flex items-center justify-center shrink-0 ${cls}`}>
-              <Icon size={15} strokeWidth={2} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-text-muted truncate">{label}</p>
-              <p className="font-display font-black text-lg text-text-primary leading-none mt-0.5">{value}</p>
-            </div>
-          </div>
-        ))}
+        <SmartProgressCard 
+          title="Attendance Standing"
+          value={`${avgAttendance}% Avg`}
+          icon={Percent}
+          progress={parseFloat(avgAttendance)}
+          trend={{ value: "Stable", isPositive: true }}
+          details={[
+            { label: "Compliance Status", value: "Satisfactory" },
+            { label: "Low attendance alerts", value: "14 profiles" }
+          ]}
+          actionText="Open Attendance Registry"
+          actionRoute="/admin/attendance"
+        />
+
+        <SmartProgressCard 
+          title="Maker-Checker Approvals"
+          value={`${pendingApprovals.length} Pending`}
+          icon={ClipboardList}
+          progress={pendingApprovals.length === 0 ? 100 : 70}
+          trend={{ value: "Awaiting review", isPositive: pendingApprovals.length === 0 }}
+          details={[
+            { label: "Results Batches", value: `${pendingApprovals.length} sheets` }
+          ]}
+          actionText="Approve Result Roster"
+          actionRoute="/admin/results"
+        />
       </div>
 
       {/* Module Quick Navigation — horizontal chips */}
@@ -477,6 +499,7 @@ export default function AdminDashboard() {
             { href: "/admin/calendar",      icon: CalendarDays,   label: "Calendar",     cls: "dark:text-sky-400 text-sky-700 dark:bg-sky-500/8 bg-sky-500/10 dark:border-sky-500/20 border-sky-500/30 hover:bg-sky-500/15" },
             { href: "/admin/announcements", icon: Bell,           label: "Notices",      cls: "dark:text-orange-400 text-orange-700 dark:bg-orange-500/8 bg-orange-500/10 dark:border-orange-500/20 border-orange-500/30 hover:bg-orange-500/15" },
             { href: "/admin/lms",           icon: BookOpen,       label: "LMS",          cls: "dark:text-teal-400 text-teal-700 dark:bg-teal-500/8 bg-teal-500/10 dark:border-teal-500/20 border-teal-500/30 hover:bg-teal-500/15" },
+            { href: "/admin/workflows",     icon: ClipboardList,  label: "Workflows",    cls: "dark:text-violet-400 text-violet-750 dark:bg-violet-500/8 bg-violet-500/10 dark:border-violet-500/20 border-violet-500/30 hover:bg-violet-500/15" },
           ].map(({ href, icon: Icon, label, cls }) => (
             <Link
               key={href}
@@ -487,6 +510,53 @@ export default function AdminDashboard() {
               {label}
             </Link>
           ))}
+        </div>
+      </div>
+
+      {/* Faculty Workloads & Watchlists */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 rounded-2xl border border-border-subtle bg-surface p-5 shadow-sm space-y-4">
+          <div>
+            <h3 className="font-display font-bold text-sm text-text-primary uppercase tracking-wider">
+              Institutional Faculty Workload Distribution
+            </h3>
+            <p className="text-[11px] text-text-muted mt-0.5">Average weekly contact hours per department</p>
+          </div>
+          <WeeklyWorkloadChart 
+            weeklyData={[
+              { name: "Computer Science", Hours: 15 },
+              { name: "Information Tech", Hours: 14 },
+              { name: "Electronics", Hours: 13 },
+              { name: "Mechanical", Hours: 11 },
+              { name: "Civil Eng", Hours: 9 }
+            ]} 
+          />
+        </div>
+
+        <div className="lg:col-span-1 rounded-2xl border border-border-subtle bg-surface p-5 shadow-sm space-y-4">
+          <div>
+            <h3 className="font-display font-bold text-sm text-text-primary uppercase tracking-wider">
+              Overloaded Faculty Watchlist
+            </h3>
+            <p className="text-[11px] text-text-muted mt-0.5">Alerting profiles with heavy teaching load</p>
+          </div>
+          <div className="space-y-3">
+            {[
+              { name: "Dr. R. Nair", dept: "CSE", hours: 18, color: "text-red-500 bg-red-500/10 border-red-500/20" },
+              { name: "Dr. K. Reddy", dept: "ECE", hours: 17, color: "text-orange-600 bg-orange-500/10 border-orange-500/20" },
+              { name: "Prof. S. Verma", dept: "CSE", hours: 15, color: "text-amber-700 bg-amber-500/10 border-amber-500/20" }
+            ].map((fac, idx) => (
+              <div key={idx} className="flex justify-between items-center gap-2 p-3 rounded-xl border border-border-subtle bg-background">
+                <div>
+                  <h4 className="text-xs font-semibold text-text-primary">{fac.name}</h4>
+                  <p className="text-[10px] text-text-muted mt-0.5">Dept: {fac.dept}</p>
+                </div>
+                <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded border ${fac.color}`}>
+                  {fac.hours} hrs
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

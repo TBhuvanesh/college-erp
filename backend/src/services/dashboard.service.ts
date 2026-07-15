@@ -4,6 +4,51 @@ import { getStudentSummary } from './attendance.service';
 import { getStudentDues, ensureAllStudentsHaveFees } from './fee.service';
 import { getStudentResults } from './result.service';
 import { getStudentTimetable } from './examination.service';
+import { listRoomsWithAvailability } from './resourceAvailability.service';
+
+// ── Exam Seating & Invigilation admin widget — reused by both the admin and
+// HOD dashboards (HOD scoped to their own department's sessions). ────────────
+async function getExamSeatingOverview(departmentId: string | null) {
+  const params: unknown[] = [];
+  let deptFilter = '';
+  if (departmentId) {
+    params.push(departmentId);
+    deptFilter = `AND $${params.length}::uuid = ANY(es.department_ids)`;
+  }
+
+  const { rows: statusRows } = await query<{ status: string; count: string; conflicts: string }>(
+    `SELECT es.status::text AS status, COUNT(*)::text AS count, COALESCE(SUM(es.last_conflict_count), 0)::text AS conflicts
+     FROM exam_sessions es WHERE es.deleted_at IS NULL ${deptFilter}
+     GROUP BY es.status`,
+    params
+  );
+
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const nowTime = now.toISOString().slice(11, 16);
+  const nowPlus = new Date(now.getTime() + 60000).toISOString().slice(11, 16);
+  const roomAvailability = await listRoomsWithAvailability(today, nowTime, nowPlus, { isActive: true });
+
+  const byStatus: Record<string, number> = {};
+  let conflictCount = 0;
+  for (const r of statusRows) {
+    byStatus[r.status] = Number(r.count);
+    conflictCount += Number(r.conflicts);
+  }
+
+  return {
+    draftSessions: byStatus['draft'] ?? 0,
+    generatedSessions: byStatus['generated'] ?? 0,
+    validatedSessions: byStatus['validated'] ?? 0,
+    publishedSessions: byStatus['published'] ?? 0,
+    completedSessions: byStatus['completed'] ?? 0,
+    archivedSessions: byStatus['archived'] ?? 0,
+    conflictCount,
+    availableRooms: roomAvailability.filter((r) => r.state === 'available').length,
+    occupiedRooms: roomAvailability.filter((r) => r.state === 'occupied').length,
+    maintenanceRooms: roomAvailability.filter((r) => r.state === 'maintenance').length,
+  };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ADMIN DASHBOARD
@@ -262,8 +307,10 @@ export async function getAdminDashboardStats(userId: string) {
 
   const totalRecords = Number(a?.total_records) || 0;
   const totalPresent = Number(a?.total_present) || 0;
+  const examSeatingOverview = await getExamSeatingOverview(null);
 
   return {
+    examSeatingOverview,
     institutionOverview: {
       totalStudents:    Number(c.total_students)    || 0,
       totalFaculty:     Number(c.total_faculty)     || 0,
@@ -1057,8 +1104,10 @@ export async function getHODDashboardStats(userId: string) {
   const totalAtt = Number(attStatsRes.rows[0]?.total || 0);
   const presentAtt = Number(attStatsRes.rows[0]?.present || 0);
   const attendanceRate = totalAtt > 0 ? Math.round((presentAtt / totalAtt) * 100) : 100;
+  const examSeatingOverview = await getExamSeatingOverview(departmentId);
 
   return {
+    examSeatingOverview,
     profile: {
       id:             profileRows[0].id,
       fullName:       profileRows[0].full_name,

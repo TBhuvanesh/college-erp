@@ -1,6 +1,7 @@
 import { query } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
+import { emitWorkflowEvent } from './workflowEngine.service';
 import type { Role } from '../types/roles';
 import type {
   Assignment,
@@ -147,7 +148,28 @@ export async function createAssignment(
   await auditLog({ actorId: userId, action: 'CREATE', resource: 'lms_assignment', resourceId: rows[0].id });
 
   const row = await fetchAssignmentRow(rows[0].id);
-  return toAssignment(row!);
+  const assignment = toAssignment(row!);
+
+  // Academic Workflow Engine — assignment creation has no built-in notification/
+  // calendar sync of its own, so the default seeded rule wires those up here.
+  const { rows: subjectCtx } = await query<{ department_id: string; semester: number }>(
+    'SELECT department_id, semester FROM subjects WHERE id = $1',
+    [data.subjectId]
+  );
+  if (subjectCtx[0]) {
+    await emitWorkflowEvent('assignment.created', userId, {
+      departmentId: subjectCtx[0].department_id,
+      semester: subjectCtx[0].semester,
+      title: 'New Assignment Posted',
+      message: `A new assignment "${assignment.title}" (${assignment.subjectCode}) is due on ${new Date(assignment.dueDate).toDateString()}.`,
+      notificationType: 'Assignment',
+      sourceId: assignment.id,
+      calendarDate: assignment.dueDate,
+      calendarEventType: 'Assignment Deadline',
+    });
+  }
+
+  return assignment;
 }
 
 export async function listAssignments(

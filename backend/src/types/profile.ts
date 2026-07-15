@@ -27,6 +27,7 @@ export interface FacultyProfile extends BaseProfile {
 
 export interface StudentProfile extends BaseProfile {
   role: 'student';
+  id: string;
   rollNumber: string;
   semester: number;
   year: number;

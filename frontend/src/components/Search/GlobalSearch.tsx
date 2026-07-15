@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { usePermission } from "@/context/PermissionContext";
+
 import {
   searchErp,
   SearchResult,
@@ -131,13 +133,99 @@ export const GlobalSearch: React.FC = () => {
     }
   };
 
+  const { rbacRole } = usePermission();
+
+  // Filter search results based on active RBAC role scoping constraints
+  const getScopedResults = () => {
+    if (!results) return null;
+    
+    const roleLower = rbacRole.toLowerCase();
+    
+    // 1. Student Search: Own subjects, announcements, events (Hide student & faculty listings)
+    if (rbacRole === "Student") {
+      return {
+        ...results,
+        students: [],
+        faculty: [],
+        subjects: results.subjects || [],
+        announcements: results.announcements || [],
+        events: results.events || [],
+      };
+    }
+    
+    // 2. Faculty / Specialized Instructor Search: Assigned students/subjects (Hide other faculty)
+    if (roleLower.includes("faculty") || roleLower.includes("coordinator") || roleLower.includes("placement") || roleLower.includes("mentoring")) {
+      const deptName = user?.facultyProfile?.departmentName || "";
+      const deptCode = user?.facultyProfile?.departmentCode || "";
+      
+      const filteredStudents = (results.students || []).filter(student => {
+        if (!deptCode) return true;
+        return student.departmentName?.toLowerCase().includes(deptCode.toLowerCase()) || 
+               student.departmentName?.toLowerCase().includes(deptName.toLowerCase());
+      });
+
+      return {
+        ...results,
+        students: filteredStudents,
+        faculty: [], 
+        subjects: results.subjects || [],
+        announcements: results.announcements || [],
+        events: results.events || [],
+      };
+    }
+    
+    // 3. HOD Search: Scoped strictly to Department
+    if (rbacRole === "HOD") {
+      const deptName = user?.facultyProfile?.departmentName || "";
+      const deptCode = user?.facultyProfile?.departmentCode || "";
+      
+      const filteredStudents = (results.students || []).filter(student => {
+        if (!deptCode) return true;
+        return student.departmentName?.toLowerCase().includes(deptCode.toLowerCase()) || 
+               student.departmentName?.toLowerCase().includes(deptName.toLowerCase());
+      });
+      
+      const filteredFaculty = (results.faculty || []).filter(fac => {
+        if (!deptCode) return true;
+        return fac.departmentName?.toLowerCase().includes(deptCode.toLowerCase()) || 
+               fac.departmentName?.toLowerCase().includes(deptName.toLowerCase());
+      });
+      
+      const filteredSubjects = (results.subjects || []).filter(sub => {
+        if (!deptCode) return true;
+        const codePrefix = deptCode.toLowerCase() === 'cse' ? 'cs' :
+                           deptCode.toLowerCase() === 'aiml' ? 'am' :
+                           deptCode.toLowerCase() === 'ds' ? 'ds' :
+                           deptCode.toLowerCase() === 'ece' ? 'ec' : 
+                           deptCode.toLowerCase();
+        return sub.code?.toLowerCase().startsWith(codePrefix);
+      });
+
+      
+      return {
+        ...results,
+        students: filteredStudents,
+        faculty: filteredFaculty,
+        subjects: filteredSubjects,
+        announcements: results.announcements || [],
+        events: results.events || [],
+      };
+    }
+    
+    // 4. Admin Search: Full institutional database
+    return results;
+  };
+
+  const scopedResults = getScopedResults();
+
   const hasResults =
-    results &&
-    (results.students?.length > 0 ||
-      results.faculty?.length > 0 ||
-      results.subjects?.length > 0 ||
-      results.announcements?.length > 0 ||
-      results.events?.length > 0);
+    scopedResults &&
+    ((scopedResults.students?.length ?? 0) > 0 ||
+      (scopedResults.faculty?.length ?? 0) > 0 ||
+      (scopedResults.subjects?.length ?? 0) > 0 ||
+      (scopedResults.announcements?.length ?? 0) > 0 ||
+      (scopedResults.events?.length ?? 0) > 0);
+
 
   return (
     <div ref={containerRef} className="relative w-full max-w-xs md:max-w-md mx-auto">
@@ -199,17 +287,17 @@ export const GlobalSearch: React.FC = () => {
           )}
 
           {/* Results Grid / Categorized Lists */}
-          {!loading && !error && hasResults && results && (
-            <div className="space-y-4">
+          {!loading && !error && hasResults && scopedResults && (
+            <div className="space-y-4 font-sans">
               {/* Category: Students */}
-              {results.students && results.students.length > 0 && (
+              {scopedResults.students && scopedResults.students.length > 0 && (
                 <div>
                   <h4 className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider mb-2 border-b border-neutral-850 pb-1 flex items-center gap-1.5">
                     <User size={12} className="text-blue-400" />
-                    <span>Students ({results.students.length})</span>
+                    <span>Students ({scopedResults.students.length})</span>
                   </h4>
                   <div className="grid grid-cols-1 gap-1.5">
-                    {results.students.map((student) => (
+                    {scopedResults.students.map((student) => (
                       <Link
                         key={student.id}
                         href={getRoleRedirectUrl("students", student)}
@@ -236,14 +324,14 @@ export const GlobalSearch: React.FC = () => {
               )}
 
               {/* Category: Faculty */}
-              {results.faculty && results.faculty.length > 0 && (
+              {scopedResults.faculty && scopedResults.faculty.length > 0 && (
                 <div>
                   <h4 className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider mb-2 border-b dark:border-neutral-850 border-border-subtle pb-1 flex items-center gap-1.5">
                     <GraduationCap size={12} className="text-emerald-400" />
-                    <span>Faculty ({results.faculty.length})</span>
+                    <span>Faculty ({scopedResults.faculty.length})</span>
                   </h4>
                   <div className="grid grid-cols-1 gap-1.5">
-                    {results.faculty.map((fac) => (
+                    {scopedResults.faculty.map((fac) => (
                       <Link
                         key={fac.id}
                         href={getRoleRedirectUrl("faculty", fac)}
@@ -266,14 +354,14 @@ export const GlobalSearch: React.FC = () => {
               )}
 
               {/* Category: Subjects */}
-              {results.subjects && results.subjects.length > 0 && (
+              {scopedResults.subjects && scopedResults.subjects.length > 0 && (
                 <div>
                   <h4 className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider mb-2 border-b dark:border-neutral-850 border-border-subtle pb-1 flex items-center gap-1.5">
                     <BookOpen size={12} className="text-indigo-400" />
-                    <span>Subjects ({results.subjects.length})</span>
+                    <span>Subjects ({scopedResults.subjects.length})</span>
                   </h4>
                   <div className="grid grid-cols-1 gap-1.5">
-                    {results.subjects.map((sub) => (
+                    {scopedResults.subjects.map((sub) => (
                       <Link
                         key={sub.id}
                         href={getRoleRedirectUrl("subjects", sub)}
@@ -300,14 +388,14 @@ export const GlobalSearch: React.FC = () => {
               )}
 
               {/* Category: Announcements */}
-              {results.announcements && results.announcements.length > 0 && (
+              {scopedResults.announcements && scopedResults.announcements.length > 0 && (
                 <div>
                   <h4 className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider mb-2 border-b dark:border-neutral-850 border-border-subtle pb-1 flex items-center gap-1.5">
                     <Bell size={12} className="text-amber-400" />
-                    <span>Announcements ({results.announcements.length})</span>
+                    <span>Announcements ({scopedResults.announcements.length})</span>
                   </h4>
                   <div className="grid grid-cols-1 gap-1.5">
-                    {results.announcements.map((ann) => (
+                    {scopedResults.announcements.map((ann) => (
                       <Link
                         key={ann.id}
                         href={getRoleRedirectUrl("announcements", ann)}
@@ -330,14 +418,14 @@ export const GlobalSearch: React.FC = () => {
               )}
 
               {/* Category: Events */}
-              {results.events && results.events.length > 0 && (
+              {scopedResults.events && scopedResults.events.length > 0 && (
                 <div>
                   <h4 className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider mb-2 border-b dark:border-neutral-850 border-border-subtle pb-1 flex items-center gap-1.5">
                     <Calendar size={12} className="text-rose-455" />
-                    <span>Academic Events ({results.events.length})</span>
+                    <span>Academic Events ({scopedResults.events.length})</span>
                   </h4>
                   <div className="grid grid-cols-1 gap-1.5">
-                    {results.events.map((ev) => (
+                    {scopedResults.events.map((ev) => (
                       <Link
                         key={ev.id}
                         href={getRoleRedirectUrl("events", ev)}

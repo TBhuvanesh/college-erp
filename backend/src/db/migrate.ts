@@ -28,6 +28,15 @@ const MIGRATION_FILES = [
   '020_add_hod_designation.sql',
   '021_add_accountant_role.sql',
   '022_add_accountants_table.sql',
+  '023_student_mentorship.sql',
+  '024_mentor_groups.sql',
+  '025_teaching_plans.sql',
+  '026_teaching_plan_intelligence.sql',
+  '027_academic_feedback.sql',
+  '028_faculty_operations_workflow.sql',
+  '029_exam_seating_invigilation.sql',
+  '030_exam_seating_enterprise.sql',
+  '031_exam_synchronization.sql',
 ];
 
 async function runMigrations(): Promise<void> {
@@ -95,6 +104,58 @@ async function runMigrations(): Promise<void> {
         }
         
         // Execute the rest of the SQL file (truncations/inserts) in a separate transaction
+        await client.query('BEGIN');
+        await client.query(sql);
+        await client.query(
+          'INSERT INTO schema_migrations (version) VALUES ($1)',
+          [file]
+        );
+        await client.query('COMMIT');
+      } else if (file === '026_teaching_plan_intelligence.sql') {
+        const enumAdditions = [
+          "ALTER TYPE lesson_completion_status ADD VALUE IF NOT EXISTS 'In Progress'",
+          "ALTER TYPE lesson_completion_status ADD VALUE IF NOT EXISTS 'Partially Completed'",
+        ];
+        for (const stmt of enumAdditions) {
+          try {
+            await client.query(stmt);
+            console.log(`  ${stmt}`);
+          } catch (err: any) {
+            if (err.message && err.message.includes('already exists')) {
+              console.log('  Enum value already exists, skipping.');
+            } else {
+              throw err;
+            }
+          }
+        }
+
+        // Rest of the file (column additions, backfill, indexes) in its own transaction
+        await client.query('BEGIN');
+        await client.query(sql);
+        await client.query(
+          'INSERT INTO schema_migrations (version) VALUES ($1)',
+          [file]
+        );
+        await client.query('COMMIT');
+      } else if (file === '031_exam_synchronization.sql') {
+        const enumAdditions = [
+          "ALTER TYPE workflow_trigger_event ADD VALUE IF NOT EXISTS 'exam_seating.published'",
+          "ALTER TYPE exam_session_status ADD VALUE IF NOT EXISTS 'validated' AFTER 'generated'",
+          "ALTER TYPE exam_session_status ADD VALUE IF NOT EXISTS 'completed' AFTER 'published'",
+        ];
+        for (const stmt of enumAdditions) {
+          try {
+            await client.query(stmt);
+            console.log(`  ${stmt}`);
+          } catch (err: any) {
+            if (err.message && err.message.includes('already exists')) {
+              console.log('  Enum value already exists, skipping.');
+            } else {
+              throw err;
+            }
+          }
+        }
+
         await client.query('BEGIN');
         await client.query(sql);
         await client.query(

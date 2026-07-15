@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import { SimulationProvider } from "@/context/SimulationContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { PermissionProvider } from "@/context/PermissionContext";
 import "./globals.css";
 
 const inter = Inter({
@@ -34,9 +35,12 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-slate-50 dark:bg-neutral-950 text-slate-900 dark:text-neutral-100 antialiased flex flex-col font-sans">
         <SimulationProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <PermissionProvider>{children}</PermissionProvider>
+          </AuthProvider>
         </SimulationProvider>
       </body>
     </html>
   );
 }
+

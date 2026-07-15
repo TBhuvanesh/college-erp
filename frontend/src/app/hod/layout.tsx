@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { AccessGuard } from "@/components/Analytics/AccessGuard";
 
 export default function HODLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -19,7 +20,10 @@ export default function HODLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <ProtectedRoute allowedRoles={["faculty"]}>
-      <DashboardLayout>{children}</DashboardLayout>
+      <AccessGuard>
+        <DashboardLayout>{children}</DashboardLayout>
+      </AccessGuard>
     </ProtectedRoute>
   );
 }
+

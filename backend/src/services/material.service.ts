@@ -3,6 +3,7 @@ import path from 'path';
 import { query } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
+import { emitWorkflowEvent } from './workflowEngine.service';
 import type { Role } from '../types/roles';
 import type {
   CourseMaterial,
@@ -164,7 +165,26 @@ export async function createMaterial(
   await auditLog({ actorId: userId, action: 'CREATE', resource: 'course_material', resourceId: rows[0].id });
 
   const row = await fetchMaterialRow(rows[0].id);
-  return toMaterial(row!);
+  const material = toMaterial(row!);
+
+  // Academic Workflow Engine — material upload has no built-in notification of
+  // its own, so the default seeded rule notifies students here.
+  const { rows: subjectCtx } = await query<{ department_id: string; semester: number }>(
+    'SELECT department_id, semester FROM subjects WHERE id = $1',
+    [data.subjectId]
+  );
+  if (subjectCtx[0]) {
+    await emitWorkflowEvent('material.created', userId, {
+      departmentId: subjectCtx[0].department_id,
+      semester: subjectCtx[0].semester,
+      title: 'New Study Material Uploaded',
+      message: `New material "${material.title}" (${material.subjectCode}) is now available.`,
+      notificationType: 'Announcement',
+      sourceId: material.id,
+    });
+  }
+
+  return material;
 }
 
 export async function listMaterials(

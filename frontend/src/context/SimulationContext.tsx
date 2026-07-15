@@ -646,6 +646,10 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
+  if (!initialized) {
+    return null; // Avoids hydration mismatch by not rendering until client state from localStorage is loaded
+  }
+
   return (
     <SimulationContext.Provider
       value={{

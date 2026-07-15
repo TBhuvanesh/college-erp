@@ -36,6 +36,7 @@ export interface Notification {
   departmentId: string | null;
   departmentName: string | null;
   semester: number | null;
+  recipientUserId: string | null;
   isImportant: boolean;
   isRead: boolean;
   createdBy: string;
@@ -65,6 +66,7 @@ export const createNotificationSchema = z.object({
   targetRole:   z.enum(NOTIFICATION_TARGET_ROLES).default('all'),
   departmentId: z.string().uuid().optional().nullable(),
   semester:     z.coerce.number().int().min(1).max(12).optional().nullable(),
+  recipientUserId: z.string().uuid().optional().nullable(),
   isImportant:  z.boolean().default(false),
   sourceModule: z.enum(SOURCE_MODULES).optional(),
   sourceId:     z.string().uuid().optional(),

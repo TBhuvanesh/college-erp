@@ -13,6 +13,7 @@ interface UserRow {
   password_hash: string;
   role: Role;
   is_active: boolean;
+  is_super_admin: boolean;
 }
 
 interface RefreshTokenRow {
@@ -22,6 +23,7 @@ interface RefreshTokenRow {
   email: string;
   role: Role;
   is_active: boolean;
+  is_super_admin: boolean;
 }
 
 interface FacultyAuthRow {
@@ -79,7 +81,7 @@ export async function login(
   password: string
 ): Promise<{ tokens: TokenPair; user: AuthUser }> {
   const { rows } = await query<UserRow>(
-    `SELECT id, email, password_hash, role, is_active
+    `SELECT id, email, password_hash, role, is_active, is_super_admin
      FROM users
      WHERE email = $1 AND deleted_at IS NULL`,
     [email.toLowerCase()]
@@ -103,7 +105,7 @@ export async function login(
   const facultyProfile = user.role === 'faculty'
     ? await getFacultyAuthProfile(user.id)
     : undefined;
-  const tokens = await issueTokenPair(user.id, user.email, user.role, facultyProfile);
+  const tokens = await issueTokenPair(user.id, user.email, user.role, facultyProfile, user.is_super_admin);
 
   await query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
 
@@ -118,6 +120,7 @@ export async function login(
       departmentId: facultyProfile?.departmentId,
       facultyId: facultyProfile?.id,
       facultyProfile,
+      isSuperAdmin: user.is_super_admin,
     },
   };
 }
@@ -131,7 +134,7 @@ export async function refresh(
 
   const { rows } = await query<RefreshTokenRow>(
     `SELECT rt.user_id, rt.revoked_at, rt.expires_at,
-            u.email, u.role, u.is_active
+            u.email, u.role, u.is_active, u.is_super_admin
      FROM refresh_tokens rt
      JOIN users u ON u.id = rt.user_id
      WHERE rt.token_hash = $1 AND rt.user_id = $2`,
@@ -172,7 +175,7 @@ export async function refresh(
   const facultyProfile = stored.role === 'faculty'
     ? await getFacultyAuthProfile(stored.user_id)
     : undefined;
-  const tokens = await issueTokenPair(stored.user_id, stored.email, stored.role, facultyProfile);
+  const tokens = await issueTokenPair(stored.user_id, stored.email, stored.role, facultyProfile, stored.is_super_admin);
 
   return {
     tokens,
@@ -185,6 +188,7 @@ export async function refresh(
       departmentId: facultyProfile?.departmentId,
       facultyId: facultyProfile?.id,
       facultyProfile,
+      isSuperAdmin: stored.is_super_admin,
     },
   };
 }
@@ -208,7 +212,8 @@ async function issueTokenPair(
   userId: string,
   email: string,
   role: Role,
-  facultyProfile?: AuthUser['facultyProfile']
+  facultyProfile?: AuthUser['facultyProfile'],
+  isSuperAdmin?: boolean
 ): Promise<TokenPair> {
   const tokenId = uuidv4();
   const refreshToken = signRefreshToken({ sub: userId, tokenId });
@@ -220,6 +225,7 @@ async function issueTokenPair(
     designation: facultyProfile?.designation,
     departmentId: facultyProfile?.departmentId,
     facultyId: facultyProfile?.id,
+    isSuperAdmin,
   });
   const tokenHash = hashToken(refreshToken);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);

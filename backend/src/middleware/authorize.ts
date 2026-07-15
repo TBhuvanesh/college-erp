@@ -58,3 +58,25 @@ export function requireRole(...roles: Role[]) {
     next();
   };
 }
+
+/**
+ * Restricts access to admin users additionally flagged as super admin
+ * (users.is_super_admin) — a capability flag, not a distinct Role, mirroring
+ * how HOD is a `designation` on faculty rather than its own role.
+ * Use for workflow-configuration endpoints only.
+ */
+export function requireSuperAdmin() {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      next(AppError.unauthorized());
+      return;
+    }
+
+    if (req.user.role !== 'admin' || !req.user.isSuperAdmin) {
+      next(AppError.forbidden('Access restricted to super admins', 'SUPER_ADMIN_REQUIRED'));
+      return;
+    }
+
+    next();
+  };
+}

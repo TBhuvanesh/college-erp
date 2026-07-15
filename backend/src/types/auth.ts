@@ -7,6 +7,7 @@ export interface JwtAccessPayload {
   designation?: string;
   departmentId?: string;
   facultyId?: string;
+  isSuperAdmin?: boolean;
 }
 
 export interface JwtRefreshPayload {
@@ -22,6 +23,7 @@ export interface AuthUser {
   designation?: string;
   departmentId?: string;
   facultyId?: string;
+  isSuperAdmin?: boolean;
   facultyProfile?: {
     id: string;
     employeeNumber: string;

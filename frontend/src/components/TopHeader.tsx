@@ -8,6 +8,8 @@ import { useSimulation } from "@/context/SimulationContext";
 import { apiFetch } from "@/lib/api";
 import { Notification, NotificationType } from "./NotificationCenter";
 import { GlobalSearch } from "./Search/GlobalSearch";
+import { usePermission } from "@/context/PermissionContext";
+
 import { 
   Bell, 
   User, 
@@ -28,6 +30,8 @@ export const TopHeader: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { currentRole, students, faculty, currentStudentId, currentFacultyId, theme, toggleTheme } = useSimulation();
+  const { rbacRole } = usePermission();
+
   const { accessToken, logout } = useAuth();
   
   const [notifOpen, setNotifOpen] = useState(false);
@@ -45,17 +49,80 @@ export const TopHeader: React.FC = () => {
   };
 
   const fetchHeaderNotifications = async () => {
-    if (!accessToken) return;
     try {
-      const res = await apiFetch("/notifications?limit=5", {}, accessToken);
+      const res = await apiFetch("/notifications?limit=25", {}, accessToken);
       if (res.success && res.data?.notifications) {
-        setNotifications(res.data.notifications);
-        setUnreadCount(res.data.notifications.filter((n: Notification) => !n.isRead).length);
+        const notifs = res.data.notifications;
+        const filtered = notifs.filter((n: Notification) => {
+          const typeLower = (n.type || "").toLowerCase();
+          
+          if (rbacRole === "Student") {
+            return typeLower.includes("assignment") || 
+                   typeLower.includes("homework") || 
+                   typeLower.includes("grade") || 
+                   typeLower.includes("result") ||
+                   typeLower.includes("calendar") || 
+                   typeLower.includes("event") ||
+                   typeLower.includes("opportunity") ||
+                   typeLower.includes("placement");
+          }
+          
+          if (rbacRole === "Faculty") {
+            return typeLower.includes("submission") || 
+                   typeLower.includes("lesson") || 
+                   typeLower.includes("workload") ||
+                   typeLower.includes("mentor") ||
+                   typeLower.includes("alert");
+          }
+          
+          if (rbacRole === "Placement Officer") {
+            return typeLower.includes("opportunity") || 
+                   typeLower.includes("placement") || 
+                   typeLower.includes("internship") || 
+                   typeLower.includes("company");
+          }
+          
+          if (rbacRole === "Mentoring Head") {
+            return typeLower.includes("mentor") || 
+                   typeLower.includes("alert") ||
+                   typeLower.includes("system");
+          }
+
+          if (rbacRole === "Academic Coordinator") {
+            return typeLower.includes("calendar") || 
+                   typeLower.includes("exam") ||
+                   typeLower.includes("academic") ||
+                   typeLower.includes("system");
+          }
+
+          if (rbacRole === "Super Admin") {
+            if (typeLower.includes("assignment") || typeLower.includes("homework") || typeLower.includes("grade") || typeLower.includes("lesson") || typeLower.includes("attendance")) {
+              return false;
+            }
+            return typeLower.includes("system") || 
+                   typeLower.includes("alert") || 
+                   typeLower.includes("user") || 
+                   typeLower.includes("config");
+          }
+
+          if (rbacRole === "College Admin") {
+            if (typeLower.includes("submission") || typeLower.includes("lesson") || typeLower.includes("teaching")) {
+              return false;
+            }
+            return true;
+          }
+          
+          return true;
+        });
+
+        setNotifications(filtered.slice(0, 5));
+        setUnreadCount(filtered.filter((n: Notification) => !n.isRead).length);
       }
     } catch (err) {
       console.error("Failed to fetch recent notifications", err);
     }
   };
+
 
   useEffect(() => {
     const load = async () => {

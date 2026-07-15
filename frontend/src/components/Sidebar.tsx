@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSimulation } from "@/context/SimulationContext";
 import { useAuth } from "@/context/AuthContext";
+import { usePermission } from "@/context/PermissionContext";
+
 import {
   LayoutDashboard,
   Users,
@@ -19,7 +21,11 @@ import {
   FileText,
   Briefcase,
   PanelLeft,
+  ClipboardList,
+  Settings,
+  GitBranch,
 } from "lucide-react";
+
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname() || "";
@@ -51,12 +57,16 @@ export const Sidebar: React.FC = () => {
   };
 
   const getRoleBadgeClass = () => {
-    if (currentRole === "Admin") return "dark:text-purple-400 text-purple-700 dark:bg-purple-500/10 bg-purple-50 dark:border-purple-500/20 border-purple-200";
-    if (currentRole === "Faculty") return "dark:text-blue-400 text-blue-700 dark:bg-blue-500/10 bg-blue-50 dark:border-blue-500/20 border-blue-200";
-    if (currentRole === "HOD") return "dark:text-amber-400 text-amber-700 dark:bg-amber-500/10 bg-amber-50 dark:border-amber-500/20 border-amber-200";
-    if (currentRole === "Accountant") return "dark:text-indigo-400 text-indigo-700 dark:bg-indigo-500/10 bg-indigo-50 dark:border-indigo-500/20 border-indigo-200";
+    if (rbacRole === "Super Admin") return "dark:text-purple-400 text-purple-700 dark:bg-purple-500/10 bg-purple-50 dark:border-purple-500/20 border-purple-200";
+    if (rbacRole === "College Admin") return "dark:text-indigo-400 text-indigo-700 dark:bg-indigo-500/10 bg-indigo-50 dark:border-indigo-500/20 border-indigo-200";
+    if (rbacRole === "HOD") return "dark:text-amber-400 text-amber-700 dark:bg-amber-500/10 bg-amber-50 dark:border-amber-500/20 border-amber-200";
+    if (rbacRole === "Academic Coordinator") return "dark:text-blue-400 text-blue-700 dark:bg-blue-500/10 bg-blue-50 dark:border-blue-500/20 border-blue-200";
+    if (rbacRole === "Placement Officer") return "dark:text-pink-400 text-pink-700 dark:bg-pink-500/10 bg-pink-50 dark:border-pink-500/20 border-pink-200";
+    if (rbacRole === "Mentoring Head") return "dark:text-cyan-400 text-cyan-700 dark:bg-cyan-500/10 bg-cyan-50 dark:border-cyan-500/20 border-cyan-200";
+    if (rbacRole === "Faculty") return "dark:text-teal-400 text-teal-700 dark:bg-teal-500/10 bg-teal-50 dark:border-teal-500/20 border-teal-200";
     return "dark:text-emerald-400 text-emerald-700 dark:bg-emerald-500/10 bg-emerald-50 dark:border-emerald-500/20 border-emerald-200";
   };
+
 
   type NavItem = { name: string; href: string; icon: React.ElementType };
   type NavGroup = { section: string; items: NavItem[] };
@@ -67,6 +77,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
         { name: "Opportunity Hub", href: "/admin/opportunities", icon: Briefcase },
+        { name: "Mentorship Registry", href: "/admin/mentorship", icon: Users },
       ]
     },
     {
@@ -85,6 +96,10 @@ export const Sidebar: React.FC = () => {
         { name: "Examinations", href: "/admin/examinations", icon: FileText },
         { name: "Results Desk", href: "/admin/results", icon: GraduationCap },
         { name: "Academic Calendar", href: "/admin/calendar", icon: Calendar },
+        { name: "Teaching Planner", href: "/admin/teaching-planner", icon: ClipboardList },
+        { name: "Academic Feedback", href: "/admin/feedback", icon: ClipboardList },
+        { name: "System Workflows", href: "/admin/workflows", icon: GitBranch },
+        { name: "Exam Seating", href: "/admin/seating", icon: ClipboardList },
       ]
     },
     {
@@ -92,8 +107,15 @@ export const Sidebar: React.FC = () => {
       items: [
         { name: "Fee Management", href: "/admin/fees", icon: CreditCard },
       ]
+    },
+    {
+      section: "System",
+      items: [
+        { name: "ERP Settings", href: "/admin/settings", icon: Settings },
+      ]
     }
   ];
+
 
   const facultyNav: NavGroup[] = [
     {
@@ -101,6 +123,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { name: "Dashboard", href: "/faculty/dashboard", icon: LayoutDashboard },
         { name: "Opportunity Hub", href: "/faculty/opportunities", icon: Briefcase },
+        { name: "Mentorship Dashboard", href: "/faculty/mentorship", icon: Users },
       ]
     },
     {
@@ -112,6 +135,10 @@ export const Sidebar: React.FC = () => {
         { name: "Examinations", href: "/faculty/examinations", icon: Calendar },
         { name: "Results Entry", href: "/faculty/results", icon: GraduationCap },
         { name: "Academic Calendar", href: "/faculty/calendar", icon: Calendar },
+        { name: "Teaching Planner", href: "/faculty/teaching-planner", icon: ClipboardList },
+        { name: "Invigilation Duty", href: "/faculty/invigilation", icon: ClipboardList },
+        { name: "Feedback Insights", href: "/faculty/feedback", icon: ClipboardList },
+        { name: "Workflow Tracker", href: "/faculty/workflows", icon: GitBranch },
       ]
     }
   ];
@@ -122,6 +149,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { name: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
         { name: "Opportunity Hub", href: "/student/opportunities", icon: Briefcase },
+        { name: "My Mentor", href: "/student/mentorship", icon: Users },
       ]
     },
     {
@@ -130,7 +158,9 @@ export const Sidebar: React.FC = () => {
         { name: "Attendance Logs", href: "/student/attendance", icon: Calendar },
         { name: "Semester Results", href: "/student/results", icon: GraduationCap },
         { name: "Examinations", href: "/student/examinations", icon: Calendar },
+        { name: "Exam Seating", href: "/student/seating", icon: ClipboardList },
         { name: "Academic Calendar", href: "/student/calendar", icon: Calendar },
+        { name: "Academic Feedback", href: "/student/feedback", icon: ClipboardList },
       ]
     },
     {
@@ -147,6 +177,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { name: "Dashboard", href: "/hod/dashboard", icon: LayoutDashboard },
         { name: "Opportunity Hub", href: "/faculty/opportunities", icon: Briefcase },
+        { name: "Mentorship Head Desk", href: "/hod/mentorship", icon: Users },
       ]
     },
     {
@@ -161,6 +192,8 @@ export const Sidebar: React.FC = () => {
       items: [
         { name: "Class Schedules", href: "/hod/classes", icon: BookOpen },
         { name: "Attendance Registry", href: "/hod/attendance", icon: Calendar },
+        { name: "Feedback Analysis", href: "/hod/feedback", icon: ClipboardList },
+        { name: "Exam Seating", href: "/hod/seating", icon: ClipboardList },
       ]
     },
     {
@@ -172,6 +205,10 @@ export const Sidebar: React.FC = () => {
         { name: "Examinations", href: "/faculty/examinations", icon: Calendar },
         { name: "Results Entry", href: "/faculty/results", icon: GraduationCap },
         { name: "Academic Calendar", href: "/faculty/calendar", icon: Calendar },
+        { name: "Teaching Planner", href: "/faculty/teaching-planner", icon: ClipboardList },
+        { name: "Invigilation Duty", href: "/faculty/invigilation", icon: ClipboardList },
+        { name: "My Feedback Insights", href: "/faculty/feedback", icon: ClipboardList },
+        { name: "Workflow Tracker", href: "/faculty/workflows", icon: GitBranch },
       ]
     }
   ];
@@ -191,12 +228,22 @@ export const Sidebar: React.FC = () => {
     }
   ];
 
+  const { hasAccess, rbacRole } = usePermission();
+
   const navGroups =
     currentRole === "Admin" ? adminNav :
     currentRole === "Faculty" ? facultyNav :
     currentRole === "HOD" ? hodNav :
     currentRole === "Accountant" ? accountantNav :
     studentNav;
+
+  const filteredNavGroups = navGroups
+    .map((group) => {
+      const items = group.items.filter((item) => hasAccess(item.href));
+      return { ...group, items };
+    })
+    .filter((group) => group.items.length > 0);
+
 
   const handleReset = () => {
     if (confirm("Reset simulation database to initial academic state?")) {
@@ -270,7 +317,7 @@ export const Sidebar: React.FC = () => {
               </div>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider border ${getRoleBadgeClass()}`}>
-                  {currentRole}
+                  {rbacRole}
                 </span>
                 <span className="text-[10px] text-text-muted truncate font-mono">{getUserSub()}</span>
               </div>
@@ -285,7 +332,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 custom-scrollbar space-y-5">
-        {navGroups.map((group, groupIdx) => (
+        {filteredNavGroups.map((group, groupIdx) => (
           <div key={groupIdx}>
             {!collapsed && (
               <h3 className="px-2 text-[9px] font-black text-text-muted uppercase tracking-[0.12em] mb-1.5 select-none">

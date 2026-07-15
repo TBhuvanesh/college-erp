@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import * as departmentService from '../services/department.service';
 import { sendSuccess } from '../utils/response';
 import { asyncHandler } from '../utils/asyncHandler';
+import type { UpdateDepartmentColorInput } from '../services/department.service';
 
 export const listDepartments = asyncHandler(async (_req: Request, res: Response) => {
   const departments = await departmentService.getDepartments();
@@ -22,4 +23,10 @@ export const listPrograms = asyncHandler(async (req: Request, res: Response) => 
 export const getProgram = asyncHandler(async (req: Request, res: Response) => {
   const program = await departmentService.getProgramById(req.params.id);
   sendSuccess(res, { program });
+});
+
+export const updateDepartmentColor = asyncHandler(async (req: Request, res: Response) => {
+  const data = req.body as UpdateDepartmentColorInput;
+  const department = await departmentService.updateDepartmentColor(req.user!.id, req.params.id, data);
+  sendSuccess(res, { department }, 'Department color updated successfully');
 });

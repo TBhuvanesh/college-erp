@@ -22,6 +22,7 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
       designation: payload.designation,
       departmentId: payload.departmentId,
       facultyId: payload.facultyId,
+      isSuperAdmin: payload.isSuperAdmin,
     };
     next();
   } catch (err) {

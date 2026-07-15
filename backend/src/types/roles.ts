@@ -39,6 +39,10 @@ export const PERMISSIONS = {
   'fees:update': ['admin', 'accountant'],
   // Reporting
   'reports:read': ['admin', 'faculty', 'accountant'],
+  // Mentorship
+  'mentorship:manage': ['admin'],
+  'mentorship:read': ['admin', 'faculty', 'student'],
+  'mentorship:write': ['faculty'],
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
