@@ -41,7 +41,7 @@ export const AcademicSubNav: React.FC = () => {
   ];
 
   return (
-    <div className="w-full border-b border-border-subtle bg-surface px-4 py-2 sticky top-16 z-10 backdrop-blur-md bg-surface/90">
+    <div className="w-full border-b border-border-subtle bg-surface px-4 py-2 sticky top-0 z-10 backdrop-blur-md bg-surface/90">
       <div className="max-w-7xl mx-auto flex gap-1 sm:gap-2 overflow-x-auto no-scrollbar">
         {tabs.map((tab) => {
           const Icon = tab.icon;
