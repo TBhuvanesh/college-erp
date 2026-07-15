@@ -487,7 +487,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       cells.push(
         <div
           key={`prev-${prevDay}`}
-          className="min-h-[90px] border-b border-r border-neutral-900 bg-neutral-950/20 p-2 text-neutral-600 text-[10px] font-medium"
+          className="min-h-[90px] border-b border-r dark:border-neutral-900 border-border-subtle dark:bg-neutral-950/20 bg-surface-hover/30 p-2 dark:text-neutral-600 text-text-muted text-[10px] font-medium"
         >
           {prevDay}
         </div>
@@ -711,8 +711,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               </select>
             </div>
 
-            {/* Student/Faculty: Add personal entry */}
-            {(role === "student" || role === "faculty") && (
+            {/* Student/Faculty/Admin: Add personal entry */}
+            {(role === "student" || role === "faculty" || role === "admin") && (
               <button
                 onClick={() => {
                   setSelectedPersonalEvent(null);

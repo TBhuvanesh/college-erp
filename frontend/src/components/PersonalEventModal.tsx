@@ -60,8 +60,18 @@ export const PersonalEventModal: React.FC<PersonalEventModalProps> = ({
     { label: "Other", value: "Other" },
   ];
 
+  // Admin categories mapping
+  const adminTypes = [
+    { label: "Admin Task", value: "Reminder" },
+    { label: "Meeting", value: "Meeting" },
+    { label: "Deadline", value: "Reminder" },
+    { label: "Other", value: "Other" },
+  ];
+
   const getTypesList = () => {
-    return role === "student" ? studentTypes : facultyTypes;
+    if (role === "student") return studentTypes;
+    if (role === "admin") return adminTypes;
+    return facultyTypes;
   };
 
   // Load departments (for faculty scoping)
@@ -230,20 +240,20 @@ export const PersonalEventModal: React.FC<PersonalEventModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-955/80 dark:bg-neutral-950/80 backdrop-blur-sm animate-fade-in">
       <div className="absolute inset-0 cursor-default" onClick={onClose}></div>
 
-      <div className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl p-5 z-10 flex flex-col justify-between max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-md dark:bg-neutral-900 bg-surface border dark:border-neutral-800 border-border-subtle rounded-xl shadow-2xl p-5 z-10 flex flex-col justify-between max-h-[90vh] overflow-y-auto">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-neutral-800 pb-3 mb-4">
-          <h3 className="font-display font-bold text-white text-sm flex items-center gap-2">
+        <div className="flex items-center justify-between border-b dark:border-neutral-800 border-border-subtle pb-3 mb-4">
+          <h3 className="font-display font-bold dark:text-white text-text-primary text-sm flex items-center gap-2">
             <Sparkles size={15} className="text-blue-500" />
             <span>{eventToEdit ? "Edit Calendar Task" : "Add Personal Task / Reminder"}</span>
           </h3>
           <button
             onClick={onClose}
-            className="p-1 rounded bg-neutral-850 hover:bg-neutral-850 text-neutral-450 hover:text-white cursor-pointer transition"
+            className="p-1 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-450 text-text-secondary dark:hover:text-white hover:text-text-primary cursor-pointer border dark:border-neutral-850 border-border-subtle transition"
           >
             <X size={15} />
           </button>
@@ -251,7 +261,7 @@ export const PersonalEventModal: React.FC<PersonalEventModalProps> = ({
 
         {/* Errors */}
         {error && (
-          <div className="p-3 mb-4 rounded bg-rose-500/10 border border-rose-500/20 text-rose-450 text-xs font-semibold flex items-center gap-2">
+          <div className="p-3 mb-4 rounded bg-rose-500/10 border border-rose-500/25 text-rose-400 text-xs font-semibold flex items-center gap-2">
             <AlertCircle size={14} className="shrink-0" />
             <span>{error}</span>
           </div>
@@ -261,7 +271,7 @@ export const PersonalEventModal: React.FC<PersonalEventModalProps> = ({
           
           {/* Custom label type selector */}
           <div>
-            <label className="block text-[10px] font-bold text-neutral-450 uppercase mb-1">
+            <label className="block text-[10px] font-bold dark:text-neutral-450 text-text-secondary uppercase mb-1">
               Event Subcategory <span className="text-rose-500">*</span>
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -276,7 +286,7 @@ export const PersonalEventModal: React.FC<PersonalEventModalProps> = ({
                   className={`py-1.5 px-2.5 rounded text-[10px] font-bold border transition text-center cursor-pointer ${
                     customTypeLabel === t.label
                       ? "bg-blue-600 border-blue-500 text-white font-extrabold"
-                      : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-neutral-200"
+                      : "dark:bg-neutral-950 bg-background dark:border-neutral-800 border-border-subtle dark:text-neutral-400 text-text-secondary dark:hover:text-neutral-200 hover:text-text-primary"
                   }`}
                 >
                   {t.label}
@@ -287,7 +297,7 @@ export const PersonalEventModal: React.FC<PersonalEventModalProps> = ({
 
           {/* Title */}
           <div>
-            <label className="block text-[10px] font-bold text-neutral-450 uppercase mb-1">
+            <label className="block text-[10px] font-bold dark:text-neutral-450 text-text-secondary uppercase mb-1">
               Event Title <span className="text-rose-500">*</span>
             </label>
             <input
@@ -296,13 +306,13 @@ export const PersonalEventModal: React.FC<PersonalEventModalProps> = ({
               placeholder="e.g. Midterm prep, grading deadline, project checkin"
               value={title.replace(/^\[.*?\]\s*/, "")} // Remove prefixed label if editing
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-neutral-700"
+              className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-[10px] font-bold text-neutral-455 uppercase mb-1">
+            <label className="block text-[10px] font-bold dark:text-neutral-450 text-text-secondary uppercase mb-1">
               Description / Notes
             </label>
             <textarea
@@ -310,14 +320,14 @@ export const PersonalEventModal: React.FC<PersonalEventModalProps> = ({
               placeholder="Add details, links, room numbers, etc."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-neutral-700 resize-none"
+              className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition resize-none"
             />
           </div>
 
           {/* Start and End Date-time */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-bold text-neutral-450 uppercase mb-1">
+              <label className="block text-[10px] font-bold dark:text-neutral-450 text-text-secondary uppercase mb-1">
                 Start Date & Time <span className="text-rose-500">*</span>
               </label>
               <input
@@ -325,52 +335,53 @@ export const PersonalEventModal: React.FC<PersonalEventModalProps> = ({
                 required
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-neutral-700"
+                className="w-full px-2.5 py-1.5 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-neutral-450 uppercase mb-1">
+              <label className="block text-[10px] font-bold dark:text-neutral-450 text-text-secondary uppercase mb-1">
                 End Date & Time
               </label>
               <input
                 type="datetime-local"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-neutral-700"
+                className="w-full px-2.5 py-1.5 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
               />
             </div>
           </div>
 
-          {/* Faculty scopes (Visibility / Semester / Dept) */}
-          {role === "faculty" && (
-            <div className="space-y-3.5 border-t border-neutral-850 pt-3">
+          {/* Faculty/Admin scopes (Visibility / Semester / Dept) */}
+          {(role === "faculty" || role === "admin") && (
+            <div className="space-y-3.5 border-t dark:border-neutral-850 border-border-subtle pt-3">
               <div>
-                <label className="block text-[10px] font-bold text-neutral-450 uppercase mb-1">
+                <label className="block text-[10px] font-bold dark:text-neutral-450 text-text-secondary uppercase mb-1">
                   Scope Visibility
                 </label>
                 <select
                   value={visibility}
                   onChange={(e) => setVisibility(e.target.value)}
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-neutral-700"
+                  className="w-full px-2.5 py-1.5 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                 >
                   <option value="personal">Only Me (Personal)</option>
                   <option value="faculty">All Faculty Members</option>
                   <option value="student">All Students</option>
-                  <option value="department">My Department Specific</option>
-                  <option value="semester">Semester & Department Specific</option>
+                  {role === "admin" && <option value="institution_wide">Institution Wide</option>}
+                  {role === "faculty" && <option value="department">My Department Specific</option>}
+                  {role === "faculty" && <option value="semester">Semester & Department Specific</option>}
                 </select>
               </div>
 
-              {visibility === "semester" && (
+              {role === "faculty" && visibility === "semester" && (
                 <div>
-                  <label className="block text-[10px] font-bold text-neutral-450 uppercase mb-1">
+                  <label className="block text-[10px] font-bold dark:text-neutral-455 text-text-secondary uppercase mb-1">
                     Target Semester
                   </label>
                   <select
                     value={semester}
                     onChange={(e) => setSemester(e.target.value)}
                     required
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-neutral-700"
+                    className="w-full px-2.5 py-1.5 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                   >
                     <option value="">Select Semester</option>
                     {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
@@ -385,13 +396,13 @@ export const PersonalEventModal: React.FC<PersonalEventModalProps> = ({
           )}
 
           {/* Action triggers */}
-          <div className="flex items-center justify-between border-t border-neutral-800 pt-4 mt-4">
+          <div className="flex items-center justify-between border-t dark:border-neutral-800 border-border-subtle pt-4 mt-4">
             {eventToEdit ? (
               <button
                 type="button"
                 onClick={handleDelete}
                 disabled={submitting}
-                className="px-3 py-2 rounded bg-rose-600/10 border border-rose-500/20 text-rose-400 hover:bg-rose-600 hover:text-white transition text-xs font-bold flex items-center gap-1 cursor-pointer"
+                className="px-3 py-2 rounded bg-rose-500/10 border border-rose-500/20 text-rose-450 hover:bg-rose-600 hover:text-white transition text-xs font-bold flex items-center gap-1 cursor-pointer"
               >
                 <Trash2 size={13} />
                 <span>Delete</span>
@@ -405,7 +416,7 @@ export const PersonalEventModal: React.FC<PersonalEventModalProps> = ({
                 type="button"
                 onClick={onClose}
                 disabled={submitting}
-                className="px-3 py-2 rounded bg-neutral-950 hover:bg-neutral-800 border border-neutral-850 text-neutral-400 hover:text-neutral-200 transition text-xs font-bold cursor-pointer"
+                className="px-3 py-2 rounded dark:bg-neutral-950 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 border dark:border-neutral-850 border-border-subtle dark:text-neutral-400 text-text-primary transition text-xs font-bold cursor-pointer"
               >
                 Cancel
               </button>

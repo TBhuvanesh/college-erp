@@ -4,17 +4,17 @@ import { env } from './env';
 
 export const pool = new Pool({
   connectionString: env.DATABASE_URL,
-  max: 20,
+  max: 10,
   idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: 15_000,
+  connectionTimeoutMillis: 30_000, // Increase connection timeout to 30s to handle Neon cold starts better
   ssl: env.DATABASE_URL.includes('sslmode=') || env.DATABASE_URL.includes('neon.tech')
     ? { rejectUnauthorized: false }
     : undefined,
 });
 
 pool.on('error', (err) => {
-  console.error('Idle database client error:', err);
-  process.exit(1);
+  console.error('Idle database client error (handled):', err.message || err);
+  // Do not call process.exit(1) here. The pool will handle discarding the dead client.
 });
 
 export async function query<T extends QueryResultRow = QueryResultRow>(
