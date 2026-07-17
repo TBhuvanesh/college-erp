@@ -41,19 +41,20 @@ export const Sidebar: React.FC = () => {
 
   const activeStudent = students.find(s => s.id === currentStudentId);
   const authFaculty = user?.facultyProfile;
+  const authStudent = user?.studentProfile;
 
   const getUserName = () => {
     if (currentRole === "Admin") return "Admin Control";
     if (currentRole === "Accountant") return "Accounts Office";
     if (currentRole === "Faculty" || currentRole === "HOD") return authFaculty?.fullName || user?.email || "Faculty";
-    return activeStudent?.name || "Rahul Sharma";
+    return authStudent?.fullName || activeStudent?.name || "Rahul Sharma";
   };
 
   const getUserSub = () => {
     if (currentRole === "Admin") return "Super User";
     if (currentRole === "Accountant") return "Chief Accountant";
     if (currentRole === "Faculty" || currentRole === "HOD") return authFaculty?.employeeNumber || "Faculty";
-    return activeStudent?.rollNo || "2026CSE001";
+    return authStudent?.rollNumber || activeStudent?.rollNo || "2026CSE001";
   };
 
   const getRoleBadgeClass = () => {

@@ -81,22 +81,22 @@ async function seedFeedback() {
           await client.query(
             `INSERT INTO feedback_questions (id, template_id, text, type, order_index, is_required)
              VALUES ($1, $2, $3, 'rating', 0, true)`,
-            [uuidv4(), templateId, courseQuestions[0], 0]
+            [uuidv4(), templateId, courseQuestions[0]]
           );
           await client.query(
             `INSERT INTO feedback_questions (id, template_id, text, type, order_index, is_required)
              VALUES ($1, $2, $3, 'rating', 1, true)`,
-            [uuidv4(), templateId, courseQuestions[1], 1]
+            [uuidv4(), templateId, courseQuestions[1]]
           );
           await client.query(
             `INSERT INTO feedback_questions (id, template_id, text, type, order_index, is_required)
              VALUES ($1, $2, $3, 'rating', 2, true)`,
-            [uuidv4(), templateId, courseQuestions[2], 2]
+            [uuidv4(), templateId, courseQuestions[2]]
           );
           await client.query(
             `INSERT INTO feedback_questions (id, template_id, text, type, order_index, is_required, options)
              VALUES ($1, $2, $3, 'mcq', 3, true, $4)`,
-            [uuidv4(), templateId, courseQuestions[3], 3, JSON.stringify(['Yes, completely', 'Partially', 'No, not at all'])]
+            [uuidv4(), templateId, courseQuestions[3], JSON.stringify(['Yes, completely', 'Partially', 'No, not at all'])]
           );
         } else if (t.type === 'lms') {
           const lmsQuestions = [
@@ -107,17 +107,17 @@ async function seedFeedback() {
           await client.query(
             `INSERT INTO feedback_questions (id, template_id, text, type, order_index, is_required)
              VALUES ($1, $2, $3, 'rating', 0, true)`,
-            [uuidv4(), templateId, lmsQuestions[0], 0]
+            [uuidv4(), templateId, lmsQuestions[0]]
           );
           await client.query(
             `INSERT INTO feedback_questions (id, template_id, text, type, order_index, is_required, options)
              VALUES ($1, $2, $3, 'boolean', 1, true, $4)`,
-            [uuidv4(), templateId, lmsQuestions[1], 1, JSON.stringify(['Yes', 'No'])]
+            [uuidv4(), templateId, lmsQuestions[1], JSON.stringify(['Yes', 'No'])]
           );
           await client.query(
             `INSERT INTO feedback_questions (id, template_id, text, type, order_index, is_required, options)
              VALUES ($1, $2, $3, 'boolean', 2, true, $4)`,
-            [uuidv4(), templateId, lmsQuestions[2], 2, JSON.stringify(['Yes', 'No'])]
+            [uuidv4(), templateId, lmsQuestions[2], JSON.stringify(['Yes', 'No'])]
           );
         } else if (t.type === 'erp') {
           await client.query(

@@ -52,6 +52,12 @@ export interface MentorshipAnalytics {
   totalMentorGroups: number;
   activeMentors: number;
   studentsAtRisk: number;
+  averageMentorLoad: number;
+  unassignedStudents: number;
+  unassignedSections: number;
+  overloadedMentors: number;
+  departmentDistribution: Array<{ departmentId: string; departmentName: string; groupCount: number; studentCount: number }>;
+  studentsPerMentor: Array<{ mentorId: string; mentorName: string; studentCount: number }>;
 }
 
 export interface OpportunityAnalytics {
@@ -67,6 +73,16 @@ export interface NotificationAnalytics {
   readPercentage: number;
 }
 
+export interface FeedbackAnalytics {
+  totalCampaigns: number;
+  activeCampaigns: number;
+  eligibleStudents: number;
+  submitted: number;
+  pending: number;
+  completionPercent: number;
+  statusBreakdown: Record<string, number>;
+}
+
 export interface AdminAnalyticsResponse {
   institutionOverview: InstitutionOverview;
   academicAnalytics: AcademicAnalytics;
@@ -75,6 +91,7 @@ export interface AdminAnalyticsResponse {
   mentorshipAnalytics: MentorshipAnalytics;
   opportunityAnalytics: OpportunityAnalytics;
   notificationAnalytics: NotificationAnalytics;
+  feedbackAnalytics: FeedbackAnalytics;
 }
 
 export interface HodAnalyticsResponse {
@@ -103,6 +120,7 @@ export interface HodAnalyticsResponse {
     jobs: number;
     workshops: number;
   };
+  feedbackAnalytics: FeedbackAnalytics;
 }
 
 export interface FacultyAnalyticsResponse {
@@ -122,6 +140,10 @@ export interface FacultyAnalyticsResponse {
     feePending: number;
     assignmentPending: number;
     mentees: unknown[];
+  };
+  feedbackAnalytics: {
+    activeCampaigns: number;
+    campaigns: Array<{ campaignId: string; title: string; status: string; eligibleStudents: number; submittedCount: number; completionPercent: number }>;
   };
 }
 

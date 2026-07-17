@@ -2,10 +2,12 @@ import { query } from '../config/database';
 import { AppError } from '../errors/AppError';
 import * as roadmapService from './teachingPlanRoadmap.service';
 import { getMentorDashboard } from './mentorship.service';
-import { getMentorGroups } from './mentorGroup.service';
+import { getMentorGroups, getAllGroupMemberships } from './mentorGroup.service';
+import { getMentorshipSettings } from './mentorshipSettings.service';
 import { getStudentDues } from './fee.service';
 import { getStudentSummary as getAttendanceSummary } from './attendance.service';
 import { getStudentSummary as getInternalMarksSummary } from './internal-marks.service';
+import { getInstitutionFeedbackAnalytics, getFacultyFeedbackAnalytics } from './feedback.service';
 import type { CourseProgressQuery } from '../types/teachingPlan';
 import type {
   AdminAnalyticsQuery,
@@ -218,6 +220,71 @@ export async function getMentorshipAnalytics(departmentId: string | null): Promi
   const totalMentorGroups = groups.length;
   const activeMentors = new Set(groups.map((g) => g.mentorId)).size;
 
+  const settings = await getMentorshipSettings();
+  const memberships = await getAllGroupMemberships();
+  const groupIdsInScope = new Set(groups.map((g) => g.id));
+  const scopedMemberships = departmentId ? memberships.filter((m) => groupIdsInScope.has(m.mentorGroupId)) : memberships;
+
+  const studentsByMentor = new Map<string, Set<string>>();
+  for (const m of scopedMemberships) {
+    if (!studentsByMentor.has(m.mentorId)) studentsByMentor.set(m.mentorId, new Set());
+    studentsByMentor.get(m.mentorId)!.add(m.studentId);
+  }
+  const mentorIds = Array.from(studentsByMentor.keys());
+  const { rows: mentorNameRows } = mentorIds.length > 0
+    ? await query<{ id: string; full_name: string }>(`SELECT id, full_name FROM faculty WHERE id = ANY($1::uuid[])`, [mentorIds])
+    : { rows: [] as Array<{ id: string; full_name: string }> };
+  const mentorNameById = new Map(mentorNameRows.map((r) => [r.id, r.full_name]));
+
+  const studentsPerMentor = mentorIds.map((mentorId) => ({
+    mentorId,
+    mentorName: mentorNameById.get(mentorId) ?? 'Unknown',
+    studentCount: studentsByMentor.get(mentorId)!.size,
+  }));
+  const totalAssignedStudents = studentsPerMentor.reduce((s, m) => s + m.studentCount, 0);
+  const averageMentorLoad = studentsPerMentor.length > 0 ? Math.round((totalAssignedStudents / studentsPerMentor.length) * 100) / 100 : 0;
+  const overloadedMentors = studentsPerMentor.filter((m) => m.studentCount > settings.maximumStudents).length;
+
+  const deptDistParams: unknown[] = [];
+  const deptDistWhere = departmentId ? 'AND s.department_id = $1' : '';
+  if (departmentId) deptDistParams.push(departmentId);
+  const { rows: deptRows } = await query<{ id: string; name: string }>(
+    `SELECT id, name FROM departments WHERE deleted_at IS NULL ${departmentId ? 'AND id = $1' : ''}`,
+    deptDistParams
+  );
+  const groupCountByDept = new Map<string, number>();
+  for (const g of groups) groupCountByDept.set(g.departmentId, (groupCountByDept.get(g.departmentId) ?? 0) + 1);
+  const studentDeptRes = await query<{ department_id: string; student_id: string }>(
+    `SELECT s.department_id, s.id AS student_id FROM students s WHERE s.status = 'active' AND s.deleted_at IS NULL ${deptDistWhere}`,
+    deptDistParams
+  );
+  const assignedStudentIdSet = new Set(scopedMemberships.map((m) => m.studentId));
+  const studentCountByDept = new Map<string, number>();
+  for (const r of studentDeptRes.rows) {
+    if (assignedStudentIdSet.has(r.student_id)) studentCountByDept.set(r.department_id, (studentCountByDept.get(r.department_id) ?? 0) + 1);
+  }
+  const departmentDistribution = deptRows.map((d) => ({
+    departmentId: d.id,
+    departmentName: d.name,
+    groupCount: groupCountByDept.get(d.id) ?? 0,
+    studentCount: studentCountByDept.get(d.id) ?? 0,
+  }));
+
+  // Unassigned students / sections — active students (in scope) with no group membership at all.
+  const unassignedParams: unknown[] = [];
+  const unassignedWhere = departmentId ? 'AND department_id = $1' : '';
+  if (departmentId) unassignedParams.push(departmentId);
+  const { rows: activeStudentRows } = await query<{ id: string; department_id: string; semester: number; section: string | null }>(
+    `SELECT id, department_id, semester, section FROM students WHERE status = 'active' AND deleted_at IS NULL ${unassignedWhere}`,
+    unassignedParams
+  );
+  const allAssignedIds = new Set(memberships.map((m) => m.studentId));
+  const unassignedStudentRows = activeStudentRows.filter((s) => !allAssignedIds.has(s.id));
+  const unassignedStudents = unassignedStudentRows.length;
+  const unassignedSections = new Set(
+    unassignedStudentRows.filter((s) => s.section).map((s) => `${s.department_id}|${s.semester}|${s.section}`)
+  ).size;
+
   const atRiskParams: unknown[] = [];
   const atRiskWhere = departmentId ? 'AND st.department_id = $1' : '';
   if (departmentId) atRiskParams.push(departmentId);
@@ -247,7 +314,17 @@ export async function getMentorshipAnalytics(departmentId: string | null): Promi
     atRiskParams
   );
 
-  return { totalMentorGroups, activeMentors, studentsAtRisk: Number(rows[0].count) };
+  return {
+    totalMentorGroups,
+    activeMentors,
+    studentsAtRisk: Number(rows[0].count),
+    averageMentorLoad,
+    unassignedStudents,
+    unassignedSections,
+    overloadedMentors,
+    departmentDistribution,
+    studentsPerMentor,
+  };
 }
 
 // ── Opportunity analytics ────────────────────────────────────────────────────────
@@ -314,7 +391,7 @@ export async function getAdminAnalytics(
 ): Promise<AdminAnalyticsResponse> {
   const deptId = filters.departmentId ?? null;
 
-  const [institutionOverview, academicAnalytics, teachingAnalytics, lmsAnalytics, mentorshipAnalytics, opportunityAnalytics, notificationAnalytics] =
+  const [institutionOverview, academicAnalytics, teachingAnalytics, lmsAnalytics, mentorshipAnalytics, opportunityAnalytics, notificationAnalytics, feedbackAnalytics] =
     await Promise.all([
       getInstitutionOverview(deptId),
       getAcademicAnalytics(deptId),
@@ -323,6 +400,7 @@ export async function getAdminAnalytics(
       getMentorshipAnalytics(deptId),
       getOpportunityAnalytics(deptId),
       getNotificationAnalytics(),
+      getInstitutionFeedbackAnalytics(deptId),
     ]);
 
   return {
@@ -333,6 +411,7 @@ export async function getAdminAnalytics(
     mentorshipAnalytics,
     opportunityAnalytics,
     notificationAnalytics,
+    feedbackAnalytics,
   };
 }
 
@@ -353,12 +432,13 @@ export async function getHodAnalytics(userId: string): Promise<HodAnalyticsRespo
 
   const departmentId = facRows[0].department_id;
 
-  const [overview, academic, teaching, mentorship, opportunity] = await Promise.all([
+  const [overview, academic, teaching, mentorship, opportunity, feedbackAnalytics] = await Promise.all([
     getInstitutionOverview(departmentId),
     getAcademicAnalytics(departmentId),
     getTeachingAnalytics(userId, departmentId),
     getMentorshipAnalytics(departmentId),
     getOpportunityAnalytics(departmentId),
+    getInstitutionFeedbackAnalytics(departmentId),
   ]);
 
   const { rows: feePendingRows } = await query<{ count: string }>(
@@ -394,6 +474,7 @@ export async function getHodAnalytics(userId: string): Promise<HodAnalyticsRespo
       jobs: opportunity.jobs,
       workshops: opportunity.workshops,
     },
+    feedbackAnalytics,
   };
 }
 
@@ -405,7 +486,7 @@ export async function getFacultyAnalytics(userId: string): Promise<FacultyAnalyt
   if (!facRows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
   const facultyId = facRows[0].id;
 
-  const [subjRes, progress, assignRes, submissionRes, attRes, marksRes, mentees] = await Promise.all([
+  const [subjRes, progress, assignRes, submissionRes, attRes, marksRes, mentees, feedbackAnalytics] = await Promise.all([
     query<{ count: string }>(
       `SELECT COUNT(DISTINCT subject_id)::text AS count FROM faculty_subject_assignments
        WHERE faculty_id = $1 AND is_active = TRUE AND deleted_at IS NULL`,
@@ -441,6 +522,7 @@ export async function getFacultyAnalytics(userId: string): Promise<FacultyAnalyt
       [facultyId]
     ),
     getMentorDashboard(userId),
+    getFacultyFeedbackAnalytics(facultyId),
   ]);
 
   const studentsAtRisk = mentees.filter((m) => Object.values(m.alerts).some(Boolean)).length;
@@ -466,6 +548,7 @@ export async function getFacultyAnalytics(userId: string): Promise<FacultyAnalyt
       assignmentPending,
       mentees,
     },
+    feedbackAnalytics,
   };
 }
 

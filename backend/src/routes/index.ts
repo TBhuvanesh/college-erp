@@ -39,6 +39,7 @@ import examSeatingRouter from './examSeating.routes';
 import examInvigilationRouter from './examInvigilation.routes';
 import seatingPatternRouter from './seatingPattern.routes';
 import examSessionRouter from './examSession.routes';
+import mentorshipSettingsRouter from './mentorshipSettings.routes';
 
 const router = Router();
 
@@ -80,6 +81,7 @@ router.use('/exam-seating', examSeatingRouter);
 router.use('/exam-invigilation', examInvigilationRouter);
 router.use('/seating-patterns', seatingPatternRouter);
 router.use('/exam-sessions', examSessionRouter);
+router.use('/mentorship-settings', mentorshipSettingsRouter);
 
 // Reference implementation for auth middleware patterns
 router.use('/example', protectedRouter);

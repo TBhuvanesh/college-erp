@@ -126,6 +126,12 @@ export const listStudentsQuerySchema = z.object({
   search: z.string().max(100).trim().optional(),
 });
 
+export const listSectionsQuerySchema = z.object({
+  departmentId: z.string().uuid('Invalid department ID'),
+  semester: z.coerce.number().int().min(1).max(12),
+});
+export type ListSectionsQuery = z.infer<typeof listSectionsQuerySchema>;
+
 export type CreateStudentInput = z.infer<typeof createStudentSchema>;
 export type UpdateStudentInput = z.infer<typeof updateStudentSchema>;
 export type UpdateStatusInput = z.infer<typeof updateStatusSchema>;

@@ -176,6 +176,21 @@ export async function listStudents(filters: ListStudentsQuery): Promise<Paginate
   };
 }
 
+/**
+ * Distinct active sections for a department+semester — the "Section
+ * Synchronization" source of truth for the Mentorship module (and any other
+ * caller): never hardcode sections, always query what actually exists.
+ */
+export async function listDistinctSections(departmentId: string, semester: number): Promise<string[]> {
+  const { rows } = await query<{ section: string }>(
+    `SELECT DISTINCT section FROM students
+     WHERE department_id = $1 AND semester = $2 AND status = 'active' AND deleted_at IS NULL AND section IS NOT NULL
+     ORDER BY section`,
+    [departmentId, semester]
+  );
+  return rows.map((r) => r.section);
+}
+
 // ── Write operations ──────────────────────────────────────────────────────────
 
 export async function createStudent(

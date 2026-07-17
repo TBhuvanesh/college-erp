@@ -19,6 +19,16 @@ export interface UserProfile {
     departmentCode: string;
     designation: string;
   };
+  studentId?: string;
+  studentProfile?: {
+    id: string;
+    rollNumber: string;
+    fullName: string;
+    departmentId: string;
+    departmentName: string;
+    departmentCode: string;
+    semester: number;
+  };
 }
 
 interface AuthContextType {
@@ -38,7 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const { setCurrentRole, setCurrentStudentId, setCurrentFacultyId } = useSimulation();
+  const { setCurrentRole, setCurrentStudentId, setCurrentFacultyId, syncStudent } = useSimulation();
 
   const syncSimulationState = useCallback((userProfile: UserProfile) => {
     const { role, designation } = userProfile;
@@ -55,13 +65,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } else if (role === "student") {
       setCurrentRole("Student");
-      setCurrentStudentId("stud-rahul");
+      if (userProfile.studentId) {
+        setCurrentStudentId(userProfile.studentId);
+      }
+      if (userProfile.studentProfile) {
+        syncStudent(userProfile.studentProfile, userProfile.email);
+      }
     } else if (role === "accountant") {
       setCurrentRole("Accountant");
     }
-  }, [setCurrentRole, setCurrentStudentId, setCurrentFacultyId]);
+  }, [setCurrentRole, setCurrentStudentId, setCurrentFacultyId, syncStudent]);
 
   const checkSession = useCallback(async () => {
+    if (typeof window !== "undefined" && localStorage.getItem("erp_has_session") !== "true") {
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await window.fetch(`${API_URL}/auth/refresh`, {
         method: "POST",
@@ -78,7 +98,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setAccessToken(newAccessToken);
           setUser(newUser);
           syncSimulationState(newUser);
+        } else {
+          localStorage.removeItem("erp_has_session");
         }
+      } else {
+        localStorage.removeItem("erp_has_session");
       }
     } catch (err) {
       console.warn("Session restoration failed:", err);
@@ -103,6 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const handleSessionExpired = () => {
       setAccessToken(null);
       setUser(null);
+      localStorage.removeItem("erp_has_session");
     };
 
     window.addEventListener("tokenRefreshed", handleTokenRefreshed);
@@ -135,6 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAccessToken(newAccessToken);
     setUser(newUser);
     syncSimulationState(newUser);
+    localStorage.setItem("erp_has_session", "true");
   };
 
   const logout = async () => {
@@ -148,8 +174,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setUser(null);
       setAccessToken(null);
+      localStorage.removeItem("erp_has_session");
       if (typeof window !== "undefined") {
-        window.location.href = "/login";
+        window.location.href = "/";
       }
     }
   };

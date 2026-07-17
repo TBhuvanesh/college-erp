@@ -76,6 +76,41 @@ async function getFacultyAuthProfile(userId: string): Promise<AuthUser['facultyP
   };
 }
 
+interface StudentAuthRow {
+  id: string;
+  roll_number: string;
+  full_name: string;
+  department_id: string;
+  department_name: string;
+  department_code: string;
+  semester: number;
+}
+
+async function getStudentAuthProfile(userId: string): Promise<AuthUser['studentProfile'] | undefined> {
+  const { rows } = await query<StudentAuthRow>(
+    `SELECT s.id, s.roll_number, s.full_name, s.department_id,
+            d.name AS department_name, d.code AS department_code,
+            s.semester
+     FROM students s
+     JOIN departments d ON d.id = s.department_id
+     WHERE s.user_id = $1 AND s.deleted_at IS NULL`,
+    [userId]
+  );
+
+  const student = rows[0];
+  if (!student) return undefined;
+
+  return {
+    id: student.id,
+    rollNumber: student.roll_number,
+    fullName: student.full_name,
+    departmentId: student.department_id,
+    departmentName: student.department_name,
+    departmentCode: student.department_code,
+    semester: Number(student.semester),
+  };
+}
+
 export async function login(
   email: string,
   password: string
@@ -105,7 +140,10 @@ export async function login(
   const facultyProfile = user.role === 'faculty'
     ? await getFacultyAuthProfile(user.id)
     : undefined;
-  const tokens = await issueTokenPair(user.id, user.email, user.role, facultyProfile, user.is_super_admin);
+  const studentProfile = user.role === 'student'
+    ? await getStudentAuthProfile(user.id)
+    : undefined;
+  const tokens = await issueTokenPair(user.id, user.email, user.role, facultyProfile, user.is_super_admin, studentProfile);
 
   await query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
 
@@ -117,9 +155,11 @@ export async function login(
       role: user.role,
       isActive: user.is_active,
       designation: facultyProfile?.designation,
-      departmentId: facultyProfile?.departmentId,
+      departmentId: facultyProfile?.departmentId || studentProfile?.departmentId,
       facultyId: facultyProfile?.id,
+      studentId: studentProfile?.id,
       facultyProfile,
+      studentProfile,
       isSuperAdmin: user.is_super_admin,
     },
   };
@@ -175,7 +215,10 @@ export async function refresh(
   const facultyProfile = stored.role === 'faculty'
     ? await getFacultyAuthProfile(stored.user_id)
     : undefined;
-  const tokens = await issueTokenPair(stored.user_id, stored.email, stored.role, facultyProfile, stored.is_super_admin);
+  const studentProfile = stored.role === 'student'
+    ? await getStudentAuthProfile(stored.user_id)
+    : undefined;
+  const tokens = await issueTokenPair(stored.user_id, stored.email, stored.role, facultyProfile, stored.is_super_admin, studentProfile);
 
   return {
     tokens,
@@ -185,9 +228,11 @@ export async function refresh(
       role: stored.role,
       isActive: stored.is_active,
       designation: facultyProfile?.designation,
-      departmentId: facultyProfile?.departmentId,
+      departmentId: facultyProfile?.departmentId || studentProfile?.departmentId,
       facultyId: facultyProfile?.id,
+      studentId: studentProfile?.id,
       facultyProfile,
+      studentProfile,
       isSuperAdmin: stored.is_super_admin,
     },
   };
@@ -213,7 +258,8 @@ async function issueTokenPair(
   email: string,
   role: Role,
   facultyProfile?: AuthUser['facultyProfile'],
-  isSuperAdmin?: boolean
+  isSuperAdmin?: boolean,
+  studentProfile?: AuthUser['studentProfile']
 ): Promise<TokenPair> {
   const tokenId = uuidv4();
   const refreshToken = signRefreshToken({ sub: userId, tokenId });
@@ -223,8 +269,9 @@ async function issueTokenPair(
     email,
     role,
     designation: facultyProfile?.designation,
-    departmentId: facultyProfile?.departmentId,
+    departmentId: facultyProfile?.departmentId || studentProfile?.departmentId,
     facultyId: facultyProfile?.id,
+    studentId: studentProfile?.id,
     isSuperAdmin,
   });
   const tokenHash = hashToken(refreshToken);

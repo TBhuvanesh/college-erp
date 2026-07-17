@@ -1,44 +1,19 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { apiFetch } from "@/lib/api";
 import { getProfile } from "@/lib/profile";
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  Calendar, 
-  BookOpen, 
-  Loader2, 
+import {
+  Mail,
+  Calendar,
+  BookOpen,
+  Loader2,
   AlertCircle,
   MessageSquare,
   Clock,
-  ArrowRight,
   ShieldAlert
 } from "lucide-react";
-
-interface MentorDetails {
-  assignmentId: string;
-  assignedDate: string;
-  status: string;
-  mentorId: string;
-  mentorName: string;
-  employeeNumber: string;
-  departmentName: string;
-  mentorEmail: string;
-}
-
-interface MentoringNote {
-  id: string;
-  mentorId: string;
-  studentId: string;
-  title: string;
-  remarks: string;
-  meetingDate: string;
-  followUpDate: string | null;
-  createdAt: string;
-}
+import { getMentorByStudent, getNotesByStudent, type MentorDetails, type MentoringNote } from "@/lib/mentorship";
 
 export default function StudentMentorshipPage() {
   const { accessToken } = useAuth();
@@ -71,10 +46,8 @@ export default function StudentMentorshipPage() {
 
       // 2. Fetch mentor information
       try {
-        const mentorRes = await apiFetch(`/mentorship/student/${sId}`, {}, accessToken);
-        if (mentorRes.success && mentorRes.data) {
-          setMentor(mentorRes.data);
-        }
+        const mentorData = await getMentorByStudent(sId, accessToken);
+        setMentor(mentorData);
       } catch (err: any) {
         if (!err.message?.includes("not found")) {
           throw err;
@@ -82,10 +55,8 @@ export default function StudentMentorshipPage() {
       }
 
       // 3. Fetch mentoring notes
-      const notesRes = await apiFetch(`/mentorship/notes/student/${sId}`, {}, accessToken);
-      if (notesRes.success && notesRes.data) {
-        setNotes(notesRes.data);
-      }
+      const notesData = await getNotesByStudent(sId, accessToken);
+      setNotes(notesData);
     } catch (err: any) {
       setError(err.message || "Failed to load mentorship information");
     } finally {

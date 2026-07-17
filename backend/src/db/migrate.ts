@@ -37,6 +37,8 @@ const MIGRATION_FILES = [
   '029_exam_seating_invigilation.sql',
   '030_exam_seating_enterprise.sql',
   '031_exam_synchronization.sql',
+  '032_mentorship_settings.sql',
+  '033_feedback_campaigns.sql',
 ];
 
 async function runMigrations(): Promise<void> {

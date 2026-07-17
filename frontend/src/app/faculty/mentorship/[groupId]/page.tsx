@@ -1,16 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { apiFetch } from "@/lib/api";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { 
-  Users, 
-  Loader2, 
+import {
+  Loader2,
   AlertCircle,
   Search,
-  Filter,
   ArrowLeft,
   ChevronRight,
   TrendingUp,
@@ -18,57 +15,8 @@ import {
   CreditCard,
   FileText,
   AlertTriangle,
-  HelpCircle,
-  BookmarkCheck
 } from "lucide-react";
-
-interface StudentProfile {
-  id: string;
-  name: string;
-  rollNumber: string;
-  department: string;
-  semester: number;
-  year: number;
-  phoneNumber: string | null;
-  parentContact: string | null;
-  email: string;
-}
-
-interface StudentSummary {
-  attendancePercentage: number;
-  latestCGPA: number;
-  internalMarksSummary: string;
-  feeStatus: string;
-  assignmentStatus: string;
-}
-
-interface StudentAlerts {
-  attendanceBelow75: boolean;
-  feePending: boolean;
-  assignmentOverdue: boolean;
-  failedSubjects: boolean;
-  lowInternalMarks: boolean;
-}
-
-interface MenteeDashboardRow {
-  profile: StudentProfile;
-  summary: StudentSummary;
-  alerts: StudentAlerts;
-}
-
-interface MentorGroup {
-  id: string;
-  mentorId: string;
-  mentorName: string;
-  departmentId: string;
-  departmentName: string;
-  year: number;
-  semester: number;
-  section: string;
-  assignmentMethod: "range" | "section" | "manual";
-  rollNumberStart: string | null;
-  rollNumberEnd: string | null;
-}
+import { listMentorGroups, getGroupStudents, getMentorDashboard, type MentorGroup, type MenteeDashboardRow } from "@/lib/mentorship";
 
 export default function FacultyMentorGroupDetailPage() {
   const { accessToken } = useAuth();
@@ -95,27 +43,21 @@ export default function FacultyMentorGroupDetailPage() {
     setError(null);
     try {
       // 1. Fetch group details
-      const groupsRes = await apiFetch("/mentor-groups", {}, accessToken);
-      if (groupsRes.success && groupsRes.data) {
-        const found = (groupsRes.data as MentorGroup[]).find(g => g.id === groupId);
-        if (found) {
-          setGroup(found);
-        } else {
-          throw new Error("Mentor group details not found");
-        }
+      const allGroups = await listMentorGroups({}, accessToken);
+      const found = allGroups.find(g => g.id === groupId);
+      if (found) {
+        setGroup(found);
+      } else {
+        throw new Error("Mentor group details not found");
       }
 
       // 2. Fetch students who match this group dynamically
-      const studentsRes = await apiFetch(`/mentor-groups/${groupId}/students`, {}, accessToken);
-      if (studentsRes.success && studentsRes.data) {
-        setStudentsInGroup(studentsRes.data);
-      }
+      const students = await getGroupStudents(groupId, accessToken);
+      setStudentsInGroup(students);
 
       // 3. Fetch all dashboard telemetry for this mentor
-      const telemetryRes = await apiFetch("/mentorship/dashboard", {}, accessToken);
-      if (telemetryRes.success && telemetryRes.data) {
-        setDashboardTelemetry(telemetryRes.data);
-      }
+      const telemetry = await getMentorDashboard(accessToken);
+      setDashboardTelemetry(telemetry);
     } catch (err: any) {
       setError(err.message || "Failed to load group details");
     } finally {
@@ -297,7 +239,7 @@ export default function FacultyMentorGroupDetailPage() {
             {group.departmentName} — Section {group.section}
           </h1>
           <p className="text-text-secondary text-xs mt-0.5 font-semibold">
-            Year {group.year} • Semester {group.semester} • {groupMentees.length} Students Assigned
+            Session {group.academicSession} • {groupMentees.length} Students Assigned
           </p>
         </div>
       </div>

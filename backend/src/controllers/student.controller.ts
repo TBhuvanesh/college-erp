@@ -8,6 +8,7 @@ import type {
   UpdateStudentInput,
   UpdateStatusInput,
   ListStudentsQuery,
+  ListSectionsQuery,
 } from '../types/student';
 
 export const createStudent = asyncHandler(async (req: Request, res: Response) => {
@@ -23,6 +24,12 @@ export const listStudents = asyncHandler(async (req: Request, res: Response) => 
   }
   const result = await studentService.listStudents(filters);
   sendSuccess(res, result);
+});
+
+export const listSections = asyncHandler(async (req: Request, res: Response) => {
+  const { departmentId, semester } = req.query as unknown as ListSectionsQuery;
+  const sections = await studentService.listDistinctSections(departmentId, semester);
+  sendSuccess(res, { sections });
 });
 
 export const getStudent = asyncHandler(async (req: Request, res: Response) => {

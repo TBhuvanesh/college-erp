@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { query } from '../config/database';
 import { AppError } from '../errors/AppError';
+import { getAllGroupMemberships } from '../services/mentorGroup.service';
 
 /**
  * Authorizes if the user is an admin or a faculty member marked as is_mentoring_head.
@@ -89,23 +90,9 @@ export function authorizeStudentMentorshipAccess(source: 'params' | 'body' | 'qu
           return next();
         }
 
-        // Faculty mentors get access only to their assigned mentees
-        const assignmentResult = await query(
-          `SELECT 1
-           FROM mentor_groups mg
-           JOIN students s ON s.id = $2 AND s.deleted_at IS NULL
-           LEFT JOIN mentor_group_students mgs ON mg.id = mgs.mentor_group_id AND mgs.deleted_at IS NULL
-           WHERE mg.mentor_id = $1 AND mg.deleted_at IS NULL AND (
-             (mg.assignment_method = 'manual' AND mgs.student_id = s.id)
-             OR
-             (mg.assignment_method = 'section' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section)
-             OR
-             (mg.assignment_method = 'range' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section AND s.roll_number >= mg.roll_number_start AND s.roll_number <= mg.roll_number_end)
-           )
-           LIMIT 1`,
-          [faculty.id, studentId]
-        );
-        if (assignmentResult.rowCount && assignmentResult.rowCount > 0) {
+        // Faculty mentors get access only to their assigned mentees (shared resolver)
+        const memberships = await getAllGroupMemberships({ mentorId: faculty.id, studentId });
+        if (memberships.length > 0) {
           return next();
         }
         return next(AppError.forbidden('You are not assigned as the mentor for this student', 'NOT_ASSIGNED_MENTOR'));
