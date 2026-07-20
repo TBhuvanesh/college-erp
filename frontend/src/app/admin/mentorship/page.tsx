@@ -1,915 +1,771 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
-import { 
-  Users, 
-  Loader2, 
+import {
+  Loader2,
   AlertCircle,
-  Search,
-  Filter,
-  CheckCircle,
   AlertTriangle,
-  RefreshCw,
+  CheckCircle2,
   Plus,
   Trash2,
-  ListFilter,
-  BookOpen,
+  Split,
+  Merge,
+  Sparkles,
+  Search,
+  Settings,
+  RefreshCw,
+  ArrowRight,
   Info,
-  Calendar,
-  Layers,
-  ArrowRight
+  Award,
 } from "lucide-react";
+import * as m from "@/lib/mentorship";
+import { listDepartments, type Department } from "@/lib/seating";
 
-interface MentorWorkload {
-  mentorId: string;
-  mentorName: string;
-  employeeNumber: string;
-  departmentName: string;
-  isMentoringHead: boolean;
-  activeMenteesCount: number;
-}
+type Tab = "create" | "groups" | "workloads" | "settings";
 
-interface Relationship {
-  studentId: string;
-  studentName: string;
-  rollNumber: string;
-  departmentName: string;
-  semester: number;
-  mentorName: string | null;
-  mentorId: string | null;
-}
-
-interface MentorshipReport {
-  summary: {
-    totalStudents: number;
-    assignedStudents: number;
-    unassignedStudents: number;
-  };
-  relationships: Relationship[];
-}
-
-interface FacultyListItem {
+interface StudentLite {
   id: string;
+  rollNumber: string;
   fullName: string;
-  employeeNumber: string;
-  departmentName: string;
+  section?: string;
+  status: string;
 }
 
-interface MentorGroup {
-  id: string;
-  mentorId: string;
-  mentorName: string;
-  departmentId: string;
-  departmentName: string;
-  year: number;
-  semester: number;
-  section: string;
-  assignmentMethod: "range" | "section" | "manual";
-  rollNumberStart: string | null;
-  rollNumberEnd: string | null;
-  createdBy: string;
-  createdAt: string;
-}
+export default function AdminMentorshipConsole() {
+  const { accessToken, user } = useAuth();
+  const isAdmin = user?.role === "admin";
 
-interface StudentPreviewItem {
-  id: string;
-  name: string;
-  rollNumber: string;
-  department: string;
-  semester: number;
-}
+  const [activeTab, setActiveTab] = useState<Tab>("create");
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [groups, setGroups] = useState<m.MentorGroup[]>([]);
+  const [workloads, setWorkloads] = useState<m.MentorWorkload[]>([]);
+  const [report, setReport] = useState<m.MentorshipReport | null>(null);
+  const [settings, setSettings] = useState<m.MentorshipSettings | null>(null);
 
-export default function AdminMentorshipManagementPage() {
-  const { accessToken } = useAuth();
-  
-  // Tabs
-  const [activeTab, setActiveTab] = useState<"create" | "list" | "workloads">("create");
-
-  // Loading States
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [previewLoading, setPreviewLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [toastMsg, setToastMsg] = useState("");
+  const [toastKind, setToastKind] = useState<"success" | "error">("success");
 
-  // Core Data
-  const [report, setReport] = useState<MentorshipReport | null>(null);
-  const [workloads, setWorkloads] = useState<MentorWorkload[]>([]);
-  const [faculty, setFaculty] = useState<FacultyListItem[]>([]);
-  const [groups, setGroups] = useState<MentorGroup[]>([]);
+  const triggerToast = (msg: string, kind: "success" | "error" = "success") => {
+    setToastMsg(msg);
+    setToastKind(kind);
+    setTimeout(() => setToastMsg(""), 4000);
+  };
 
-  // Form Fields
-  const [formMethod, setFormMethod] = useState<"range" | "section" | "manual">("range");
-  const [formMentorId, setFormMentorId] = useState("");
+  // ── Create Group form state ────────────────────────────────────────────────
   const [formDeptId, setFormDeptId] = useState("");
-  const [formYear, setFormYear] = useState(1);
-  const [formSem, setFormSem] = useState(1);
-  const [formSection, setFormSection] = useState("A");
+  const [formSemester, setFormSemester] = useState<number>(1);
+  const [formSection, setFormSection] = useState("");
+  const [formMethod, setFormMethod] = useState<"range" | "recommended" | "manual">("range");
+  const [formMentorId, setFormMentorId] = useState("");
   const [formRollStart, setFormRollStart] = useState("");
   const [formRollEnd, setFormRollEnd] = useState("");
-
-  // Student selectors for manual method
-  const [availableStudents, setAvailableStudents] = useState<StudentPreviewItem[]>([]);
+  const [targetSize, setTargetSize] = useState<number>(25);
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
+  const [studentSearch, setStudentSearch] = useState("");
 
-  // Dynamic preview results
-  const [previewStudents, setPreviewStudents] = useState<StudentPreviewItem[]>([]);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [sections, setSections] = useState<string[]>([]);
+  const [sectionRoster, setSectionRoster] = useState<StudentLite[]>([]);
+  const [candidates, setCandidates] = useState<m.MentorCandidate[]>([]);
+  const [proposals, setProposals] = useState<m.BalancedGroupsResult | null>(null);
+  const [conflictResult, setConflictResult] = useState<m.MentorGroupConflictCheckResult | null>(null);
+  const [checkingConflicts, setCheckingConflicts] = useState(false);
 
-  // Group Filters
-  const [filterSearch, setFilterSearch] = useState("");
-  const [filterDept, setFilterDept] = useState("ALL");
-  const [filterMethod, setFilterMethod] = useState("ALL");
-
-  const loadData = useCallback(async (isRefresh = false) => {
+  const loadStatics = useCallback(async () => {
     if (!accessToken) return;
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
+    setLoading(true);
     try {
-      // 1. Fetch workloads
-      const workloadsRes = await apiFetch("/mentorship/workloads", {}, accessToken);
-      if (workloadsRes.success && workloadsRes.data) {
-        setWorkloads(workloadsRes.data);
-      }
-
-      // 2. Fetch reports
-      const reportRes = await apiFetch("/mentorship/reports", {}, accessToken);
-      if (reportRes.success && reportRes.data) {
-        setReport(reportRes.data);
-      }
-
-      // 3. Fetch faculty list
-      const facultyRes = await apiFetch("/faculty?limit=500", {}, accessToken);
-      if (facultyRes.success && facultyRes.data?.faculty) {
-        setFaculty(facultyRes.data.faculty);
-      }
-
-      // 4. Fetch groups list
-      const groupsRes = await apiFetch("/mentor-groups", {}, accessToken);
-      if (groupsRes.success && groupsRes.data) {
-        setGroups(groupsRes.data);
-      }
+      const [deptData, groupsData, workloadsData, reportData, settingsData] = await Promise.all([
+        listDepartments(accessToken),
+        m.listMentorGroups({}, accessToken),
+        m.getMentorWorkloads(accessToken),
+        m.getMentorshipReports(accessToken),
+        m.getMentorshipSettings(accessToken),
+      ]);
+      setDepartments(deptData);
+      setGroups(groupsData);
+      setWorkloads(workloadsData);
+      setReport(reportData);
+      setSettings(settingsData);
+      setTargetSize(settingsData.recommendedStudentsPerMentor);
     } catch (err: any) {
-      setError(err.message || "Failed to load mentorship management data");
+      triggerToast(err.message || "Failed to load mentorship data", "error");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [accessToken]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadStatics();
+  }, [loadStatics]);
 
-  // Load candidate students for manual assignment OR preview candidate list
-  const runPreviewResolution = useCallback(async () => {
-    if (!accessToken || !formDeptId || !formSem) return;
-    setPreviewLoading(true);
-    setFormError(null);
-    try {
-      // Fetch all students for the matching department, semester, section
-      const res = await apiFetch("/students?limit=1000", {}, accessToken);
-      if (res.success && res.data?.students) {
-        const allStudents = res.data.students.map((s: any) => ({
-          id: s.id,
-          name: s.fullName,
-          rollNumber: s.rollNumber,
-          departmentId: s.departmentId,
-          department: s.departmentName || s.department?.name || "",
-          semester: s.semester,
-          section: s.section || "A"
-        }));
-
-        // Filter based on selected criteria
-        const candidates = allStudents.filter((s: any) => 
-          s.departmentId === formDeptId &&
-          s.semester === formSem &&
-          s.section.toUpperCase() === formSection.toUpperCase()
-        );
-
-        setAvailableStudents(candidates);
-
-        if (formMethod === "section") {
-          setPreviewStudents(candidates);
-        } else if (formMethod === "range") {
-          if (!formRollStart || !formRollEnd) {
-            setPreviewStudents([]);
-          } else {
-            const filtered = candidates.filter((s: any) => 
-              s.rollNumber.toUpperCase() >= formRollStart.toUpperCase() &&
-              s.rollNumber.toUpperCase() <= formRollEnd.toUpperCase()
-            );
-            setPreviewStudents(filtered);
-          }
-        } else {
-          // Manual selection
-          const filtered = candidates.filter((s: any) => selectedStudentIds.has(s.id));
-          setPreviewStudents(filtered);
-        }
-      }
-    } catch (err: any) {
-      setFormError(err.message || "Failed to preview students.");
-    } finally {
-      setPreviewLoading(false);
-    }
-  }, [accessToken, formDeptId, formSem, formSection, formMethod, formRollStart, formRollEnd, selectedStudentIds]);
-
-  // Run preview updates automatically when parameters change
+  // ── Dependent cascade: Department -> Academic Session -> Sections ─────────
   useEffect(() => {
-    runPreviewResolution();
-  }, [formDeptId, formSem, formSection, formMethod, formRollStart, formRollEnd, selectedStudentIds, runPreviewResolution]);
+    if (!accessToken || !formDeptId) {
+      setSections([]);
+      return;
+    }
+    setFormSection("");
+    m.listDistinctSections(formDeptId, formSemester, accessToken)
+      .then(setSections)
+      .catch(() => setSections([]));
+  }, [accessToken, formDeptId, formSemester]);
 
-  // Unique departments listing
-  const departments = useMemo(() => {
-    if (!faculty) return [];
-    const list = new Set(faculty.map(f => f.departmentName));
-    return Array.from(list);
-  }, [faculty]);
+  // Mentor candidates for the selected department (capacity-aware)
+  useEffect(() => {
+    if (!accessToken || !formDeptId) {
+      setCandidates([]);
+      return;
+    }
+    m.listMentorCandidates(formDeptId, accessToken)
+      .then(setCandidates)
+      .catch(() => setCandidates([]));
+  }, [accessToken, formDeptId]);
 
-  // Filtered Mentor Groups List
-  const filteredGroups = useMemo(() => {
-    return groups.filter(g => {
-      const searchLower = filterSearch.toLowerCase();
-      const matchSearch = 
-        g.mentorName.toLowerCase().includes(searchLower) ||
-        g.departmentName.toLowerCase().includes(searchLower) ||
-        g.section.toLowerCase().includes(searchLower);
-      if (!matchSearch) return false;
+  // Section roster (Student Synchronization) — active students in dept+semester,
+  // filtered to the selected section client-side (no server-side section filter
+  // exists on /students, matching the established fetch-then-filter convention).
+  useEffect(() => {
+    if (!accessToken || !formDeptId || !formSection) {
+      setSectionRoster([]);
+      return;
+    }
+    (async () => {
+      const res = await apiFetch(
+        `/students?departmentId=${formDeptId}&semester=${formSemester}&status=active&limit=1000`,
+        {},
+        accessToken
+      );
+      const list: StudentLite[] = (res.data?.students ?? []).filter((s: any) => s.section === formSection);
+      setSectionRoster(list);
+    })().catch(() => setSectionRoster([]));
+  }, [accessToken, formDeptId, formSemester, formSection]);
 
-      if (filterDept !== "ALL" && g.departmentName !== filterDept) return false;
-      if (filterMethod !== "ALL" && g.assignmentMethod !== filterMethod) return false;
+  // Live preview: resolved roster for range/manual methods
+  const resolvedForRange = useMemo(() => {
+    if (formMethod !== "range" || !formRollStart || !formRollEnd) return [];
+    return sectionRoster.filter((s) => s.rollNumber >= formRollStart && s.rollNumber <= formRollEnd).sort((a, b) => a.rollNumber.localeCompare(b.rollNumber));
+  }, [sectionRoster, formMethod, formRollStart, formRollEnd]);
 
-      return true;
-    });
-  }, [groups, filterSearch, filterDept, filterMethod]);
+  const filteredManualRoster = useMemo(() => {
+    const term = studentSearch.trim().toLowerCase();
+    return sectionRoster.filter((s) => !term || s.rollNumber.toLowerCase().includes(term) || s.fullName.toLowerCase().includes(term));
+  }, [sectionRoster, studentSearch]);
 
-  const handleCreateGroup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const resetCreateForm = () => {
+    setFormRollStart("");
+    setFormRollEnd("");
+    setFormMentorId("");
+    setSelectedStudentIds(new Set());
+    setProposals(null);
+    setConflictResult(null);
+  };
+
+  // ── Conflict check before submit ───────────────────────────────────────────
+  const buildPayload = (): m.CreateMentorGroupInput | null => {
+    if (!formDeptId || !formSection || !formMentorId) return null;
+    if (formMethod === "range") {
+      if (!formRollStart || !formRollEnd) return null;
+      return { mentorId: formMentorId, departmentId: formDeptId, semester: formSemester, section: formSection, assignmentMethod: "range", rollNumberStart: formRollStart, rollNumberEnd: formRollEnd };
+    }
+    if (formMethod === "manual") {
+      if (selectedStudentIds.size === 0) return null;
+      return { mentorId: formMentorId, departmentId: formDeptId, semester: formSemester, section: formSection, assignmentMethod: "manual", studentIds: Array.from(selectedStudentIds) };
+    }
+    return null;
+  };
+
+  const runConflictCheck = useCallback(async () => {
     if (!accessToken) return;
-    if (!formMentorId || !formDeptId || !formSem || !formSection) {
-      setFormError("Please fill out all required group descriptors.");
+    const payload = buildPayload();
+    if (!payload) {
+      setConflictResult(null);
       return;
     }
-
-    if (formMethod === "range" && (!formRollStart || !formRollEnd)) {
-      setFormError("Please set the starting and ending roll numbers.");
-      return;
-    }
-
-    if (formMethod === "manual" && selectedStudentIds.size === 0) {
-      setFormError("Please check at least one student for manual assignment.");
-      return;
-    }
-
-    setSubmitting(true);
-    setFormError(null);
+    setCheckingConflicts(true);
     try {
-      const res = await apiFetch("/mentor-groups", {
-        method: "POST",
-        body: JSON.stringify({
-          mentorId: formMentorId,
-          departmentId: formDeptId,
-          year: formYear,
-          semester: formSem,
-          section: formSection,
-          assignmentMethod: formMethod,
-          rollNumberStart: formMethod === "range" ? formRollStart : null,
-          rollNumberEnd: formMethod === "range" ? formRollEnd : null,
-          studentIds: formMethod === "manual" ? Array.from(selectedStudentIds) : []
-        })
-      }, accessToken);
+      const result = await m.checkMentorGroupConflicts(payload, accessToken);
+      setConflictResult(result);
+    } catch {
+      setConflictResult(null);
+    } finally {
+      setCheckingConflicts(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken, formMentorId, formDeptId, formSemester, formSection, formMethod, formRollStart, formRollEnd, selectedStudentIds]);
 
-      if (res.success) {
-        // Reset form
-        setFormMentorId("");
-        setFormRollStart("");
-        setFormRollEnd("");
-        setSelectedStudentIds(new Set());
-        setPreviewStudents([]);
-        setActiveTab("list");
-        loadData(true);
-      }
+  useEffect(() => {
+    const t = setTimeout(runConflictCheck, 400);
+    return () => clearTimeout(t);
+  }, [runConflictCheck]);
+
+  const handleSuggest = async () => {
+    if (!accessToken || !formDeptId || !formSection) return;
+    setSubmitting(true);
+    try {
+      const result = await m.suggestBalancedGroups({ departmentId: formDeptId, semester: formSemester, section: formSection, targetSize }, accessToken);
+      setProposals(result);
     } catch (err: any) {
-      setFormError(err.message || "Failed to create mentor group");
+      triggerToast(err.message || "Failed to generate suggestions", "error");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDeleteGroup = async (groupId: string) => {
-    if (!accessToken) return;
-    if (!confirm("Are you sure you want to delete this mentor group? Matching student-mentor assignments will be resolved dynamically and group details will be deleted.")) {
-      return;
-    }
+  const useProposalAsRange = (p: m.BalancedGroupProposal) => {
+    setFormMethod("range");
+    setFormRollStart(p.rollNumberStart);
+    setFormRollEnd(p.rollNumberEnd);
+    setProposals(null);
+  };
+
+  const createProposalGroup = async (p: m.BalancedGroupProposal, mentorId: string) => {
+    if (!accessToken || !mentorId) return;
+    setSubmitting(true);
     try {
-      const res = await apiFetch(`/mentor-groups/${groupId}`, {
-        method: "DELETE"
-      }, accessToken);
-      if (res.success) {
-        loadData(true);
-      }
+      await m.createMentorGroup(
+        { mentorId, departmentId: formDeptId, semester: formSemester, section: formSection, assignmentMethod: "range", rollNumberStart: p.rollNumberStart, rollNumberEnd: p.rollNumberEnd },
+        accessToken
+      );
+      triggerToast(`Group ${p.rollNumberStart}–${p.rollNumberEnd} created successfully`);
+      setProposals((prev) => (prev ? { ...prev, proposals: prev.proposals.filter((x) => x !== p) } : prev));
+      loadStatics();
     } catch (err: any) {
-      alert(err.message || "Failed to delete group");
+      triggerToast(err.message || "Failed to create group", "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleToggleStudent = (studentId: string) => {
-    const updated = new Set(selectedStudentIds);
-    if (updated.has(studentId)) {
-      updated.delete(studentId);
-    } else {
-      updated.add(studentId);
+  const handleCreate = async () => {
+    if (!accessToken) return;
+    const payload = buildPayload();
+    if (!payload) {
+      triggerToast("Please complete all required fields", "error");
+      return;
     }
-    setSelectedStudentIds(updated);
+    setSubmitting(true);
+    try {
+      const group = await m.createMentorGroup(payload, accessToken);
+      triggerToast(`Mentor group created (${group.academicSession}, Section ${group.section})`);
+      resetCreateForm();
+      loadStatics();
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to create mentor group", "error");
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  // ── Manage Groups tab ─────────────────────────────────────────────────────
+  const [groupFilterDept, setGroupFilterDept] = useState("ALL");
+  const [groupFilterMethod, setGroupFilterMethod] = useState("ALL");
+  const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
+  const [splitTarget, setSplitTarget] = useState<m.MentorGroup | null>(null);
+  const [splitRoll, setSplitRoll] = useState("");
+  const [splitNewMentor, setSplitNewMentor] = useState("");
+
+  const filteredGroups = useMemo(() => {
+    return groups.filter((g) => (groupFilterDept === "ALL" || g.departmentId === groupFilterDept) && (groupFilterMethod === "ALL" || g.assignmentMethod === groupFilterMethod));
+  }, [groups, groupFilterDept, groupFilterMethod]);
+
+  const toggleGroupSelection = (id: string) => {
+    setSelectedGroupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else if (next.size < 2) next.add(id);
+      return next;
+    });
+  };
+
+  const handleDeleteGroup = async (id: string) => {
+    if (!accessToken || !confirm("Delete this mentor group? This cannot be undone.")) return;
+    try {
+      await m.deleteMentorGroup(id, accessToken);
+      triggerToast("Mentor group deleted");
+      loadStatics();
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to delete group", "error");
+    }
+  };
+
+  const handleSplit = async () => {
+    if (!accessToken || !splitTarget || !splitRoll || !splitNewMentor) return;
+    try {
+      await m.splitMentorGroup(splitTarget.id, { splitAtRollNumber: splitRoll, newMentorId: splitNewMentor }, accessToken);
+      triggerToast("Mentor group split successfully");
+      setSplitTarget(null);
+      setSplitRoll("");
+      setSplitNewMentor("");
+      loadStatics();
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to split group", "error");
+    }
+  };
+
+  const handleMerge = async () => {
+    if (!accessToken || selectedGroupIds.size !== 2) return;
+    const [a, b] = Array.from(selectedGroupIds);
+    try {
+      await m.mergeMentorGroups(a, b, accessToken);
+      triggerToast("Mentor groups merged successfully");
+      setSelectedGroupIds(new Set());
+      loadStatics();
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to merge groups", "error");
+    }
+  };
+
+  // ── Settings tab ──────────────────────────────────────────────────────────
+  const [settingsForm, setSettingsForm] = useState({ recommended: 25, maximum: 30, crossDept: false });
+  useEffect(() => {
+    if (settings) setSettingsForm({ recommended: settings.recommendedStudentsPerMentor, maximum: settings.maximumStudents, crossDept: settings.allowCrossDepartment });
+  }, [settings]);
+
+  const saveSettings = async () => {
+    if (!accessToken) return;
+    setSubmitting(true);
+    try {
+      const updated = await m.updateMentorshipSettings(
+        { recommendedStudentsPerMentor: settingsForm.recommended, maximumStudents: settingsForm.maximum, allowCrossDepartment: settingsForm.crossDept },
+        accessToken
+      );
+      setSettings(updated);
+      triggerToast("Mentorship settings updated");
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to update settings", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const inputClass = "w-full bg-background border border-border-subtle rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-accent-blue";
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-        <Loader2 className="w-8 h-8 text-accent-blue animate-spin" />
-        <p className="text-text-secondary text-sm">Loading mentorship registry portal...</p>
+      <div className="flex h-[350px] w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-accent-blue" />
       </div>
     );
   }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 p-6 max-w-md mx-auto text-center">
-        <AlertCircle className="w-12 h-12 text-danger" />
-        <h3 className="text-lg font-bold text-text-primary">Registry Error</h3>
-        <p className="text-text-secondary text-sm leading-normal">{error}</p>
-        <button 
-          onClick={() => loadData()}
-          className="mt-2 px-4 py-2 bg-accent-blue hover:bg-accent-blue/90 text-white rounded-lg text-sm font-semibold cursor-pointer flex items-center gap-1.5 mx-auto"
-        >
-          <RefreshCw size={14} /> Retry loading
-        </button>
-      </div>
-    );
-  }
-
-  // Resolve mentor name helper
-  const selectedMentorName = faculty.find(f => f.id === formMentorId)?.fullName || "No Mentor Selected";
-  const selectedDeptName = faculty.find(f => f.departmentName)?.departmentName || "CSE";
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary">Mentor Group Registry</h1>
-          <p className="text-text-secondary text-sm mt-1">
-            Configure dynamic mentor groups based on ranges or sections, and review workloads.
-          </p>
-        </div>
-        <button
-          onClick={() => loadData(true)}
-          disabled={refreshing}
-          className="p-2 border border-border-subtle bg-surface hover:bg-surface-hover text-text-secondary hover:text-text-primary rounded-lg text-sm font-medium flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
-        >
-          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-          {refreshing ? "Refreshing..." : "Refresh list"}
-        </button>
-      </div>
-
-      {/* Metrics Summaries */}
-      {report && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-accent-blue-soft text-accent-blue">
-              <Users size={20} />
-            </div>
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Total Students</span>
-              <h3 className="text-xl sm:text-2xl font-black text-text-primary leading-tight mt-0.5">{report.summary.totalStudents}</h3>
-            </div>
-          </div>
-
-          <div className="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-success-soft text-success">
-              <CheckCircle size={20} />
-            </div>
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Assigned Mentees</span>
-              <h3 className="text-xl sm:text-2xl font-black text-success leading-tight mt-0.5">{report.summary.assignedStudents}</h3>
-            </div>
-          </div>
-
-          <div className="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-warning-soft text-warning">
-              <AlertTriangle size={20} />
-            </div>
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Unassigned Mentees</span>
-              <h3 className="text-xl sm:text-2xl font-black text-warning leading-tight mt-0.5">{report.summary.unassignedStudents}</h3>
-            </div>
-          </div>
+    <div className="space-y-4 pb-12 w-full max-w-7xl mx-auto">
+      {toastMsg && (
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xl animate-fade-in ${toastKind === "success" ? "bg-accent-blue" : "bg-danger"}`}>
+          {toastKind === "success" ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+          <span>{toastMsg}</span>
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex border-b border-border-subtle gap-4">
-        <button
-          onClick={() => setActiveTab("create")}
-          className={`pb-2.5 text-sm font-semibold cursor-pointer border-b-2 transition-all ${
-            activeTab === "create" 
-              ? "border-accent-blue text-accent-blue" 
-              : "border-transparent text-text-secondary hover:text-text-primary"
-          }`}
-        >
-          Create Mentor Group
-        </button>
-        <button
-          onClick={() => setActiveTab("list")}
-          className={`pb-2.5 text-sm font-semibold cursor-pointer border-b-2 transition-all ${
-            activeTab === "list" 
-              ? "border-accent-blue text-accent-blue" 
-              : "border-transparent text-text-secondary hover:text-text-primary"
-          }`}
-        >
-          Mentor Groups List ({groups.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("workloads")}
-          className={`pb-2.5 text-sm font-semibold cursor-pointer border-b-2 transition-all ${
-            activeTab === "workloads" 
-              ? "border-accent-blue text-accent-blue" 
-              : "border-transparent text-text-secondary hover:text-text-primary"
-          }`}
-        >
-          Mentor Workloads
-        </button>
+      <div className="relative overflow-hidden rounded-2xl border border-border-subtle bg-surface p-5 lg:p-6 shadow-sm">
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-500" />
+        <h1 className="font-display font-bold text-lg text-text-primary leading-none">Mentor Group Management</h1>
+        <p className="text-xs text-text-muted mt-1">
+          Every selection is derived from Student Management — department, academic session and section drive eligible students automatically.
+        </p>
+      </div>
+
+      <div className="flex border-b border-border-subtle gap-4 text-xs font-bold text-text-muted">
+        {([
+          { id: "create", label: "Create Group" },
+          { id: "groups", label: "Manage Groups" },
+          { id: "workloads", label: "Workloads & Analytics" },
+          ...(isAdmin ? [{ id: "settings" as Tab, label: "Settings" }] : []),
+        ] as { id: Tab; label: string }[]).map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`pb-2 border-b-2 transition-all cursor-pointer ${activeTab === tab.id ? "border-accent-blue text-accent-blue" : "border-transparent hover:text-text-primary"}`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {activeTab === "create" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Creation Form */}
-          <div className="lg:col-span-2 bg-surface border border-border-subtle rounded-xl p-5 shadow-sm space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-text-muted flex items-center gap-1.5">
-              <Plus size={16} />
-              Mentor Group Details
-            </h2>
-
-            <form onSubmit={handleCreateGroup} className="space-y-4">
-              {formError && (
-                <div className="p-3 bg-danger-soft border border-danger/20 text-danger text-xs rounded-lg flex items-center gap-2">
-                  <AlertCircle size={14} />
-                  <span>{formError}</span>
-                </div>
-              )}
-
-              {/* Method Selection (Radio Buttons) */}
-              <div>
-                <label className="text-xs font-bold text-text-secondary block mb-2">Assignment Method</label>
-                <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
-                    <input
-                      type="radio"
-                      name="method"
-                      checked={formMethod === "range"}
-                      onChange={() => setFormMethod("range")}
-                      className="text-accent-blue focus:ring-accent-blue"
-                    />
-                    <span>Roll Number Range</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
-                    <input
-                      type="radio"
-                      name="method"
-                      checked={formMethod === "section"}
-                      onChange={() => setFormMethod("section")}
-                      className="text-accent-blue focus:ring-accent-blue"
-                    />
-                    <span>Entire Section</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
-                    <input
-                      type="radio"
-                      name="method"
-                      checked={formMethod === "manual"}
-                      onChange={() => setFormMethod("manual")}
-                      className="text-accent-blue focus:ring-accent-blue"
-                    />
-                    <span>Manual Selection</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Mentor selection */}
-              <div>
-                <label className="text-xs font-bold text-text-secondary block mb-1">Assigned Faculty Mentor</label>
-                <select
-                  required
-                  value={formMentorId}
-                  onChange={(e) => setFormMentorId(e.target.value)}
-                  className="w-full py-2 px-3 text-sm bg-background border border-border-subtle rounded-lg text-text-primary focus:outline-hidden focus:border-accent-blue font-medium"
-                >
-                  <option value="">-- Select Faculty Mentor --</option>
-                  {faculty.map(f => (
-                    <option key={f.id} value={f.id}>{f.fullName} ({f.employeeNumber}) — {f.departmentName}</option>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="lg:col-span-7 rounded-2xl border border-border-subtle bg-surface p-5 shadow-sm space-y-4">
+            <h3 className="font-display font-bold text-xs uppercase text-text-primary">1. Academic Scope</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="space-y-1">
+                <span className="text-[10px] font-bold text-text-muted uppercase">Department</span>
+                <select value={formDeptId} onChange={(e) => setFormDeptId(e.target.value)} className={inputClass}>
+                  <option value="">Select department…</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>
-              </div>
+              </label>
+              <label className="space-y-1">
+                <span className="text-[10px] font-bold text-text-muted uppercase">Academic Session</span>
+                <select value={formSemester} onChange={(e) => setFormSemester(Number(e.target.value))} className={inputClass}>
+                  {m.ACADEMIC_SESSIONS.map((s) => (
+                    <option key={s.semester} value={s.semester}>{s.label} (Year {s.year}, Sem {s.semester})</option>
+                  ))}
+                </select>
+              </label>
+              <label className="col-span-2 space-y-1">
+                <span className="text-[10px] font-bold text-text-muted uppercase">Section (synced from Student Management)</span>
+                <select value={formSection} onChange={(e) => setFormSection(e.target.value)} disabled={!formDeptId} className={inputClass}>
+                  <option value="">{formDeptId ? (sections.length ? "Select section…" : "No active sections found") : "Select a department first"}</option>
+                  {sections.map((s) => (
+                    <option key={s} value={s}>Section {s}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
 
-              {/* Academic descriptors */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-text-secondary block mb-1">Department</label>
-                  <select
-                    required
-                    value={formDeptId}
-                    onChange={(e) => setFormDeptId(e.target.value)}
-                    className="w-full py-2 px-3 text-sm bg-background border border-border-subtle rounded-lg text-text-primary focus:outline-hidden focus:border-accent-blue"
-                  >
-                    <option value="">-- Select --</option>
-                    {/* Map departments dynamically from workloads or faculty */}
-                    {faculty.reduce((acc: any[], f) => {
-                      if (!acc.some(d => d.name === f.departmentName)) {
-                        // Normally we'd need ID but for simplicity let's find the ID.
-                        // Let's fallback to searching from database departments if loaded.
-                        // Wait! HOD has department_id in their credentials or we can fetch.
-                        // CSE department ID. Let's list from faculty department ID.
-                        // Let's write down a helper map based on faculty entries:
-                        acc.push({ name: f.departmentName });
-                      }
-                      return acc;
-                    }, []).map((d: any) => {
-                      // Find one faculty member in this department to grab their department ID
-                      const fMember = faculty.find(fac => fac.departmentName === d.name);
-                      // In the backend, we can query departments list too, but mapping from faculty departmentId is quick.
-                      // Let's fetch the actual departmentId!
-                      // In backend/src/controllers/faculty, department_id is part of faculty details.
-                      // Let's check: fMember contains department ID? No, FacultyListItem doesn't have department ID listed in the interface, but we can double check fMember keys.
-                      // Wait! In results/page.tsx line 126, facRes returns faculty list. Let's see what is inside faculty list row.
-                      // Let's use fMember's departmentName and check.
-                      // Actually, let's see if we have access to departments. HOD dashboard might call /departments.
-                      // Let's query /departments! We can add a departments loader.
-                      return (
-                        // Let's assume we can resolve the department ID. In backend seed.ts, department IDs are mapped.
-                        // Let's check if the workloads or reports returned department IDs.
-                        // Workloads returns: departmentName.
-                        // Let's see: how did we resolve department ID in other files?
-                        // Let's make an API call to get departments or list them from faculty if they contain department_id.
-                        // Wait, fMember has f.departmentName. Let's make a call to fetch departments: `/departments`.
-                        // Let's check if we can query department options.
-                        <option key={fMember?.id} value={(fMember as any).departmentId || "8cf1bf7c-e092-4fdb-9ef0-038c1143c7b2"}>
-                          {d.name}
-                        </option>
-                      );
-                    })}
-                    {/* Fallbacks just in case */}
-                    <option value="8cf1bf7c-e092-4fdb-9ef0-038c1143c7b2">Computer Science & Engineering</option>
-                    <option value="9cf1bf7c-e092-4fdb-9ef0-038c1143c7b2">Artificial Intelligence and Machine Learning</option>
-                    <option value="acf1bf7c-e092-4fdb-9ef0-038c1143c7b2">Data Science</option>
-                    <option value="bcf1bf7c-e092-4fdb-9ef0-038c1143c7b2">Electronics & Communication Engineering</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-text-secondary block mb-1">Year</label>
-                  <select
-                    value={formYear}
-                    onChange={(e) => setFormYear(Number(e.target.value))}
-                    className="w-full py-2 px-3 text-sm bg-background border border-border-subtle rounded-lg text-text-primary focus:outline-hidden focus:border-accent-blue"
-                  >
-                    {[1, 2, 3, 4].map(y => (
-                      <option key={y} value={y}>Year {y}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-text-secondary block mb-1">Semester</label>
-                  <select
-                    value={formSem}
-                    onChange={(e) => setFormSem(Number(e.target.value))}
-                    className="w-full py-2 px-3 text-sm bg-background border border-border-subtle rounded-lg text-text-primary focus:outline-hidden focus:border-accent-blue"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map(s => (
-                      <option key={s} value={s}>Semester {s}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-text-secondary block mb-1">Section</label>
-                  <select
-                    value={formSection}
-                    onChange={(e) => setFormSection(e.target.value)}
-                    className="w-full py-2 px-3 text-sm bg-background border border-border-subtle rounded-lg text-text-primary focus:outline-hidden focus:border-accent-blue"
-                  >
-                    {["A", "B", "C", "D"].map(s => (
-                      <option key={s} value={s}>Section {s}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Conditional parameters based on method */}
-              {formMethod === "range" && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-background border border-border-subtle rounded-lg">
-                  <div>
-                    <label className="text-xs font-bold text-text-secondary block mb-1">Roll Number Start</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 23VE1A0501"
-                      value={formRollStart}
-                      onChange={(e) => setFormRollStart(e.target.value)}
-                      className="w-full text-sm bg-background border border-border-subtle focus:border-accent-blue focus:outline-hidden py-2 px-3 rounded-lg text-text-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-text-secondary block mb-1">Roll Number End</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 23VE1A0515"
-                      value={formRollEnd}
-                      onChange={(e) => setFormRollEnd(e.target.value)}
-                      className="w-full text-sm bg-background border border-border-subtle focus:border-accent-blue focus:outline-hidden py-2 px-3 rounded-lg text-text-primary"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {formMethod === "manual" && (
-                <div className="p-3 bg-background border border-border-subtle rounded-lg space-y-3">
-                  <div className="flex items-center justify-between border-b border-border-subtle/50 pb-2">
-                    <span className="text-xs font-bold text-text-secondary">Select Students</span>
-                    <span className="text-xs font-semibold text-accent-blue">
-                      {selectedStudentIds.size} checked
-                    </span>
-                  </div>
-
-                  {availableStudents.length === 0 ? (
-                    <p className="text-xs text-text-muted py-4 text-center">
-                      No candidates found matching the selected Department, Semester, and Section.
-                    </p>
-                  ) : (
-                    <div className="max-h-48 overflow-y-auto divide-y divide-border-subtle/50">
-                      {availableStudents.map(s => (
-                        <label key={s.id} className="flex items-center justify-between py-2 px-1 hover:bg-surface-hover/20 cursor-pointer">
-                          <div className="flex items-center gap-2.5">
-                            <input
-                              type="checkbox"
-                              checked={selectedStudentIds.has(s.id)}
-                              onChange={() => handleToggleStudent(s.id)}
-                              className="text-accent-blue rounded focus:ring-accent-blue"
-                            />
-                            <div className="text-xs">
-                              <p className="font-semibold text-text-primary">{s.name}</p>
-                              <p className="font-mono text-text-muted text-[10px]">{s.rollNumber}</p>
-                            </div>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <div className="pt-2">
+            <h3 className="font-display font-bold text-xs uppercase text-text-primary pt-2 border-t border-border-subtle">2. Assignment Method</h3>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { id: "range", label: "Roll Range", desc: "Consecutive roll numbers (default)" },
+                { id: "recommended", label: "Recommended Size", desc: "Auto-balanced groups" },
+                { id: "manual", label: "Manual Selection", desc: "Search & pick students" },
+              ] as { id: typeof formMethod; label: string; desc: string }[]).map((opt) => (
                 <button
-                  type="submit"
-                  disabled={submitting || previewStudents.length === 0}
-                  className="px-5 py-2.5 bg-accent-blue hover:bg-accent-blue/90 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
+                  key={opt.id}
+                  onClick={() => { setFormMethod(opt.id); resetCreateForm(); }}
+                  className={`text-left p-3 rounded-xl border text-xs transition-colors cursor-pointer ${formMethod === opt.id ? "border-accent-blue bg-accent-blue/5" : "border-border-subtle hover:border-border-hover"}`}
                 >
-                  {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Create Mentor Group
+                  <p className="font-bold text-text-primary">{opt.label}</p>
+                  <p className="text-[10px] text-text-muted mt-0.5">{opt.desc}</p>
                 </button>
+              ))}
+            </div>
+
+            {formMethod === "range" && (
+              <div className="grid grid-cols-2 gap-3">
+                <label className="space-y-1">
+                  <span className="text-[10px] font-bold text-text-muted uppercase">Start Roll Number</span>
+                  <input value={formRollStart} onChange={(e) => setFormRollStart(e.target.value.toUpperCase())} className={inputClass} placeholder="e.g. 23VE1A0501" />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[10px] font-bold text-text-muted uppercase">End Roll Number</span>
+                  <input value={formRollEnd} onChange={(e) => setFormRollEnd(e.target.value.toUpperCase())} className={inputClass} placeholder="e.g. 23VE1A0525" />
+                </label>
               </div>
-            </form>
-          </div>
+            )}
 
-          {/* Live Preview Column */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-surface border border-border-subtle rounded-xl p-5 shadow-sm space-y-4">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-text-muted flex items-center gap-1.5">
-                <Info size={16} className="text-text-muted" />
-                Assignment Preview
-              </h2>
-
-              {/* Summary Card */}
-              <div className="p-3.5 bg-surface-elevated/40 border border-border-subtle rounded-lg space-y-2.5 text-xs text-text-secondary">
-                <div className="flex items-center justify-between">
-                  <span>Mentor Assigned</span>
-                  <span className="font-bold text-text-primary text-right">{selectedMentorName}</span>
+            {formMethod === "recommended" && (
+              <div className="space-y-3">
+                <div className="flex items-end gap-2">
+                  <label className="space-y-1 flex-1">
+                    <span className="text-[10px] font-bold text-text-muted uppercase">Target Students Per Mentor</span>
+                    <input type="number" min={1} value={targetSize} onChange={(e) => setTargetSize(Number(e.target.value))} className={inputClass} />
+                  </label>
+                  <button onClick={handleSuggest} disabled={!formSection || submitting} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent-blue text-white text-xs font-bold hover:bg-blue-600 disabled:opacity-50 cursor-pointer">
+                    <Sparkles size={13} /> Generate
+                  </button>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span>Method</span>
-                  <span className="font-bold text-text-primary capitalize">{formMethod}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Section Details</span>
-                  <span className="font-bold text-text-primary">Yr {formYear} • Sem {formSem} • Sec {formSection}</span>
-                </div>
-                <hr className="border-border-subtle/50" />
-                <div className="flex items-center justify-between font-semibold text-sm text-accent-blue">
-                  <span>Target Students</span>
-                  <span>{previewStudents.length} Found</span>
-                </div>
-              </div>
-
-              {/* Resolved candidates checklist list preview */}
-              <div className="space-y-2">
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Resolved Student List:</span>
-                {previewLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-5 h-5 text-accent-blue animate-spin" />
+                {proposals && (
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-text-muted">{proposals.totalStudents} students → {proposals.proposals.length} proposed group(s)</p>
+                    {proposals.proposals.map((p, idx) => (
+                      <ProposalRow key={idx} proposal={p} candidates={candidates} onUse={() => useProposalAsRange(p)} onCreate={(mentorId) => createProposalGroup(p, mentorId)} submitting={submitting} />
+                    ))}
                   </div>
-                ) : previewStudents.length === 0 ? (
-                  <p className="text-xs text-text-muted py-6 text-center border border-dashed border-border-subtle rounded-lg">
-                    No matching students meet the current criteria.
-                  </p>
-                ) : (
-                  <div className="max-h-56 overflow-y-auto divide-y divide-border-subtle/40 border border-border-subtle rounded-lg px-2 bg-background">
-                    {previewStudents.map(s => (
-                      <div key={s.id} className="py-2 flex items-center justify-between text-xs">
-                        <div>
-                          <p className="font-semibold text-text-primary">{s.name}</p>
-                          <p className="font-mono text-text-muted text-[10px]">{s.rollNumber}</p>
-                        </div>
-                        <span className="text-[10px] bg-accent-blue-soft border border-accent-blue/10 px-1.5 py-0.5 rounded text-accent-blue font-bold">
-                          Sem {s.semester}
-                        </span>
+                )}
+              </div>
+            )}
+
+            {formMethod === "manual" && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Search size={13} className="text-text-muted" />
+                  <input value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)} placeholder="Search by roll number or name…" className={inputClass} disabled={!formSection} />
+                </div>
+                <div className="max-h-[220px] overflow-y-auto custom-scrollbar space-y-1 border border-border-subtle rounded-xl p-2 bg-background">
+                  {filteredManualRoster.length === 0 && <p className="text-[11px] text-text-muted p-2">No eligible students found.</p>}
+                  {filteredManualRoster.map((s) => (
+                    <label key={s.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-surface-hover cursor-pointer text-xs">
+                      <input
+                        type="checkbox"
+                        checked={selectedStudentIds.has(s.id)}
+                        onChange={(e) => setSelectedStudentIds((prev) => { const next = new Set(prev); if (e.target.checked) next.add(s.id); else next.delete(s.id); return next; })}
+                        className="rounded border-border-subtle text-accent-blue"
+                      />
+                      <span className="font-mono font-bold text-text-primary">{s.rollNumber}</span>
+                      <span className="text-text-secondary">{s.fullName}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-[10px] text-text-muted">{selectedStudentIds.size} student(s) selected</p>
+              </div>
+            )}
+
+            {formMethod !== "recommended" && (
+              <>
+                <h3 className="font-display font-bold text-xs uppercase text-text-primary pt-2 border-t border-border-subtle">3. Mentor</h3>
+                <MentorSelect candidates={candidates} value={formMentorId} onChange={setFormMentorId} />
+
+                {conflictResult && conflictResult.conflicts.length > 0 && (
+                  <div className="space-y-1.5">
+                    {conflictResult.conflicts.map((c, idx) => (
+                      <div key={idx} className={`flex items-start gap-2 p-2.5 rounded-lg text-[11px] border ${c.severity === "error" ? "bg-danger-soft border-danger/20 text-danger" : "bg-warning-soft border-warning/20 text-warning"}`}>
+                        <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                        <span>{c.message}</span>
                       </div>
                     ))}
                   </div>
                 )}
+
+                <button
+                  onClick={handleCreate}
+                  disabled={submitting || checkingConflicts || (conflictResult?.hasBlockingConflicts ?? false) || !buildPayload()}
+                  className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-accent-blue text-white text-xs font-bold hover:bg-blue-600 disabled:opacity-50 cursor-pointer"
+                >
+                  {submitting ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                  Create Mentor Group
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Live Preview panel */}
+          <div className="lg:col-span-5 rounded-2xl border border-border-subtle bg-surface p-5 shadow-sm space-y-4">
+            <h3 className="font-display font-bold text-xs uppercase text-text-primary">Live Preview</h3>
+            <div className="grid grid-cols-3 gap-2">
+              <PreviewStat label="Eligible" value={sectionRoster.length} />
+              <PreviewStat label="Assigned" value={formMethod === "manual" ? selectedStudentIds.size : resolvedForRange.length} accent />
+              <PreviewStat label="Remaining" value={Math.max(0, sectionRoster.length - (formMethod === "manual" ? selectedStudentIds.size : resolvedForRange.length))} />
+            </div>
+
+            {settings && (
+              <div className="p-3 rounded-xl bg-background border border-border-subtle text-[11px] text-text-muted flex items-start gap-2">
+                <Info size={13} className="mt-0.5 shrink-0" />
+                <span>Recommended {settings.recommendedStudentsPerMentor} / Maximum {settings.maximumStudents} students per mentor.</span>
               </div>
+            )}
+
+            <div>
+              <h4 className="text-[10px] font-bold text-text-muted uppercase mb-1.5">Resolved Roll Number Range</h4>
+              {formMethod === "range" && resolvedForRange.length > 0 ? (
+                <div className="max-h-[280px] overflow-y-auto custom-scrollbar space-y-1">
+                  {resolvedForRange.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between p-2 rounded-lg bg-background border border-border-subtle text-[11px]">
+                      <span className="font-mono font-bold text-text-primary">{s.rollNumber}</span>
+                      <span className="text-text-secondary">{s.fullName}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : formMethod === "manual" && selectedStudentIds.size > 0 ? (
+                <p className="text-[11px] text-text-muted">{selectedStudentIds.size} students manually selected — see checklist.</p>
+              ) : (
+                <p className="text-[11px] text-text-muted">Select a scope and range to preview resolved students.</p>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {activeTab === "list" && (
+      {activeTab === "groups" && (
         <div className="space-y-4">
-          {/* Filters */}
-          <div className="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[240px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
-              <input
-                type="text"
-                placeholder="Search groups by mentor, department, section..."
-                value={filterSearch}
-                onChange={(e) => setFilterSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-sm bg-background border border-border-subtle rounded-lg text-text-primary focus:outline-hidden focus:border-accent-blue"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 select-none text-text-secondary text-xs sm:text-sm font-semibold shrink-0">
-              <ListFilter size={15} />
-              <span>Filters:</span>
-            </div>
-
-            <select
-              value={filterDept}
-              onChange={(e) => setFilterDept(e.target.value)}
-              className="py-2 px-3 text-xs bg-background border border-border-subtle rounded-lg text-text-primary focus:outline-hidden"
-            >
+          <div className="flex flex-wrap items-center gap-3">
+            <select value={groupFilterDept} onChange={(e) => setGroupFilterDept(e.target.value)} className={`${inputClass} w-auto`}>
               <option value="ALL">All Departments</option>
-              {departments.map(d => (
-                <option key={d} value={d}>{d}</option>
-              ))}
+              {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
-
-            <select
-              value={filterMethod}
-              onChange={(e) => setFilterMethod(e.target.value)}
-              className="py-2 px-3 text-xs bg-background border border-border-subtle rounded-lg text-text-primary focus:outline-hidden"
-            >
+            <select value={groupFilterMethod} onChange={(e) => setGroupFilterMethod(e.target.value)} className={`${inputClass} w-auto`}>
               <option value="ALL">All Methods</option>
-              <option value="range">Range Range</option>
-              <option value="section">Section Section</option>
-              <option value="manual">Manual Select</option>
+              <option value="range">Range</option>
+              <option value="section">Section (legacy)</option>
+              <option value="manual">Manual</option>
             </select>
+            {selectedGroupIds.size === 2 && (
+              <button onClick={handleMerge} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-accent-purple text-white text-xs font-bold hover:opacity-90 cursor-pointer">
+                <Merge size={13} /> Merge Selected
+              </button>
+            )}
+            <button onClick={loadStatics} className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border-subtle text-xs font-bold text-text-secondary hover:border-border-hover cursor-pointer">
+              <RefreshCw size={13} /> Refresh
+            </button>
           </div>
 
-          {/* Groups List Table */}
-          <div className="bg-surface border border-border-subtle rounded-xl overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left text-xs sm:text-sm">
-                <thead>
-                  <tr className="border-b border-border-subtle bg-surface-elevated/55 text-text-muted font-bold text-[11px] uppercase tracking-wider select-none">
-                    <th className="py-3 px-4">Faculty Mentor</th>
-                    <th className="py-3 px-4">Department</th>
-                    <th className="py-3 px-4">Section details</th>
-                    <th className="py-3 px-4">Assignment Method</th>
-                    <th className="py-3 px-4">Scope Range / Criteria</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border-subtle/50 text-text-secondary">
-                  {filteredGroups.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 px-4 text-center text-text-muted text-sm">
-                        No mentor groups configured yet matching filters.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredGroups.map((g) => (
-                      <tr key={g.id} className="hover:bg-surface-hover/30 transition-colors">
-                        <td className="py-3 px-4 font-semibold text-text-primary">{g.mentorName}</td>
-                        <td className="py-3 px-4">{g.departmentName}</td>
-                        <td className="py-3 px-4 font-medium">Year {g.year} • Sem {g.semester} • Sec {g.section}</td>
-                        <td className="py-3 px-4">
-                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
-                            g.assignmentMethod === "section" 
-                              ? "bg-success-soft text-success border-success/15" 
-                              : g.assignmentMethod === "range" 
-                              ? "bg-accent-blue-soft text-accent-blue border-accent-blue/15" 
-                              : "bg-accent-purple-soft text-accent-purple border-accent-purple/15"
-                          }`}>
-                            {g.assignmentMethod}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 font-mono text-[11px]">
-                          {g.assignmentMethod === "range" 
-                            ? `${g.rollNumberStart} ➔ ${g.rollNumberEnd}`
-                            : g.assignmentMethod === "section"
-                            ? `All Section ${g.section} Students`
-                            : "Manual Selection Checklist"}
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() => handleDeleteGroup(g.id)}
-                            className="p-1.5 rounded hover:bg-danger-soft text-text-secondary hover:text-danger border border-border-subtle hover:border-danger/20 cursor-pointer transition-colors"
-                            title="Delete Group"
-                          >
-                            <Trash2 size={13} />
+          <div className="overflow-x-auto border border-border-subtle rounded-xl bg-background">
+            <table className="w-full border-collapse text-left text-xs">
+              <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-border-subtle text-text-muted font-bold">
+                <tr>
+                  <th className="p-3"></th>
+                  <th className="p-3">Mentor</th>
+                  <th className="p-3">Department</th>
+                  <th className="p-3">Session</th>
+                  <th className="p-3">Section</th>
+                  <th className="p-3">Roll Range</th>
+                  <th className="p-3">Students</th>
+                  <th className="p-3">Method</th>
+                  <th className="p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-subtle text-text-secondary font-medium">
+                {filteredGroups.map((g) => (
+                  <tr key={g.id} className="hover:bg-surface-hover/30">
+                    <td className="p-3">
+                      <input type="checkbox" checked={selectedGroupIds.has(g.id)} onChange={() => toggleGroupSelection(g.id)} className="rounded border-border-subtle" />
+                    </td>
+                    <td className="p-3 font-bold text-text-primary">{g.mentorName}</td>
+                    <td className="p-3">{g.departmentName}</td>
+                    <td className="p-3 font-mono">{g.academicSession}</td>
+                    <td className="p-3">{g.section}</td>
+                    <td className="p-3 font-mono text-[10px]">{g.rollNumberStart ? `${g.rollNumberStart}–${g.rollNumberEnd}` : "—"}</td>
+                    <td className="p-3 font-bold text-accent-blue">{g.studentCount ?? 0}</td>
+                    <td className="p-3 uppercase text-[10px]">{g.assignmentMethod}</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        {g.assignmentMethod !== "manual" && (
+                          <button onClick={() => setSplitTarget(g)} className="text-accent-purple hover:opacity-70 cursor-pointer" title="Split group">
+                            <Split size={13} />
                           </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                        )}
+                        <button onClick={() => handleDeleteGroup(g.id)} className="text-danger hover:opacity-70 cursor-pointer" title="Delete group">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredGroups.length === 0 && (
+                  <tr><td colSpan={9} className="p-6 text-center text-text-muted">No mentor groups match the current filters.</td></tr>
+                )}
+              </tbody>
+            </table>
           </div>
+
+          {report && (
+            <div className="rounded-2xl border border-border-subtle bg-surface p-5 shadow-sm grid grid-cols-3 gap-4">
+              <PreviewStat label="Total Students" value={report.summary.totalStudents} />
+              <PreviewStat label="Assigned" value={report.summary.assignedStudents} accent />
+              <PreviewStat label="Unassigned" value={report.summary.unassignedStudents} />
+            </div>
+          )}
         </div>
       )}
 
       {activeTab === "workloads" && (
-        <div className="bg-surface border border-border-subtle rounded-xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-xs sm:text-sm">
-              <thead>
-                <tr className="border-b border-border-subtle bg-surface-elevated/55 text-text-muted font-bold text-[11px] uppercase tracking-wider select-none">
-                  <th className="py-3 px-4">Employee ID</th>
-                  <th className="py-3 px-4">Faculty Name</th>
-                  <th className="py-3 px-4">Department</th>
-                  <th className="py-3 px-4">Responsibility</th>
-                  <th className="py-3 px-4 text-center">Active Mentees</th>
+        <div className="rounded-2xl border border-border-subtle bg-surface p-5 shadow-sm space-y-4">
+          <h3 className="font-display font-bold text-sm text-text-primary uppercase tracking-wider">Mentor Workloads</h3>
+          <div className="overflow-x-auto border border-border-subtle rounded-xl bg-background">
+            <table className="w-full border-collapse text-left text-xs">
+              <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-border-subtle text-text-muted font-bold">
+                <tr>
+                  <th className="p-3">Mentor</th>
+                  <th className="p-3">Department</th>
+                  <th className="p-3">Mentoring Head</th>
+                  <th className="p-3">Active Mentees</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border-subtle/50 text-text-secondary">
-                {workloads.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-8 px-4 text-center text-text-muted text-sm">
-                      No workloads returned. Ensure faculty profiles are active.
-                    </td>
+              <tbody className="divide-y divide-border-subtle text-text-secondary font-medium">
+                {workloads.map((w) => (
+                  <tr key={w.mentorId} className="hover:bg-surface-hover/30">
+                    <td className="p-3 font-bold text-text-primary">{w.mentorName}</td>
+                    <td className="p-3">{w.departmentName}</td>
+                    <td className="p-3">{w.isMentoringHead ? <Award size={13} className="text-accent-blue" /> : "—"}</td>
+                    <td className="p-3 font-bold text-accent-blue">{w.activeMenteesCount}</td>
                   </tr>
-                ) : (
-                  workloads.map((mentor) => (
-                    <tr key={mentor.mentorId} className="hover:bg-surface-hover/30 transition-colors">
-                      <td className="py-3 px-4 font-mono text-text-primary">{mentor.employeeNumber}</td>
-                      <td className="py-3 px-4 font-semibold text-text-primary">{mentor.mentorName}</td>
-                      <td className="py-3 px-4">{mentor.departmentName}</td>
-                      <td className="py-3 px-4">
-                        {mentor.isMentoringHead ? (
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-accent-purple-soft border border-accent-purple/15 text-accent-purple px-2 py-0.5 rounded">
-                            Mentoring Head
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-background border border-border-subtle px-2 py-0.5 rounded">
-                            Faculty Mentor
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-center font-bold text-text-primary">
-                        <span className={`px-2.5 py-1 rounded-full ${
-                          mentor.activeMenteesCount > 15
-                            ? "bg-danger-soft text-danger font-black"
-                            : mentor.activeMenteesCount > 10
-                            ? "bg-warning-soft text-warning"
-                            : "bg-success-soft text-success"
-                        }`}>
-                          {mentor.activeMenteesCount} Mentees
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
         </div>
       )}
+
+      {activeTab === "settings" && isAdmin && (
+        <div className="rounded-2xl border border-border-subtle bg-surface p-5 shadow-sm space-y-4 max-w-lg">
+          <h3 className="font-display font-bold text-sm text-text-primary uppercase tracking-wider flex items-center gap-2">
+            <Settings size={15} /> Mentorship Settings
+          </h3>
+          <label className="space-y-1 block">
+            <span className="text-[10px] font-bold text-text-muted uppercase">Recommended Students Per Mentor</span>
+            <input type="number" min={1} value={settingsForm.recommended} onChange={(e) => setSettingsForm((s) => ({ ...s, recommended: Number(e.target.value) }))} className={inputClass} />
+          </label>
+          <label className="space-y-1 block">
+            <span className="text-[10px] font-bold text-text-muted uppercase">Maximum Students</span>
+            <input type="number" min={1} value={settingsForm.maximum} onChange={(e) => setSettingsForm((s) => ({ ...s, maximum: Number(e.target.value) }))} className={inputClass} />
+          </label>
+          <label className="flex items-center gap-2 text-xs font-semibold text-text-primary cursor-pointer">
+            <input type="checkbox" checked={settingsForm.crossDept} onChange={(e) => setSettingsForm((s) => ({ ...s, crossDept: e.target.checked }))} className="rounded border-border-subtle text-accent-blue" />
+            Allow cross-department mentoring
+          </label>
+          <button onClick={saveSettings} disabled={submitting} className="px-4 py-2 rounded-xl bg-accent-blue text-white text-xs font-bold hover:bg-blue-600 disabled:opacity-50 cursor-pointer">
+            Save Settings
+          </button>
+        </div>
+      )}
+
+      {splitTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-border-subtle bg-surface shadow-xl p-5 space-y-4">
+            <h3 className="font-display font-bold text-sm text-text-primary">Split Mentor Group</h3>
+            <p className="text-[11px] text-text-muted">Splitting {splitTarget.rollNumberStart}–{splitTarget.rollNumberEnd} ({splitTarget.mentorName})</p>
+            <label className="space-y-1 block">
+              <span className="text-[10px] font-bold text-text-muted uppercase">Split At Roll Number</span>
+              <input value={splitRoll} onChange={(e) => setSplitRoll(e.target.value.toUpperCase())} className={inputClass} placeholder="First roll number of the new group" />
+            </label>
+            <label className="space-y-1 block">
+              <span className="text-[10px] font-bold text-text-muted uppercase">New Group's Mentor</span>
+              <MentorSelect candidates={candidates.length > 0 ? candidates : []} value={splitNewMentor} onChange={setSplitNewMentor} />
+            </label>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setSplitTarget(null)} className="px-4 py-2 rounded-xl text-xs font-bold text-text-secondary hover:bg-surface-hover cursor-pointer">Cancel</button>
+              <button onClick={handleSplit} disabled={!splitRoll || !splitNewMentor} className="px-4 py-2 rounded-xl bg-accent-purple text-white text-xs font-bold disabled:opacity-50 cursor-pointer">Split Group</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PreviewStat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
+  return (
+    <div className="rounded-xl border border-border-subtle bg-background p-3 text-center">
+      <p className={`text-xl font-black ${accent ? "text-accent-blue" : "text-text-primary"}`}>{value}</p>
+      <p className="text-[9px] font-bold text-text-muted uppercase mt-0.5">{label}</p>
+    </div>
+  );
+}
+
+function MentorSelect({ candidates, value, onChange }: { candidates: m.MentorCandidate[]; value: string; onChange: (id: string) => void }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-background border border-border-subtle rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-accent-blue">
+      <option value="">Select mentor…</option>
+      {candidates.map((c) => (
+        <option key={c.facultyId} value={c.facultyId} disabled={c.overLimit}>
+          {c.facultyName} — {c.currentGroups} group(s), {c.currentStudents} students {c.overLimit ? "(at capacity)" : `(cap. left: ${c.availableCapacity})`}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function ProposalRow({
+  proposal,
+  candidates,
+  onUse,
+  onCreate,
+  submitting,
+}: {
+  proposal: m.BalancedGroupProposal;
+  candidates: m.MentorCandidate[];
+  onUse: () => void;
+  onCreate: (mentorId: string) => void;
+  submitting: boolean;
+}) {
+  const [mentorId, setMentorId] = useState("");
+  return (
+    <div className="p-3 rounded-xl border border-border-subtle bg-background space-y-2">
+      <div className="flex items-center justify-between text-[11px]">
+        <span className="font-mono font-bold text-text-primary">{proposal.rollNumberStart} <ArrowRight size={10} className="inline mx-1" /> {proposal.rollNumberEnd}</span>
+        <span className="text-text-muted">{proposal.studentCount} students</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="flex-1"><MentorSelect candidates={candidates} value={mentorId} onChange={setMentorId} /></div>
+        <button onClick={() => onCreate(mentorId)} disabled={!mentorId || submitting} className="px-3 py-2 rounded-lg bg-accent-blue text-white text-[10px] font-bold disabled:opacity-50 cursor-pointer shrink-0">Accept</button>
+        <button onClick={onUse} className="px-3 py-2 rounded-lg border border-border-subtle text-[10px] font-bold text-text-secondary hover:border-border-hover cursor-pointer shrink-0">Modify</button>
+      </div>
     </div>
   );
 }

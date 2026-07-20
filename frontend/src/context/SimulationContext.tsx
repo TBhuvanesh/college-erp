@@ -101,6 +101,7 @@ interface SimulationContextType {
   setCurrentFacultyId: (id: string) => void;
   
   addStudent: (student: Omit<Student, "id" | "dateOnboarded">) => Student;
+  syncStudent: (studentProfile: any, email: string) => void;
   addFaculty: (fac: Omit<Faculty, "id">) => Faculty;
   addAccountant: (acc: Omit<Accountant, "id" | "status">) => Accountant;
   updateAccountant: (id: string, acc: Partial<Accountant>) => void;
@@ -527,6 +528,40 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return newStudent;
   };
 
+  const syncStudent = (sp: any, email: string) => {
+    setStudents(prev => {
+      const exists = prev.some(s => s.id === sp.id || s.email === email);
+      if (exists) {
+        return prev.map(s => (s.id === sp.id || s.email === email) ? {
+          ...s,
+          id: sp.id,
+          name: sp.fullName,
+          rollNo: sp.rollNumber,
+          email: email,
+          department: sp.departmentCode,
+          semester: `Semester ${sp.semester}`,
+          program: `B.Tech ${sp.departmentCode}`,
+        } : s);
+      }
+      return [
+        ...prev,
+        {
+          id: sp.id,
+          name: sp.fullName,
+          rollNo: sp.rollNumber,
+          email: email,
+          department: sp.departmentCode,
+          semester: `Semester ${sp.semester}`,
+          status: "Good Standing",
+          dateOnboarded: new Date().toISOString().split("T")[0],
+          program: `B.Tech ${sp.departmentCode}`,
+          advisor: "Dr. Amit Verma",
+          advisorEmail: "amit.verma@sreyas.ac.in",
+        }
+      ];
+    });
+  };
+
   const addFaculty = (facData: Omit<Faculty, "id">): Faculty => {
     const newFac: Faculty = {
       ...facData,
@@ -668,6 +703,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setCurrentStudentId: handleSetStudentId,
         setCurrentFacultyId: handleSetFacultyId,
         addStudent,
+        syncStudent,
         addFaculty,
         addAccountant,
         updateAccountant,

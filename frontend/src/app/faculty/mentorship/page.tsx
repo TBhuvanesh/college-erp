@@ -2,34 +2,18 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { apiFetch } from "@/lib/api";
 import Link from "next/link";
-import { 
-  Users, 
-  Loader2, 
+import {
+  Users,
+  Loader2,
   AlertCircle,
   Search,
   Filter,
   ChevronRight,
-  BookOpen,
   RefreshCw,
   FolderOpen
 } from "lucide-react";
-
-interface MentorGroup {
-  id: string;
-  mentorId: string;
-  mentorName: string;
-  departmentId: string;
-  departmentName: string;
-  year: number;
-  semester: number;
-  section: string;
-  assignmentMethod: "range" | "section" | "manual";
-  rollNumberStart: string | null;
-  rollNumberEnd: string | null;
-  studentCount: number;
-}
+import { listMentorGroups, type MentorGroup } from "@/lib/mentorship";
 
 export default function FacultyMentorGroupsDashboard() {
   const { accessToken } = useAuth();
@@ -43,8 +27,7 @@ export default function FacultyMentorGroupsDashboard() {
   // Filters & Search
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("ALL");
-  const [yearFilter, setYearFilter] = useState("ALL");
-  const [semFilter, setSemFilter] = useState("ALL");
+  const [sessionFilter, setSessionFilter] = useState("ALL");
   const [methodFilter, setMethodFilter] = useState("ALL");
 
   const fetchGroups = useCallback(async (isRefresh = false) => {
@@ -53,10 +36,8 @@ export default function FacultyMentorGroupsDashboard() {
     else setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch("/mentor-groups", {}, accessToken);
-      if (res.success && res.data) {
-        setGroups(res.data);
-      }
+      const data = await listMentorGroups({}, accessToken);
+      setGroups(data);
     } catch (err: any) {
       setError(err.message || "Failed to load mentor groups");
     } finally {
@@ -71,7 +52,7 @@ export default function FacultyMentorGroupsDashboard() {
 
   // Derived filter choices
   const departments = useMemo(() => {
-    const list = new Set(groups.map(g => g.departmentName));
+    const list = new Set(groups.map(g => g.departmentName).filter((d): d is string => !!d));
     return Array.from(list);
   }, [groups]);
 
@@ -79,24 +60,23 @@ export default function FacultyMentorGroupsDashboard() {
   const filteredGroups = useMemo(() => {
     return groups.filter(g => {
       const searchLower = search.toLowerCase();
-      const matchSearch = 
-        g.departmentName.toLowerCase().includes(searchLower) ||
+      const matchSearch =
+        (g.departmentName ?? "").toLowerCase().includes(searchLower) ||
         g.section.toLowerCase().includes(searchLower) ||
-        g.mentorName.toLowerCase().includes(searchLower);
+        (g.mentorName ?? "").toLowerCase().includes(searchLower);
       if (!matchSearch) return false;
 
       if (deptFilter !== "ALL" && g.departmentName !== deptFilter) return false;
-      if (yearFilter !== "ALL" && g.year.toString() !== yearFilter) return false;
-      if (semFilter !== "ALL" && g.semester.toString() !== semFilter) return false;
+      if (sessionFilter !== "ALL" && g.academicSession !== sessionFilter) return false;
       if (methodFilter !== "ALL" && g.assignmentMethod !== methodFilter) return false;
 
       return true;
     });
-  }, [groups, search, deptFilter, yearFilter, semFilter, methodFilter]);
+  }, [groups, search, deptFilter, sessionFilter, methodFilter]);
 
   // Total students sum across active groups
   const totalMentees = useMemo(() => {
-    return groups.reduce((acc, curr) => acc + curr.studentCount, 0);
+    return groups.reduce((acc, curr) => acc + (curr.studentCount ?? 0), 0);
   }, [groups]);
 
   if (loading) {
@@ -205,33 +185,17 @@ export default function FacultyMentorGroupsDashboard() {
             </select>
           </div>
 
-          {/* Year */}
+          {/* Academic Session */}
           <div>
-            <label className="text-[10px] uppercase font-bold text-text-muted block mb-1">Year</label>
+            <label className="text-[10px] uppercase font-bold text-text-muted block mb-1">Academic Session</label>
             <select
-              value={yearFilter}
-              onChange={(e) => setYearFilter(e.target.value)}
+              value={sessionFilter}
+              onChange={(e) => setSessionFilter(e.target.value)}
               className="w-full py-1.5 px-2.5 text-xs bg-background border border-border-subtle rounded-lg text-text-primary font-medium focus:outline-hidden"
             >
-              <option value="ALL">All Years</option>
-              <option value="1">Year 1</option>
-              <option value="2">Year 2</option>
-              <option value="3">Year 3</option>
-              <option value="4">Year 4</option>
-            </select>
-          </div>
-
-          {/* Semester */}
-          <div>
-            <label className="text-[10px] uppercase font-bold text-text-muted block mb-1">Semester</label>
-            <select
-              value={semFilter}
-              onChange={(e) => setSemFilter(e.target.value)}
-              className="w-full py-1.5 px-2.5 text-xs bg-background border border-border-subtle rounded-lg text-text-primary font-medium focus:outline-hidden"
-            >
-              <option value="ALL">All Semesters</option>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map(s => (
-                <option key={s} value={s.toString()}>Semester {s}</option>
+              <option value="ALL">All Sessions</option>
+              {["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"].map(s => (
+                <option key={s} value={s}>Session {s}</option>
               ))}
             </select>
           </div>
@@ -245,8 +209,8 @@ export default function FacultyMentorGroupsDashboard() {
               className="w-full py-1.5 px-2.5 text-xs bg-background border border-border-subtle rounded-lg text-text-primary font-medium focus:outline-hidden"
             >
               <option value="ALL">All Methods</option>
-              <option value="range">Range Range</option>
-              <option value="section">Section Section</option>
+              <option value="range">Roll Range</option>
+              <option value="section">Whole Section</option>
               <option value="manual">Manual Select</option>
             </select>
           </div>
@@ -277,7 +241,7 @@ export default function FacultyMentorGroupsDashboard() {
                       {g.departmentName}
                     </h3>
                     <p className="text-xs text-text-muted font-semibold uppercase tracking-wider mt-0.5">
-                      Year {g.year} • Semester {g.semester}
+                      Session {g.academicSession}
                     </p>
                   </div>
                   <div className="w-10 h-10 rounded-lg bg-accent-blue-soft border border-accent-blue/15 flex items-center justify-center font-bold text-accent-blue shrink-0">
@@ -298,7 +262,7 @@ export default function FacultyMentorGroupsDashboard() {
                   )}
                   <div className="flex items-center justify-between border-t border-border-subtle/50 pt-2.5 mt-1">
                     <span className="font-medium text-text-muted uppercase tracking-wider text-[10px]">Students Count</span>
-                    <span className="font-black text-accent-blue">{g.studentCount} Assigned</span>
+                    <span className="font-black text-accent-blue">{g.studentCount ?? 0} Assigned</span>
                   </div>
                 </div>
               </div>

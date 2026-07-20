@@ -181,13 +181,18 @@ async function buildScopeConditions(
 
   // A single-recipient notification (e.g. "you've been assigned invigilation
   // duty") is always visible to that recipient regardless of the broadcast
-  // targeting rules below.
+  // targeting rules below. Critically, the broadcast half below must only
+  // match rows that are NOT single-recipient — otherwise a notification aimed
+  // at one specific user (recipient_user_id set, department_id/semester left
+  // NULL) satisfies the broadcast condition for every other user of that role
+  // too, since "column IS NULL" is treated as "applies to everyone." Gating
+  // every broadcast branch with `recipient_user_id IS NULL` closes that leak.
   params.push(userId);
   const recipientIdx = params.length;
   const recipientClause = `n.recipient_user_id = $${recipientIdx}`;
 
   if (role === 'accountant') {
-    conditions.push(`(n.target_role = 'all' OR ${recipientClause})`);
+    conditions.push(`((n.recipient_user_id IS NULL AND n.target_role = 'all') OR ${recipientClause})`);
     return conditions;
   }
 
@@ -196,10 +201,10 @@ async function buildScopeConditions(
     if (deptId) {
       params.push(deptId);
       conditions.push(
-        `((n.target_role IN ('all', 'faculty') AND (n.department_id IS NULL OR n.department_id = $${params.length})) OR ${recipientClause})`
+        `((n.recipient_user_id IS NULL AND n.target_role IN ('all', 'faculty') AND (n.department_id IS NULL OR n.department_id = $${params.length})) OR ${recipientClause})`
       );
     } else {
-      conditions.push(`(n.target_role IN ('all', 'faculty') OR ${recipientClause})`);
+      conditions.push(`((n.recipient_user_id IS NULL AND n.target_role IN ('all', 'faculty')) OR ${recipientClause})`);
     }
     return conditions;
   }
@@ -210,7 +215,7 @@ async function buildScopeConditions(
 
   params.push(ctx.departmentId, ctx.semester);
   conditions.push(
-    `((n.target_role IN ('all', 'student') AND (n.department_id IS NULL OR n.department_id = $${params.length - 1}) AND (n.semester IS NULL OR n.semester = $${params.length})) OR ${recipientClause})`
+    `((n.recipient_user_id IS NULL AND n.target_role IN ('all', 'student') AND (n.department_id IS NULL OR n.department_id = $${params.length - 1}) AND (n.semester IS NULL OR n.semester = $${params.length})) OR ${recipientClause})`
   );
   return conditions;
 }

@@ -35,7 +35,9 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
       designation: (user as any).designation, 
       departmentId: (user as any).departmentId,
       facultyId: user.facultyId,
+      studentId: user.studentId,
       facultyProfile: user.facultyProfile,
+      studentProfile: user.studentProfile,
     },
   });
 });
@@ -60,7 +62,9 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
       designation: user.designation, 
       departmentId: user.departmentId,
       facultyId: user.facultyId,
+      studentId: user.studentId,
       facultyProfile: user.facultyProfile,
+      studentProfile: user.studentProfile,
     },
   });
 });

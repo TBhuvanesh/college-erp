@@ -5,6 +5,10 @@ import { getStudentDues, ensureAllStudentsHaveFees } from './fee.service';
 import { getStudentResults } from './result.service';
 import { getStudentTimetable } from './examination.service';
 import { listRoomsWithAvailability } from './resourceAvailability.service';
+import { getMentorshipAnalytics } from './analytics.service';
+import { getMentorDashboard } from './mentorship.service';
+import { getMentorGroups } from './mentorGroup.service';
+import * as feedbackService from './feedback.service';
 
 // ── Exam Seating & Invigilation admin widget — reused by both the admin and
 // HOD dashboards (HOD scoped to their own department's sessions). ────────────
@@ -47,6 +51,33 @@ async function getExamSeatingOverview(departmentId: string | null) {
     availableRooms: roomAvailability.filter((r) => r.state === 'available').length,
     occupiedRooms: roomAvailability.filter((r) => r.state === 'occupied').length,
     maintenanceRooms: roomAvailability.filter((r) => r.state === 'maintenance').length,
+  };
+}
+
+// ── Feedback Campaign overview — eligibility-driven, reused by admin, HOD,
+// faculty and student dashboards. Denominators are always eligible students
+// (never total students), per the eligibility-driven refactor. Aggregation
+// logic lives in feedback.service.ts and is shared with analytics.service.ts. ──
+const getFeedbackOverviewForAdmin = feedbackService.getInstitutionFeedbackAnalytics;
+const getFeedbackOverviewForFaculty = feedbackService.getFacultyFeedbackAnalytics;
+
+async function getFeedbackOverviewForStudent(userId: string) {
+  const views = await feedbackService.getEligibleCampaignsForStudent(userId);
+  const pending = views.filter((v) => !v.completed);
+  const nextDeadline = pending.length > 0
+    ? pending.reduce((min, v) => (v.endDate < min ? v.endDate : min), pending[0].endDate)
+    : null;
+
+  return {
+    pendingCount: pending.length,
+    nextDeadline,
+    campaigns: views.map((v) => ({
+      campaignId: v.campaignId,
+      title: v.title,
+      status: v.status,
+      endDate: v.endDate,
+      completed: v.completed,
+    })),
   };
 }
 
@@ -308,9 +339,13 @@ export async function getAdminDashboardStats(userId: string) {
   const totalRecords = Number(a?.total_records) || 0;
   const totalPresent = Number(a?.total_present) || 0;
   const examSeatingOverview = await getExamSeatingOverview(null);
+  const mentorshipOverview = await getMentorshipAnalytics(null);
+  const feedbackOverview = await getFeedbackOverviewForAdmin(null);
 
   return {
     examSeatingOverview,
+    mentorshipOverview,
+    feedbackOverview,
     institutionOverview: {
       totalStudents:    Number(c.total_students)    || 0,
       totalFaculty:     Number(c.total_faculty)     || 0,
@@ -457,7 +492,7 @@ export async function getFacultyDashboardStats(userId: string) {
         s.code        AS subject_code,
         s.name        AS subject_name,
         fsa.section,
-        fsa.semester,
+        s.semester,
         fsa.academic_year,
         EXISTS(
           SELECT 1 FROM attendance a
@@ -479,7 +514,7 @@ export async function getFacultyDashboardStats(userId: string) {
       WHERE fsa.faculty_id = $1
         AND fsa.is_active  = true
         AND fsa.deleted_at IS NULL
-      ORDER BY fsa.semester ASC, s.code ASC
+      ORDER BY s.semester ASC, s.code ASC
     `, [facultyId]),
 
     // ── LMS counts for this faculty ───────────────────────────────────────────
@@ -613,7 +648,30 @@ export async function getFacultyDashboardStats(userId: string) {
 
   const lms = lmsCountRes.rows[0];
 
+  const myMentorGroups = await getMentorGroups({ mentorId: facultyId });
+  let mentorshipOverview = { myMentorGroups: 0, totalMentees: 0, upcomingMeetings: 0, studentsNeedingAttention: 0 };
+  if (myMentorGroups.length > 0) {
+    const [menteeDashboard, upcomingMeetingsRes] = await Promise.all([
+      getMentorDashboard(userId),
+      query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count FROM mentoring_notes
+         WHERE mentor_id = $1 AND follow_up_date >= CURRENT_DATE AND deleted_at IS NULL`,
+        [facultyId]
+      ),
+    ]);
+    mentorshipOverview = {
+      myMentorGroups: myMentorGroups.length,
+      totalMentees: menteeDashboard.length,
+      upcomingMeetings: Number(upcomingMeetingsRes.rows[0]?.count ?? 0),
+      studentsNeedingAttention: menteeDashboard.filter((s) => Object.values(s.alerts).some(Boolean)).length,
+    };
+  }
+
+  const feedbackOverview = await getFeedbackOverviewForFaculty(facultyId);
+
   return {
+    mentorshipOverview,
+    feedbackOverview,
     profile: {
       id:             profileRows[0].id,
       fullName:       profileRows[0].full_name,
@@ -940,7 +998,10 @@ export async function getStudentDashboardStats(userId: string) {
     `, [yearGroup, departmentId]),
   ]);
 
+  const feedbackOverview = await getFeedbackOverviewForStudent(userId);
+
   return {
+    feedbackOverview,
     profile: {
       id:             profileRows[0].id,
       fullName:       profileRows[0].full_name,
@@ -1105,9 +1166,13 @@ export async function getHODDashboardStats(userId: string) {
   const presentAtt = Number(attStatsRes.rows[0]?.present || 0);
   const attendanceRate = totalAtt > 0 ? Math.round((presentAtt / totalAtt) * 100) : 100;
   const examSeatingOverview = await getExamSeatingOverview(departmentId);
+  const mentorshipOverview = await getMentorshipAnalytics(departmentId);
+  const feedbackOverview = await getFeedbackOverviewForAdmin(departmentId);
 
   return {
     examSeatingOverview,
+    mentorshipOverview,
+    feedbackOverview,
     profile: {
       id:             profileRows[0].id,
       fullName:       profileRows[0].full_name,

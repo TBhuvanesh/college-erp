@@ -9,6 +9,7 @@ import {
   updateStudentSchema,
   updateStatusSchema,
   listStudentsQuerySchema,
+  listSectionsQuerySchema,
 } from '../types/student';
 
 const router = Router();
@@ -65,6 +66,16 @@ router.get(
   requireRole('admin', 'faculty', 'accountant'),
   validate({ query: listStudentsQuerySchema }),
   studentController.listStudents
+);
+
+// Distinct active sections for a department+semester — Mentorship's "Section
+// Synchronization" source of truth. Declared before /:id so it isn't swallowed.
+router.get(
+  '/sections',
+  authenticate,
+  requireRole('admin', 'faculty'),
+  validate({ query: listSectionsQuerySchema }),
+  studentController.listSections
 );
 
 // Single student: admin, faculty, or the student themselves (access check in controller)

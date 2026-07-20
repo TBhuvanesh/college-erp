@@ -7,6 +7,7 @@ export interface JwtAccessPayload {
   designation?: string;
   departmentId?: string;
   facultyId?: string;
+  studentId?: string;
   isSuperAdmin?: boolean;
 }
 
@@ -23,6 +24,7 @@ export interface AuthUser {
   designation?: string;
   departmentId?: string;
   facultyId?: string;
+  studentId?: string;
   isSuperAdmin?: boolean;
   facultyProfile?: {
     id: string;
@@ -32,6 +34,15 @@ export interface AuthUser {
     departmentName: string;
     departmentCode: string;
     designation: string;
+  };
+  studentProfile?: {
+    id: string;
+    rollNumber: string;
+    fullName: string;
+    departmentId: string;
+    departmentName: string;
+    departmentCode: string;
+    semester: number;
   };
 }
 

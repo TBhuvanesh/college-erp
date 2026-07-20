@@ -1,9 +1,11 @@
 import { query, withTransaction } from '../config/database';
+import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
-import type { 
-  AssignMentorInput, 
-  ReassignMentorInput, 
-  CreateMentoringNoteInput, 
+import { getAllGroupMemberships, type GroupMembership } from './mentorGroup.service';
+import type {
+  AssignMentorInput,
+  ReassignMentorInput,
+  CreateMentoringNoteInput,
   UpdateMentoringNoteInput,
   MentorAssignment,
   MentoringNote
@@ -45,6 +47,8 @@ export async function assignMentor(data: AssignMentorInput, adminUserId: string)
        updated_at AS "updatedAt"`,
     [data.mentorId, data.studentId, adminUserId]
   );
+
+  await auditLog({ actorId: adminUserId, action: 'ASSIGN', resource: 'mentor_assignment', resourceId: rows[0].id, changes: { to: data } });
 
   return rows[0];
 }
@@ -88,12 +92,22 @@ export async function reassignMentor(data: ReassignMentorInput, adminUserId: str
     );
 
     return rows[0];
+  }).then(async (assignment) => {
+    await auditLog({ actorId: adminUserId, action: 'REASSIGN', resource: 'mentor_assignment', resourceId: assignment.id, changes: { to: data } });
+    return assignment;
   });
 }
 
 export async function getMentorByStudent(studentId: string) {
+  // Delegates to the shared membership resolver (mentorGroup.service.ts) instead
+  // of re-implementing the assignment-method OR-chain — the resolver also now
+  // correctly filters to active students only.
+  const memberships = await getAllGroupMemberships({ studentId });
+  if (memberships.length === 0) return null;
+
+  const top = memberships.sort((a, b) => new Date(b.groupCreatedAt).getTime() - new Date(a.groupCreatedAt).getTime())[0];
   const { rows } = await query(
-    `SELECT 
+    `SELECT
        mg.id AS "assignmentId",
        mg.created_at AS "assignedDate",
        'active' AS status,
@@ -106,47 +120,29 @@ export async function getMentorByStudent(studentId: string) {
      JOIN faculty f ON mg.mentor_id = f.id
      JOIN users u ON f.user_id = u.id
      JOIN departments d ON f.department_id = d.id
-     JOIN students s ON s.id = $1 AND s.deleted_at IS NULL
-     LEFT JOIN mentor_group_students mgs ON mg.id = mgs.mentor_group_id AND mgs.deleted_at IS NULL
-     WHERE mg.deleted_at IS NULL AND f.deleted_at IS NULL AND (
-       (mg.assignment_method = 'manual' AND mgs.student_id = s.id)
-       OR
-       (mg.assignment_method = 'section' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section)
-       OR
-       (mg.assignment_method = 'range' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section AND s.roll_number >= mg.roll_number_start AND s.roll_number <= mg.roll_number_end)
-     )
-     ORDER BY mg.created_at DESC
-     LIMIT 1`,
-    [studentId]
+     WHERE mg.id = $1`,
+    [top.mentorGroupId]
   );
   return rows[0] || null;
 }
 
 export async function getStudentsByMentor(mentorId: string) {
-  const { rows } = await query(
-    `SELECT DISTINCT
-       mg.id AS "assignmentId",
-       mg.created_at AS "assignedDate",
-       s.id AS "studentId",
-       s.full_name AS "studentName",
-       s.roll_number AS "rollNumber",
-       s.semester,
-       d.name AS "departmentName"
-     FROM mentor_groups mg
-     JOIN departments d ON mg.department_id = d.id
-     CROSS JOIN students s
-     LEFT JOIN mentor_group_students mgs ON mg.id = mgs.mentor_group_id AND mgs.deleted_at IS NULL
-     WHERE mg.mentor_id = $1 AND mg.deleted_at IS NULL AND s.deleted_at IS NULL AND (
-       (mg.assignment_method = 'manual' AND mgs.student_id = s.id)
-       OR
-       (mg.assignment_method = 'section' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section)
-       OR
-       (mg.assignment_method = 'range' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section AND s.roll_number >= mg.roll_number_start AND s.roll_number <= mg.roll_number_end)
-     )
+  const memberships = await getAllGroupMemberships({ mentorId });
+  if (memberships.length === 0) return [];
+
+  const membershipByStudent = new Map(memberships.map((m) => [m.studentId, m]));
+  const { rows } = await query<{ studentId: string; studentName: string; rollNumber: string; semester: number; departmentName: string }>(
+    `SELECT s.id AS "studentId", s.full_name AS "studentName", s.roll_number AS "rollNumber", s.semester, d.name AS "departmentName"
+     FROM students s JOIN departments d ON s.department_id = d.id
+     WHERE s.id = ANY($1::uuid[]) AND s.deleted_at IS NULL
      ORDER BY s.roll_number ASC`,
-    [mentorId]
+    [Array.from(membershipByStudent.keys())]
   );
-  return rows;
+
+  return rows.map((r) => {
+    const m = membershipByStudent.get(r.studentId)!;
+    return { assignmentId: m.mentorGroupId, assignedDate: m.groupCreatedAt, ...r };
+  });
 }
 
 export async function getMentorDashboard(mentorUserId: string) {
@@ -157,8 +153,10 @@ export async function getMentorDashboard(mentorUserId: string) {
     throw AppError.forbidden('No faculty profile linked to this account');
   }
 
-  // Get all active mentees
-  const mentees = await query<{
+  // Get all active mentees (delegates to the shared membership resolver)
+  const menteeMemberships = await getAllGroupMemberships({ mentorId });
+  const menteeIds = Array.from(new Set(menteeMemberships.map((m) => m.studentId)));
+  const mentees = { rows: [] as Array<{
     id: string;
     full_name: string;
     roll_number: string;
@@ -169,32 +167,20 @@ export async function getMentorDashboard(mentorUserId: string) {
     email: string;
     academic_year: string;
     program_id: string;
-  }>(
-    `SELECT DISTINCT
-       s.id,
-       s.full_name,
-       s.roll_number,
-       d.name AS department_name,
-       s.semester,
-       s.parent_contact,
-       u.phone_number,
-       u.email,
-       s.academic_year,
-       s.program_id
-     FROM students s
-     JOIN users u ON s.user_id = u.id
-     JOIN departments d ON s.department_id = d.id
-     CROSS JOIN mentor_groups mg
-     LEFT JOIN mentor_group_students mgs ON mg.id = mgs.mentor_group_id AND mgs.deleted_at IS NULL
-     WHERE mg.mentor_id = $1 AND mg.deleted_at IS NULL AND s.deleted_at IS NULL AND (
-       (mg.assignment_method = 'manual' AND mgs.student_id = s.id)
-       OR
-       (mg.assignment_method = 'section' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section)
-       OR
-       (mg.assignment_method = 'range' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section AND s.roll_number >= mg.roll_number_start AND s.roll_number <= mg.roll_number_end)
-     )`,
-    [mentorId]
-  );
+  }> };
+  if (menteeIds.length > 0) {
+    const menteeRows = await query<typeof mentees.rows[number]>(
+      `SELECT
+         s.id, s.full_name, s.roll_number, d.name AS department_name, s.semester,
+         s.parent_contact, u.phone_number, u.email, s.academic_year, s.program_id
+       FROM students s
+       JOIN users u ON s.user_id = u.id
+       JOIN departments d ON s.department_id = d.id
+       WHERE s.id = ANY($1::uuid[]) AND s.deleted_at IS NULL`,
+      [menteeIds]
+    );
+    mentees.rows = menteeRows.rows;
+  }
 
   const studentsDashboardData = [];
 
@@ -322,22 +308,8 @@ export async function addNote(data: CreateMentoringNoteInput, mentorUserId: stri
   }
 
   // Ensure this faculty is the student's mentor
-  const assResult = await query(
-    `SELECT 1
-     FROM mentor_groups mg
-     JOIN students s ON s.id = $2 AND s.deleted_at IS NULL
-     LEFT JOIN mentor_group_students mgs ON mg.id = mgs.mentor_group_id AND mgs.deleted_at IS NULL
-     WHERE mg.mentor_id = $1 AND mg.deleted_at IS NULL AND (
-       (mg.assignment_method = 'manual' AND mgs.student_id = s.id)
-       OR
-       (mg.assignment_method = 'section' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section)
-       OR
-       (mg.assignment_method = 'range' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section AND s.roll_number >= mg.roll_number_start AND s.roll_number <= mg.roll_number_end)
-     )
-     LIMIT 1`,
-    [mentorId, data.studentId]
-  );
-  if (assResult.rowCount === 0) {
+  const memberships = await getAllGroupMemberships({ mentorId, studentId: data.studentId });
+  if (memberships.length === 0) {
     throw AppError.forbidden('You are not assigned as the mentor for this student');
   }
 
@@ -433,94 +405,52 @@ export async function getNotesByStudent(studentId: string): Promise<MentoringNot
 }
 
 export async function getMentorWorkloads() {
-  const { rows } = await query(
-    `WITH student_mentor_relations AS (
-       SELECT DISTINCT ON (s.id)
-         s.id AS student_id,
-         mg.mentor_id AS mentor_id
-       FROM students s
-       CROSS JOIN mentor_groups mg
-       LEFT JOIN mentor_group_students mgs ON mg.id = mgs.mentor_group_id AND mgs.deleted_at IS NULL
-       WHERE s.deleted_at IS NULL AND mg.deleted_at IS NULL AND (
-         (mg.assignment_method = 'manual' AND mgs.student_id = s.id)
-         OR
-         (mg.assignment_method = 'section' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section)
-         OR
-         (mg.assignment_method = 'range' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section AND s.roll_number >= mg.roll_number_start AND s.roll_number <= mg.roll_number_end)
-       )
-       ORDER BY s.id, mg.created_at DESC
-     )
-     SELECT 
-       f.id AS "mentorId",
-       f.full_name AS "mentorName",
-       f.employee_number AS "employeeNumber",
-       d.name AS "departmentName",
-       f.is_mentoring_head AS "isMentoringHead",
-       COALESCE(COUNT(smr.student_id), 0)::int AS "activeMenteesCount"
-     FROM faculty f
-     JOIN departments d ON f.department_id = d.id
-     LEFT JOIN student_mentor_relations smr ON f.id = smr.mentor_id
-     WHERE f.deleted_at IS NULL
-     GROUP BY f.id, f.full_name, f.employee_number, d.name, f.is_mentoring_head
-     ORDER BY "activeMenteesCount" DESC, f.full_name ASC`
+  const memberships = await getAllGroupMemberships();
+  const menteesByMentor = new Map<string, Set<string>>();
+  for (const m of memberships) {
+    if (!menteesByMentor.has(m.mentorId)) menteesByMentor.set(m.mentorId, new Set());
+    menteesByMentor.get(m.mentorId)!.add(m.studentId);
+  }
+
+  const { rows } = await query<{
+    mentorId: string; mentorName: string; employeeNumber: string; departmentName: string; isMentoringHead: boolean;
+  }>(
+    `SELECT f.id AS "mentorId", f.full_name AS "mentorName", f.employee_number AS "employeeNumber",
+       d.name AS "departmentName", f.is_mentoring_head AS "isMentoringHead"
+     FROM faculty f JOIN departments d ON f.department_id = d.id
+     WHERE f.deleted_at IS NULL`
   );
-  return rows;
+
+  return rows
+    .map((r) => ({ ...r, activeMenteesCount: menteesByMentor.get(r.mentorId)?.size ?? 0 }))
+    .sort((a, b) => b.activeMenteesCount - a.activeMenteesCount || a.mentorName.localeCompare(b.mentorName));
 }
 
 export async function getMentorshipReports() {
   const totalStudentsRes = await query<{ count: string }>('SELECT COUNT(*)::text AS count FROM students WHERE deleted_at IS NULL');
-  
-  const assignedStudentsRes = await query<{ count: string }>(
-    `WITH student_mentor_relations AS (
-       SELECT DISTINCT ON (s.id)
-         s.id AS student_id
-       FROM students s
-       CROSS JOIN mentor_groups mg
-       LEFT JOIN mentor_group_students mgs ON mg.id = mgs.mentor_group_id AND mgs.deleted_at IS NULL
-       WHERE s.deleted_at IS NULL AND mg.deleted_at IS NULL AND (
-         (mg.assignment_method = 'manual' AND mgs.student_id = s.id)
-         OR
-         (mg.assignment_method = 'section' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section)
-         OR
-         (mg.assignment_method = 'range' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section AND s.roll_number >= mg.roll_number_start AND s.roll_number <= mg.roll_number_end)
-       )
-     )
-     SELECT COUNT(student_id)::text AS count FROM student_mentor_relations`
-  );
-
   const totalStudents = parseInt(totalStudentsRes.rows[0]?.count || '0', 10);
-  const assignedStudents = parseInt(assignedStudentsRes.rows[0]?.count || '0', 10);
 
-  const { rows: relationships } = await query(
-    `WITH student_mentor_relations AS (
-       SELECT DISTINCT ON (s.id)
-         s.id AS student_id,
-         mg.mentor_id AS mentor_id,
-         f.full_name AS mentor_name
-       FROM students s
-       CROSS JOIN mentor_groups mg
-       JOIN faculty f ON mg.mentor_id = f.id AND f.deleted_at IS NULL
-       LEFT JOIN mentor_group_students mgs ON mg.id = mgs.mentor_group_id AND mgs.deleted_at IS NULL
-       WHERE s.deleted_at IS NULL AND mg.deleted_at IS NULL AND (
-         (mg.assignment_method = 'manual' AND mgs.student_id = s.id)
-         OR
-         (mg.assignment_method = 'section' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section)
-         OR
-         (mg.assignment_method = 'range' AND mg.department_id = s.department_id AND mg.semester = s.semester AND mg.section = s.section AND s.roll_number >= mg.roll_number_start AND s.roll_number <= mg.roll_number_end)
-       )
-       ORDER BY s.id, mg.created_at DESC
-     )
-     SELECT 
-       s.id AS "studentId",
-       s.full_name AS "studentName",
-       s.roll_number AS "rollNumber",
-       d.name AS "departmentName",
-       s.semester,
-       smr.mentor_name AS "mentorName",
-       smr.mentor_id AS "mentorId"
-     FROM students s
-     JOIN departments d ON s.department_id = d.id
-     LEFT JOIN student_mentor_relations smr ON s.id = smr.student_id
+  const memberships = await getAllGroupMemberships();
+  // Most-recently-assigned group wins if a student somehow matches more than one.
+  const latestByStudent = new Map<string, GroupMembership>();
+  for (const m of memberships) {
+    const current = latestByStudent.get(m.studentId);
+    if (!current || new Date(m.groupCreatedAt) > new Date(current.groupCreatedAt)) latestByStudent.set(m.studentId, m);
+  }
+  const assignedStudents = latestByStudent.size;
+
+  const mentorIds = Array.from(new Set(Array.from(latestByStudent.values()).map((m) => m.mentorId)));
+  const { rows: mentorRows } = await query<{ id: string; full_name: string }>(
+    `SELECT id, full_name FROM faculty WHERE id = ANY($1::uuid[])`,
+    [mentorIds]
+  );
+  const mentorNameById = new Map(mentorRows.map((r) => [r.id, r.full_name]));
+
+  const { rows: relationships } = await query<{
+    studentId: string; studentName: string; rollNumber: string; departmentName: string; semester: number;
+  }>(
+    `SELECT s.id AS "studentId", s.full_name AS "studentName", s.roll_number AS "rollNumber", d.name AS "departmentName", s.semester
+     FROM students s JOIN departments d ON s.department_id = d.id
      WHERE s.deleted_at IS NULL
      ORDER BY d.name, s.semester, s.roll_number`
   );
@@ -531,6 +461,9 @@ export async function getMentorshipReports() {
       assignedStudents,
       unassignedStudents: totalStudents - assignedStudents
     },
-    relationships
+    relationships: relationships.map((r) => {
+      const m = latestByStudent.get(r.studentId);
+      return { ...r, mentorName: m ? mentorNameById.get(m.mentorId) ?? null : null, mentorId: m?.mentorId ?? null };
+    })
   };
 }

@@ -4,15 +4,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
 import { useParams, useRouter } from "next/navigation";
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  Calendar, 
-  BookOpen, 
-  Clock, 
+import {
+  User,
+  Calendar,
+  Clock,
   ArrowLeft,
-  Loader2, 
+  Loader2,
   AlertCircle,
   MessageSquare,
   Plus,
@@ -24,51 +21,7 @@ import {
   FileText,
   BookmarkCheck
 } from "lucide-react";
-
-interface StudentProfile {
-  id: string;
-  name: string;
-  rollNumber: string;
-  department: string;
-  semester: number;
-  year: number;
-  phoneNumber: string | null;
-  parentContact: string | null;
-  email: string;
-}
-
-interface StudentSummary {
-  attendancePercentage: number;
-  latestCGPA: number;
-  internalMarksSummary: string;
-  feeStatus: string;
-  assignmentStatus: string;
-}
-
-interface StudentAlerts {
-  attendanceBelow75: boolean;
-  feePending: boolean;
-  assignmentOverdue: boolean;
-  failedSubjects: boolean;
-  lowInternalMarks: boolean;
-}
-
-interface MenteeDashboardRow {
-  profile: StudentProfile;
-  summary: StudentSummary;
-  alerts: StudentAlerts;
-}
-
-interface MentoringNote {
-  id: string;
-  mentorId: string;
-  studentId: string;
-  title: string;
-  remarks: string;
-  meetingDate: string;
-  followUpDate: string | null;
-  createdAt: string;
-}
+import { getMentorDashboard, getNotesByStudent, addNote, updateNote, deleteNote, type MenteeDashboardRow, type MentoringNote } from "@/lib/mentorship";
 
 export default function StudentMentorshipProfilePage() {
   const { accessToken } = useAuth();
@@ -102,9 +55,9 @@ export default function StudentMentorshipProfilePage() {
     setError(null);
     try {
       // 1. Fetch mentee profile and dashboard stats
-      const dashRes = await apiFetch("/mentorship/dashboard", {}, accessToken);
-      if (dashRes.success && dashRes.data) {
-        const found = (dashRes.data as MenteeDashboardRow[]).find(row => row.profile.id === studentId);
+      const dashData = await getMentorDashboard(accessToken);
+      {
+        const found = dashData.find(row => row.profile.id === studentId);
         if (found) {
           setMenteeData(found);
         } else {
@@ -148,10 +101,8 @@ export default function StudentMentorshipProfilePage() {
       }
 
       // 2. Fetch mentoring notes
-      const notesRes = await apiFetch(`/mentorship/notes/student/${studentId}`, {}, accessToken);
-      if (notesRes.success && notesRes.data) {
-        setNotes(notesRes.data);
-      }
+      const notesData = await getNotesByStudent(studentId, accessToken);
+      setNotes(notesData);
     } catch (err: any) {
       setError(err.message || "Failed to load mentee profile details");
     } finally {
@@ -201,35 +152,12 @@ export default function StudentMentorshipProfilePage() {
 
     try {
       if (modalMode === "add") {
-        const res = await apiFetch("/mentorship/notes", {
-          method: "POST",
-          body: JSON.stringify({
-            studentId,
-            title: noteTitle,
-            remarks: noteRemarks,
-            meetingDate: noteMeetingDate,
-            followUpDate: noteFollowUpDate || null
-          })
-        }, accessToken);
-        if (res.success) {
-          setIsModalOpen(false);
-          loadData();
-        }
-      } else {
-        const res = await apiFetch(`/mentorship/notes/${editingNoteId}`, {
-          method: "PUT",
-          body: JSON.stringify({
-            title: noteTitle,
-            remarks: noteRemarks,
-            meetingDate: noteMeetingDate,
-            followUpDate: noteFollowUpDate || null
-          })
-        }, accessToken);
-        if (res.success) {
-          setIsModalOpen(false);
-          loadData();
-        }
+        await addNote({ studentId, title: noteTitle, remarks: noteRemarks, meetingDate: noteMeetingDate, followUpDate: noteFollowUpDate || null }, accessToken);
+      } else if (editingNoteId) {
+        await updateNote(editingNoteId, { title: noteTitle, remarks: noteRemarks, meetingDate: noteMeetingDate, followUpDate: noteFollowUpDate || null }, accessToken);
       }
+      setIsModalOpen(false);
+      loadData();
     } catch (err: any) {
       setModalError(err.message || "An error occurred while saving the mentoring note");
     } finally {
@@ -245,12 +173,8 @@ export default function StudentMentorshipProfilePage() {
     }
 
     try {
-      const res = await apiFetch(`/mentorship/notes/${id}`, {
-        method: "DELETE"
-      }, accessToken);
-      if (res.success) {
-        loadData();
-      }
+      await deleteNote(id, accessToken);
+      loadData();
     } catch (err: any) {
       alert(err.message || "Failed to delete note");
     }
