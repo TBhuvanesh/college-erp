@@ -76,6 +76,7 @@ function toSummary(r: FacultyDetailRow): FacultySummary {
     employeeNumber: r.employee_number,
     fullName: r.full_name,
     email: r.email,
+    departmentId: r.department_id,
     departmentName: r.department_name,
     designation: r.designation,
     status: r.status,

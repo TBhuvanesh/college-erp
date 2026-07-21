@@ -3,14 +3,19 @@ import { verifyAccessToken } from '../utils/jwt';
 import { AppError } from '../errors/AppError';
 
 export function authenticate(req: Request, _res: Response, next: NextFunction): void {
+  let token = '';
   const authHeader = req.headers.authorization;
 
-  if (!authHeader?.startsWith('Bearer ')) {
+  if (authHeader?.startsWith('Bearer ')) {
+    token = authHeader.slice(7);
+  } else if (req.query.token && typeof req.query.token === 'string') {
+    token = req.query.token;
+  }
+
+  if (!token) {
     next(AppError.unauthorized('No access token provided'));
     return;
   }
-
-  const token = authHeader.slice(7);
 
   try {
     const payload = verifyAccessToken(token);

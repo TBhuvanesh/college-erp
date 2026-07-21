@@ -42,6 +42,7 @@ export interface FacultySummary {
   employeeNumber: string;
   fullName: string;
   email: string;
+  departmentId: string;
   departmentName: string;
   designation: FacultyDesignation;
   status: FacultyStatus;

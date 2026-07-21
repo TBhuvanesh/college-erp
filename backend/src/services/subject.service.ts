@@ -20,19 +20,27 @@ interface SubjectDetailRow {
   department_id: string;
   department_name: string;
   department_code: string;
-  program_id: string;
-  program_name: string;
-  program_code: string;
+  program_id: string | null;
+  program_name: string | null;
+  program_code: string | null;
   semester: number;
   credits: number;
   type: SubjectDetail['type'];
   status: SubjectDetail['status'];
   created_at: Date;
   updated_at: Date;
+  regulation: string;
+  year: string | null;
+  semester_raw: string | null;
+  lecture_hours: number;
+  tutorial_hours: number;
+  practical_hours: number;
+  description: string | null;
+  program: string | null;
 }
 
 interface SubjectListRow extends SubjectDetailRow {
-  total_count: string; // pg returns bigint as string
+  total_count: string;
 }
 
 // ── Shared query fragments ─────────────────────────────────────────────────────
@@ -45,12 +53,13 @@ const DETAIL_COLS = `
   p.id   AS program_id,
   p.name AS program_name,
   p.code AS program_code,
-  s.semester, s.credits, s.type, s.status, s.created_at, s.updated_at
+  s.semester, s.credits, s.type, s.status, s.created_at, s.updated_at,
+  s.regulation, s.year, s.semester_raw, s.lecture_hours, s.tutorial_hours, s.practical_hours, s.description, s.program
 `;
 
 const JOINS = `
   JOIN departments d ON d.id = s.department_id
-  JOIN programs    p ON p.id = s.program_id
+  LEFT JOIN programs    p ON p.id = s.program_id
 `;
 
 // ── Mappers ───────────────────────────────────────────────────────────────────
@@ -65,15 +74,23 @@ function toDetail(r: SubjectDetailRow): SubjectDetail {
       name: r.department_name,
       code: r.department_code,
     },
-    program: {
+    program: r.program_id ? {
       id: r.program_id,
-      name: r.program_name,
-      code: r.program_code,
-    },
+      name: r.program_name || '',
+      code: r.program_code || '',
+    } : null,
+    programName: r.program || r.program_name || null,
+    regulation: r.regulation,
+    year: r.year as any,
     semester: r.semester,
+    semesterRaw: r.semester_raw as any,
+    lectureHours: r.lecture_hours,
+    tutorialHours: r.tutorial_hours,
+    practicalHours: r.practical_hours,
     credits: r.credits,
     type: r.type,
     status: r.status,
+    description: r.description,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -84,13 +101,37 @@ function toSummary(r: SubjectDetailRow): SubjectSummary {
     id: r.id,
     code: r.code,
     name: r.name,
+    departmentId: r.department_id,
     departmentName: r.department_name,
-    programName: r.program_name,
+    programId: r.program_id,
+    programName: r.program || r.program_name || null,
+    regulation: r.regulation,
+    year: r.year,
     semester: r.semester,
+    semesterRaw: r.semester_raw,
     credits: r.credits,
     type: r.type,
     status: r.status,
+    lectureHours: r.lecture_hours,
+    tutorialHours: r.tutorial_hours,
+    practicalHours: r.practical_hours,
   };
+}
+
+// ── Helper: Map Raw Year/Semester to absolute Semester (1-8) ────────────────────
+
+export function mapYearSemToSemester(year?: string | null, semRaw?: string | null): number {
+  if (!year || !semRaw) return 1;
+
+  const y = year.toUpperCase();
+  const s = semRaw.toUpperCase();
+
+  if (y === 'I') return s === 'II' ? 2 : 1;
+  if (y === 'II') return s === 'II' ? 4 : 3;
+  if (y === 'III') return s === 'II' ? 6 : 5;
+  if (y === 'IV') return s === 'II' ? 8 : 7;
+
+  return 1;
 }
 
 // ── Validation helper ─────────────────────────────────────────────────────────
@@ -145,6 +186,13 @@ export async function listSubjects(filters: ListSubjectsQuery): Promise<Paginate
   if (filters.semester) push('s.semester =', filters.semester);
   if (filters.type) push('s.type =', filters.type);
   if (filters.status) push('s.status =', filters.status);
+  if (filters.regulation) push('s.regulation =', filters.regulation);
+  if (filters.year) push('s.year =', filters.year);
+
+  if (filters.program) {
+    params.push(`%${filters.program}%`);
+    conditions.push(`(s.program ILIKE $${params.length} OR p.name ILIKE $${params.length})`);
+  }
 
   if (filters.search) {
     const term = `%${filters.search}%`;
@@ -161,7 +209,7 @@ export async function listSubjects(filters: ListSubjectsQuery): Promise<Paginate
     `SELECT ${DETAIL_COLS}, COUNT(*) OVER() AS total_count
      FROM subjects s ${JOINS}
      WHERE ${conditions.join(' AND ')}
-     ORDER BY s.semester ASC, s.code ASC
+     ORDER BY s.regulation DESC, s.semester ASC, s.code ASC
      LIMIT $${params.length - 1} OFFSET $${params.length}`,
     params
   );
@@ -192,17 +240,46 @@ export async function createSubject(
   );
   if (!dept[0]) throw AppError.notFound('Department not found');
 
-  // Validate program belongs to department and semester is in range
-  await validateProgramPlacement(data.departmentId, data.programId, data.semester);
+  // Validate program belongs to department and semester is in range (only if programId is set)
+  let calculatedSemester = data.semester || 1;
+  if (data.year && data.semesterRaw) {
+    calculatedSemester = mapYearSemToSemester(data.year, data.semesterRaw);
+  }
+
+  if (data.programId) {
+    await validateProgramPlacement(data.departmentId, data.programId, calculatedSemester);
+  }
+
+  // Validate subject code is unique
+  const { rows: codeDup } = await query('SELECT id FROM subjects WHERE code = $1 AND deleted_at IS NULL LIMIT 1', [data.code]);
+  if (codeDup[0]) {
+    throw AppError.badRequest('Subject code must be unique', 'DUPLICATE_SUBJECT_CODE');
+  }
 
   const { rows } = await query<{ id: string }>(
-    `INSERT INTO subjects (code, name, department_id, program_id, semester, credits, type)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO subjects (
+      code, name, department_id, program_id, semester, credits, type, status,
+      regulation, year, semester_raw, lecture_hours, tutorial_hours, practical_hours, description, program
+    )
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
      RETURNING id`,
     [
-      data.code, data.name,
-      data.departmentId, data.programId,
-      data.semester, data.credits, data.type,
+      data.code,
+      data.name,
+      data.departmentId,
+      data.programId || null,
+      calculatedSemester,
+      data.credits,
+      data.type,
+      data.status || 'active',
+      data.regulation || 'R22',
+      data.year || null,
+      data.semesterRaw || null,
+      data.lectureHours || 0,
+      data.tutorialHours || 0,
+      data.practicalHours || 0,
+      data.description || null,
+      data.program || null,
     ]
   );
   const subjectId = rows[0].id;
@@ -223,15 +300,23 @@ export async function updateSubject(
   data: UpdateSubjectInput,
   actorId: string
 ): Promise<SubjectDetail> {
-  // Fetch current state for cross-field validation
   const current = await getSubjectById(id);
 
   const newDeptId = data.departmentId ?? current.department.id;
-  const newProgId = data.programId ?? current.program.id;
-  const newSemester = data.semester ?? current.semester;
+  const newProgId = data.programId !== undefined ? data.programId : (current.program ? current.program.id : null);
+  
+  let newSemester = current.semester;
+  let newYear = data.year !== undefined ? data.year : current.year;
+  let newSemRaw = data.semesterRaw !== undefined ? data.semesterRaw : current.semesterRaw;
 
-  // Validate consistency when department, program, or semester changes
-  if (data.departmentId !== undefined || data.programId !== undefined || data.semester !== undefined) {
+  if (data.year !== undefined || data.semesterRaw !== undefined) {
+    newSemester = mapYearSemToSemester(newYear, newSemRaw);
+  } else if (data.semester !== undefined && data.semester !== null) {
+    newSemester = data.semester;
+  }
+
+  // Validate consistency when department, program, or semester changes (only if program exists)
+  if (newProgId && (data.departmentId !== undefined || data.programId !== undefined || data.semester !== undefined || data.year !== undefined || data.semesterRaw !== undefined)) {
     await validateProgramPlacement(newDeptId, newProgId, newSemester);
   }
 
@@ -245,15 +330,24 @@ export async function updateSubject(
 
   if (data.name !== undefined) set('name', data.name);
   if (data.departmentId !== undefined) set('department_id', data.departmentId);
-  if (data.programId !== undefined) set('program_id', data.programId);
-  if (data.semester !== undefined) set('semester', data.semester);
+  set('program_id', newProgId);
+  if (data.program !== undefined) set('program', data.program);
+  set('semester', newSemester);
   if (data.credits !== undefined) set('credits', data.credits);
   if (data.type !== undefined) set('type', data.type);
+  if (data.regulation !== undefined) set('regulation', data.regulation);
+  set('year', newYear);
+  set('semester_raw', newSemRaw);
+  if (data.lectureHours !== undefined) set('lecture_hours', data.lectureHours);
+  if (data.tutorialHours !== undefined) set('tutorial_hours', data.tutorialHours);
+  if (data.practicalHours !== undefined) set('practical_hours', data.practicalHours);
+  if (data.description !== undefined) set('description', data.description);
+  if (data.status !== undefined) set('status', data.status);
 
   params.push(id);
   const { rowCount } = await query(
     `UPDATE subjects
-     SET ${setClauses.join(', ')}
+     SET ${setClauses.join(', ')}, updated_at = NOW()
      WHERE id = $${params.length} AND deleted_at IS NULL`,
     params
   );
@@ -276,7 +370,7 @@ export async function updateSubjectStatus(
   actorId: string
 ): Promise<SubjectDetail> {
   const { rowCount } = await query(
-    `UPDATE subjects SET status = $1
+    `UPDATE subjects SET status = $1, updated_at = NOW()
      WHERE id = $2 AND deleted_at IS NULL`,
     [data.status, id]
   );
@@ -294,6 +388,57 @@ export async function updateSubjectStatus(
 }
 
 export async function deleteSubject(id: string, actorId: string): Promise<void> {
+  // ── Verification: Check if subject is actively used in other modules ──
+  
+  // 1. Subject Allocation (faculty_subject_assignments)
+  const { rows: fsa } = await query(
+    'SELECT 1 FROM faculty_subject_assignments WHERE subject_id = $1 AND deleted_at IS NULL LIMIT 1',
+    [id]
+  );
+  
+  // 2. Attendance
+  const { rows: att } = await query(
+    'SELECT 1 FROM attendance WHERE subject_id = $1 LIMIT 1',
+    [id]
+  );
+
+  // 3. LMS Course Materials
+  const { rows: lmsMat } = await query(
+    'SELECT 1 FROM course_materials WHERE subject_id = $1 AND deleted_at IS NULL LIMIT 1',
+    [id]
+  );
+
+  // 4. LMS Assignments
+  const { rows: lmsAss } = await query(
+    'SELECT 1 FROM assignments WHERE subject_id = $1 AND deleted_at IS NULL LIMIT 1',
+    [id]
+  );
+
+  // 5. Internal Marks
+  const { rows: marks } = await query(
+    'SELECT 1 FROM internal_marks WHERE subject_id = $1 LIMIT 1',
+    [id]
+  );
+
+  // 6. Results
+  const { rows: results } = await query(
+    'SELECT 1 FROM results WHERE subject_id = $1 LIMIT 1',
+    [id]
+  );
+
+  // 7. Teaching Plans
+  const { rows: tp } = await query(
+    'SELECT 1 FROM teaching_plans WHERE subject_id = $1 AND deleted_at IS NULL LIMIT 1',
+    [id]
+  );
+
+  if (fsa[0] || att[0] || lmsMat[0] || lmsAss[0] || marks[0] || results[0] || tp[0]) {
+    throw AppError.badRequest(
+      'This subject is currently in use and cannot be deleted. Please mark it as Inactive instead.',
+      'SUBJECT_IN_USE'
+    );
+  }
+
   const { rowCount } = await query(
     `UPDATE subjects
      SET deleted_at = NOW(), status = 'archived'
@@ -308,4 +453,29 @@ export async function deleteSubject(id: string, actorId: string): Promise<void> 
     resource: 'subjects',
     resourceId: id,
   });
+}
+
+export async function deleteAllSubjects(
+  actorId: string
+): Promise<{ deletedCount: number; skippedCount: number }> {
+  const { rowCount } = await query(
+    `UPDATE subjects
+     SET deleted_at = NOW(), status = 'archived'
+     WHERE deleted_at IS NULL`
+  );
+
+  const count = rowCount || 0;
+
+  await auditLog({
+    actorId,
+    action: 'DELETE_SUBJECT',
+    resource: 'subjects',
+    resourceId: 'all',
+    changes: { count }
+  });
+
+  return {
+    deletedCount: count,
+    skippedCount: 0,
+  };
 }

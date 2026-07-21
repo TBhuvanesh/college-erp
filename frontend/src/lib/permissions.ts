@@ -105,7 +105,9 @@ export function hasAccessToPath(role: RbacRole, path: string): boolean {
       p === "/faculty/mentorship" ||
       p === "/faculty/analytics" ||
       p === "/faculty/reports" ||
-      p === "/faculty/invigilation"
+      p === "/faculty/invigilation" ||
+      p === "/faculty/lms" ||
+      p.startsWith("/faculty/lms/")
     ) {
       return true;
     }
@@ -120,7 +122,9 @@ export function hasAccessToPath(role: RbacRole, path: string): boolean {
       p === "/faculty/teaching-planner" ||
       p === "/faculty/examinations" ||
       p === "/faculty/analytics" ||
-      p === "/faculty/reports"
+      p === "/faculty/reports" ||
+      p === "/faculty/lms" ||
+      p.startsWith("/faculty/lms/")
     );
   }
 
@@ -130,7 +134,9 @@ export function hasAccessToPath(role: RbacRole, path: string): boolean {
       p === "/faculty/dashboard" ||
       p === "/faculty/opportunities" ||
       p === "/faculty/analytics" ||
-      p === "/faculty/reports"
+      p === "/faculty/reports" ||
+      p === "/faculty/lms" ||
+      p.startsWith("/faculty/lms/")
     );
   }
 
@@ -140,7 +146,9 @@ export function hasAccessToPath(role: RbacRole, path: string): boolean {
       p === "/faculty/dashboard" ||
       p === "/faculty/mentorship" ||
       p === "/faculty/analytics" ||
-      p === "/faculty/reports"
+      p === "/faculty/reports" ||
+      p === "/faculty/lms" ||
+      p.startsWith("/faculty/lms/")
     );
   }
 
@@ -158,7 +166,9 @@ export function hasAccessToPath(role: RbacRole, path: string): boolean {
       p === "/faculty/mentorship" ||
       p === "/faculty/analytics" ||
       p === "/faculty/reports" ||
-      p === "/faculty/invigilation"
+      p === "/faculty/invigilation" ||
+      p === "/faculty/lms" ||
+      p.startsWith("/faculty/lms/")
     );
   }
 

@@ -24,6 +24,7 @@ import {
   ClipboardList,
   Settings,
   GitBranch,
+  UserCheck,
 } from "lucide-react";
 
 
@@ -92,7 +93,9 @@ export const Sidebar: React.FC = () => {
     {
       section: "Academics",
       items: [
+        { name: "Subjects", href: "/admin/subjects", icon: BookOpen },
         { name: "Curriculum Scheme", href: "/admin/courses", icon: BookOpen },
+        { name: "Subject Allocation", href: "/admin/subject-allocations", icon: UserCheck },
         { name: "Attendance Registry", href: "/admin/attendance", icon: Calendar },
         { name: "Examinations", href: "/admin/examinations", icon: FileText },
         { name: "Results Desk", href: "/admin/results", icon: GraduationCap },
@@ -191,7 +194,9 @@ export const Sidebar: React.FC = () => {
     {
       section: "Academics (Admin)",
       items: [
+        { name: "Subjects", href: "/hod/subjects", icon: BookOpen },
         { name: "Class Schedules", href: "/hod/classes", icon: BookOpen },
+        { name: "Subject Allocation", href: "/hod/subject-allocations", icon: UserCheck },
         { name: "Attendance Registry", href: "/hod/attendance", icon: Calendar },
         { name: "Feedback Analysis", href: "/hod/feedback", icon: ClipboardList },
         { name: "Exam Seating", href: "/hod/seating", icon: ClipboardList },
