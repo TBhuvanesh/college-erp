@@ -10,10 +10,13 @@ import {
   updateSubjectSchema,
   updateSubjectStatusSchema,
   listSubjectsQuerySchema,
+  createCurriculumMappingSchema,
+  updateCurriculumMappingSchema,
 } from '../types/subject';
 
 const router = Router();
 const uuidParam = { params: z.object({ id: z.string().uuid('Invalid subject ID') }) };
+const mappingUuidParam = { params: z.object({ mappingId: z.string().uuid('Invalid mapping ID') }) };
 
 // Setup memory storage multer for Excel/CSV imports
 const upload = multer({
@@ -92,6 +95,28 @@ router.post(
   '/import',
   requireRole('admin'),
   subjectController.importCommit
+);
+
+// ── Curriculum Mapping Operations (Admin only) ─────────────────────────────────
+router.post(
+  '/:id/mappings',
+  requireRole('admin'),
+  validate({ ...uuidParam, body: createCurriculumMappingSchema }),
+  subjectController.createCurriculumMapping
+);
+
+router.patch(
+  '/mappings/:mappingId',
+  requireRole('admin'),
+  validate({ ...mappingUuidParam, body: updateCurriculumMappingSchema }),
+  subjectController.updateCurriculumMapping
+);
+
+router.delete(
+  '/mappings/:mappingId',
+  requireRole('admin'),
+  validate(mappingUuidParam),
+  subjectController.deleteCurriculumMapping
 );
 
 export default router;

@@ -814,12 +814,14 @@ export async function getStudentDashboardStats(userId: string) {
              asub.status AS submission_status
       FROM assignments a
       JOIN subjects sub ON sub.id = a.subject_id
+      JOIN subject_curriculum_mappings scm ON scm.subject_id = sub.id
       LEFT JOIN assignment_submissions asub
         ON asub.assignment_id = a.id AND asub.student_id = $1 AND asub.deleted_at IS NULL
       WHERE a.deleted_at IS NULL
         AND a.due_date >= NOW()
-        AND sub.program_id = $2
-        AND sub.semester   = $3
+        AND scm.program_id = $2
+        AND scm.semester   = $3
+        AND scm.deleted_at IS NULL
       ORDER BY a.due_date ASC
       LIMIT 5
     `, [studentId, programId, semester]),
@@ -839,9 +841,11 @@ export async function getStudentDashboardStats(userId: string) {
              cm.created_at
       FROM course_materials cm
       JOIN subjects sub ON sub.id = cm.subject_id
+      JOIN subject_curriculum_mappings scm ON scm.subject_id = sub.id
       WHERE cm.deleted_at IS NULL
-        AND sub.program_id = $1
-        AND sub.semester   = $2
+        AND scm.program_id = $1
+        AND scm.semester   = $2
+        AND scm.deleted_at IS NULL
       ORDER BY cm.created_at DESC
       LIMIT 5
     `, [programId, semester]),
@@ -1157,7 +1161,8 @@ export async function getHODDashboardStats(userId: string) {
       `SELECT COUNT(*)::text AS count 
        FROM results r 
        JOIN subjects s ON s.id = r.subject_id 
-       WHERE s.department_id = $1 AND r.publication_status = 'Draft' AND r.deleted_at IS NULL`,
+       JOIN subject_curriculum_mappings scm ON scm.subject_id = s.id
+       WHERE scm.department_id = $1 AND r.publication_status = 'Draft' AND r.deleted_at IS NULL AND scm.deleted_at IS NULL`,
       [departmentId]
     ),
   ]);

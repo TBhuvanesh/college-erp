@@ -63,8 +63,9 @@ const DETAIL_COLS = `
 
 const DETAIL_JOINS = `
   JOIN subjects     sub ON sub.id = e.subject_id
-  JOIN departments  d   ON d.id   = sub.department_id
   JOIN faculty      f   ON f.id   = e.faculty_id
+  LEFT JOIN subject_curriculum_mappings scm ON scm.subject_id = sub.id AND scm.semester = e.semester AND scm.department_id = f.department_id AND scm.deleted_at IS NULL
+  LEFT JOIN departments  d   ON d.id   = scm.department_id
 `;
 
 // ── Mappers ───────────────────────────────────────────────────────────────────

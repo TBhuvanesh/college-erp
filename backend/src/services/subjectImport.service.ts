@@ -149,8 +149,8 @@ export async function parseSubjectSpreadsheet(
   const failedRows: ImportRowError[] = [];
   let duplicatesCount = 0;
 
-  // Track unique codes inside this file to catch internal duplicate rows
-  const seenCodesInFile = new Set<string>();
+  // Track unique mappings inside this file to catch internal duplicate rows
+  const seenMappingsInFile = new Set<string>();
 
   // Fetch all departments in DB to quickly look them up
   const { rows: allDepts } = await query<{ id: string; name: string; code: string }>(
@@ -254,26 +254,36 @@ export async function parseSubjectSpreadsheet(
       continue;
     }
 
-    // ── Duplicate Subject Code Handling ──
-    if (seenCodesInFile.has(code)) {
-      duplicatesCount++;
-      continue; // Skip silently inside the file
-    }
+    const calculatedSemester = mapYearSemToSemester(yearStr, semStr);
 
-    const { rows: dbDup } = await query(
-      'SELECT id FROM subjects WHERE code = $1 AND deleted_at IS NULL LIMIT 1',
+    // ── Duplicate Mapping Check in File ──
+    const mappingKey = `${code}-${matchedDept.id}-${progStr.toLowerCase()}-${regStr.toLowerCase()}-${yearStr}-${calculatedSemester}`;
+    if (seenMappingsInFile.has(mappingKey)) {
+      duplicatesCount++;
+      continue; // Skip duplicate mapping row inside the file
+    }
+    seenMappingsInFile.add(mappingKey);
+
+    // ── Duplicate Mapping Check against DB ──
+    const { rows: dbSubject } = await query<{ id: string }>(
+      'SELECT id FROM subjects WHERE code = $1 LIMIT 1',
       [code]
     );
-    if (dbDup[0]) {
-      seenCodesInFile.add(code);
-      duplicatesCount++;
-      continue; // Skip duplicate code as requested
+
+    if (dbSubject[0]) {
+      const { rows: dbMapping } = await query<{ id: string }>(
+        `SELECT id FROM subject_curriculum_mappings 
+         WHERE subject_id = $1 AND department_id = $2 AND COALESCE(program, '') = COALESCE($3, '') 
+           AND regulation = $4 AND year = $5 AND semester = $6 AND deleted_at IS NULL LIMIT 1`,
+        [dbSubject[0].id, matchedDept.id, progStr || null, regStr, yearStr, calculatedSemester]
+      );
+      if (dbMapping[0]) {
+        duplicatesCount++;
+        continue; // Skip duplicate mapping row already in DB
+      }
     }
 
     // Record verified valid row details
-    seenCodesInFile.add(code);
-    const calculatedSemester = mapYearSemToSemester(yearStr, semStr);
-
     validRows.push({
       code,
       name,
@@ -306,49 +316,142 @@ export async function parseSubjectSpreadsheet(
   };
 }
 
+export interface ImportCommitResult {
+  rowsProcessed: number;
+  newSubjectsCreated: number;
+  existingSubjectsReused: number;
+  newCurriculumMappings: number;
+  existingMappingsSkipped: number;
+  failedRows: number;
+}
+
 export async function commitImportedSubjects(
   validRows: any[],
   actorId: string
-): Promise<number> {
-  let count = 0;
+): Promise<ImportCommitResult> {
+  let newSubjectsCreated = 0;
+  let existingSubjectsReused = 0;
+  let newCurriculumMappings = 0;
+  let existingMappingsSkipped = 0;
+
   for (const row of validRows) {
-    await query(
-      `INSERT INTO subjects (
-        code, name, department_id, program_id, semester, credits, type, status,
-        regulation, year, semester_raw, lecture_hours, tutorial_hours, practical_hours, program
-      ) VALUES ($1, $2, $3, NULL, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      ON CONFLICT (code) DO NOTHING`,
-      [
-        row.code,
-        row.name,
-        row.departmentId,
-        row.semester,
-        row.credits,
-        row.type,
-        row.status,
-        row.regulation,
-        row.year,
-        row.semesterRaw,
-        row.lectureHours,
-        row.tutorialHours,
-        row.practicalHours,
-        row.program
-      ]
+    // 1. Search Subject Master by Code
+    const { rows: dbSubject } = await query<{ id: string; deleted_at: Date | null }>(
+      'SELECT id, deleted_at FROM subjects WHERE code = $1 LIMIT 1',
+      [row.code]
     );
 
-    // Get inserted ID for auditing
-    const { rows } = await query<{ id: string }>('SELECT id FROM subjects WHERE code = $1 LIMIT 1', [row.code]);
-    if (rows[0]) {
+    let subjectId: string;
+
+    if (dbSubject[0]) {
+      subjectId = dbSubject[0].id;
+      if (dbSubject[0].deleted_at) {
+        // Restore the soft-deleted subject master and update its attributes
+        await query(
+          `UPDATE subjects 
+           SET deleted_at = NULL, name = $1, credits = $2, type = $3, status = $4,
+               lecture_hours = $5, tutorial_hours = $6, practical_hours = $7, updated_at = NOW()
+           WHERE id = $8`,
+          [
+            row.name,
+            row.credits,
+            row.type,
+            row.status,
+            row.lectureHours,
+            row.tutorialHours,
+            row.practicalHours,
+            subjectId
+          ]
+        );
+        newSubjectsCreated++;
+      } else {
+        existingSubjectsReused++;
+      }
+    } else {
+      // Create new Subject Master record
+      const { rows: insertSubRow } = await query<{ id: string }>(
+        `INSERT INTO subjects (
+          code, name, credits, type, status,
+          lecture_hours, tutorial_hours, practical_hours, description
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL) RETURNING id`,
+        [
+          row.code,
+          row.name,
+          row.credits,
+          row.type,
+          row.status,
+          row.lectureHours,
+          row.tutorialHours,
+          row.practicalHours
+        ]
+      );
+      subjectId = insertSubRow[0].id;
+      newSubjectsCreated++;
+
       await auditLog({
         actorId,
-        action: 'IMPORT_SUBJECT',
+        action: 'CREATE_SUBJECT',
         resource: 'subjects',
-        resourceId: rows[0].id,
-        changes: { code: row.code, name: row.name, regulation: row.regulation }
+        resourceId: subjectId,
+        changes: { code: row.code, name: row.name }
       });
-      count++;
+    }
+
+    // 2. Check if the Curriculum Mapping already exists in DB
+    const { rows: dbMapping } = await query<{ id: string; deleted_at: Date | null }>(
+      `SELECT id, deleted_at FROM subject_curriculum_mappings 
+       WHERE subject_id = $1 AND department_id = $2 AND COALESCE(program, '') = COALESCE($3, '') 
+         AND regulation = $4 AND year = $5 AND semester = $6 LIMIT 1`,
+      [subjectId, row.departmentId, row.program || null, row.regulation, row.year, row.semester]
+    );
+
+    if (dbMapping[0]) {
+      if (dbMapping[0].deleted_at) {
+        // Restore soft-deleted mapping
+        await query(
+          `UPDATE subject_curriculum_mappings 
+           SET deleted_at = NULL, updated_at = NOW()
+           WHERE id = $1`,
+          [dbMapping[0].id]
+        );
+        newCurriculumMappings++;
+      } else {
+        existingMappingsSkipped++;
+      }
+    } else {
+      // Create new curriculum mapping
+      const { rows: insertMappingRow } = await query<{ id: string }>(
+        `INSERT INTO subject_curriculum_mappings (
+          subject_id, department_id, program_id, program, regulation, year, semester, semester_raw
+        ) VALUES ($1, $2, NULL, $3, $4, $5, $6, $7) RETURNING id`,
+        [
+          subjectId,
+          row.departmentId,
+          row.program || null,
+          row.regulation,
+          row.year,
+          row.semester,
+          row.semesterRaw
+        ]
+      );
+      newCurriculumMappings++;
+
+      await auditLog({
+        actorId,
+        action: 'CREATE_CURRICULUM_MAPPING',
+        resource: 'subject_curriculum_mappings',
+        resourceId: insertMappingRow[0].id,
+        changes: { subjectId, ...row }
+      });
     }
   }
 
-  return count;
+  return {
+    rowsProcessed: validRows.length,
+    newSubjectsCreated,
+    existingSubjectsReused,
+    newCurriculumMappings,
+    existingMappingsSkipped,
+    failedRows: 0
+  };
 }

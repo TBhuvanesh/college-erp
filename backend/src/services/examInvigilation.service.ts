@@ -55,8 +55,11 @@ export async function generateInvigilationDuties(
     exam_type: string;
   }>(
     `SELECT e.id, TO_CHAR(e.exam_date, 'YYYY-MM-DD') AS exam_date, e.start_time::text, e.end_time::text,
-       e.faculty_id, sub.department_id, sub.code AS subject_code, e.exam_type::text AS exam_type
-     FROM exams e JOIN subjects sub ON sub.id = e.subject_id
+       e.faculty_id, COALESCE(scm.department_id, f.department_id) AS department_id, sub.code AS subject_code, e.exam_type::text AS exam_type
+     FROM exams e 
+     JOIN subjects sub ON sub.id = e.subject_id
+     JOIN faculty f ON f.id = e.faculty_id
+     LEFT JOIN subject_curriculum_mappings scm ON scm.subject_id = sub.id AND scm.semester = e.semester AND scm.department_id = f.department_id AND scm.deleted_at IS NULL
      WHERE e.id = ANY($1::uuid[]) AND e.deleted_at IS NULL`,
     [data.examIds]
   );

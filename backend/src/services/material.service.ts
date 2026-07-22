@@ -132,8 +132,9 @@ async function assertMaterialAccess(row: MaterialRow, userId: string, role: Role
   );
   if (!ctx[0]) throw AppError.notFound('Student profile not found');
   const { rows: sub } = await query<{ id: string }>(
-    `SELECT id FROM subjects
-     WHERE id = $1 AND program_id = $2 AND semester = $3 AND deleted_at IS NULL`,
+    `SELECT s.id FROM subjects s
+     JOIN subject_curriculum_mappings scm ON scm.subject_id = s.id
+     WHERE s.id = $1 AND scm.program_id = $2 AND scm.semester = $3 AND s.deleted_at IS NULL`,
     [row.subject_id, ctx[0].program_id, ctx[0].semester]
   );
   if (!sub[0]) throw AppError.forbidden('This material is not in your enrolled subjects');
@@ -169,14 +170,14 @@ export async function createMaterial(
 
   // Academic Workflow Engine — material upload has no built-in notification of
   // its own, so the default seeded rule notifies students here.
-  const { rows: subjectCtx } = await query<{ department_id: string; semester: number }>(
-    'SELECT department_id, semester FROM subjects WHERE id = $1',
+  const { rows: mappings } = await query<{ department_id: string; semester: number }>(
+    'SELECT department_id, semester FROM subject_curriculum_mappings WHERE subject_id = $1 AND deleted_at IS NULL',
     [data.subjectId]
   );
-  if (subjectCtx[0]) {
+  for (const m of mappings) {
     await emitWorkflowEvent('material.created', userId, {
-      departmentId: subjectCtx[0].department_id,
-      semester: subjectCtx[0].semester,
+      departmentId: m.department_id,
+      semester: m.semester,
       title: 'New Study Material Uploaded',
       message: `New material "${material.title}" (${material.subjectCode}) is now available.`,
       notificationType: 'Announcement',
@@ -220,11 +221,11 @@ export async function listMaterials(
     if (!ctx[0]) return { materials: [], total: 0, page, limit, totalPages: 0 };
     params.push(ctx[0].program_id, ctx[0].semester);
     conditions.push(`EXISTS (
-      SELECT 1 FROM subjects s
-      WHERE s.id         = cm.subject_id
-        AND s.program_id = $${params.length - 1}
-        AND s.semester   = $${params.length}
-        AND s.deleted_at IS NULL
+      SELECT 1 FROM subject_curriculum_mappings scm
+      WHERE scm.subject_id = cm.subject_id
+        AND scm.program_id = $${params.length - 1}
+        AND scm.semester   = $${params.length}
+        AND scm.deleted_at IS NULL
     )`);
   }
 

@@ -94,7 +94,8 @@ export async function getAttendanceReport(userId: string, role: Role, filters: R
        COUNT(*) OVER()::text AS total_count
      FROM students st
      JOIN departments d   ON d.id = st.department_id
-     JOIN subjects    sub ON sub.program_id = st.program_id AND sub.semester = st.semester AND sub.deleted_at IS NULL
+     JOIN subject_curriculum_mappings scm ON scm.program_id = st.program_id AND scm.semester = st.semester AND scm.deleted_at IS NULL
+     JOIN subjects    sub ON sub.id = scm.subject_id AND sub.deleted_at IS NULL
      LEFT JOIN attendance a ON a.subject_id = sub.id AND a.student_id = st.id
      WHERE ${baseWhere}
      GROUP BY st.id, st.roll_number, st.full_name, d.name, sub.id, sub.code, sub.name
@@ -109,6 +110,7 @@ export async function getAttendanceReport(userId: string, role: Role, filters: R
      FROM attendance a
      JOIN students st  ON st.id  = a.student_id
      JOIN subjects sub ON sub.id = a.subject_id
+     JOIN subject_curriculum_mappings scm ON scm.subject_id = sub.id AND scm.deleted_at IS NULL
      WHERE ${baseWhere}
      GROUP BY month ORDER BY month`,
     baseParams
@@ -181,7 +183,7 @@ export async function getResultsReport(userId: string, role: Role, filters: Repo
   };
 
   const departmentId = scope.departmentId ?? filters.departmentId;
-  if (departmentId) push('sub.department_id =', departmentId);
+  if (departmentId) push('st.department_id =', departmentId);
   if (scope.facultyId) push('r.faculty_id =', scope.facultyId);
   else if (filters.facultyId) push('r.faculty_id =', filters.facultyId);
   if (filters.subjectId) push('r.subject_id =', filters.subjectId);
@@ -222,7 +224,7 @@ export async function getResultsReport(userId: string, role: Role, filters: Repo
      FROM results r
      JOIN students    st  ON st.id  = r.student_id
      JOIN subjects    sub ON sub.id = r.subject_id
-     JOIN departments d   ON d.id   = sub.department_id
+     JOIN departments d   ON d.id   = st.department_id
      WHERE ${baseWhere}
      ORDER BY d.name, st.roll_number, sub.code
      LIMIT $${limitN} OFFSET $${offsetN}`,
@@ -465,7 +467,7 @@ export async function getFeesReport(userId: string, role: Role, filters: ReportF
 
 export async function getLmsReport(userId: string, role: Role, filters: ReportFilters): Promise<ReportResult> {
   const scope = await resolveScopeContext(userId, role);
-  const conditions: string[] = ['sub.deleted_at IS NULL'];
+  const conditions: string[] = ['sub.deleted_at IS NULL', 'scm.deleted_at IS NULL'];
   const params: unknown[] = [];
   const push = (cond: string, val: unknown) => {
     params.push(val);
@@ -473,13 +475,14 @@ export async function getLmsReport(userId: string, role: Role, filters: ReportFi
   };
 
   const departmentId = scope.departmentId ?? filters.departmentId;
-  if (departmentId) push('sub.department_id =', departmentId);
+  if (departmentId) push('scm.department_id =', departmentId);
   const assignedFacultyId = scope.facultyId ?? filters.facultyId;
   if (assignedFacultyId) {
     params.push(assignedFacultyId);
     conditions.push(`sub.id IN (
-      SELECT subject_id FROM faculty_subject_assignments
-      WHERE faculty_id = $${params.length} AND is_active = TRUE AND deleted_at IS NULL
+      SELECT scm.subject_id FROM faculty_subject_assignments fsa
+      JOIN subject_curriculum_mappings scm ON scm.id = fsa.subject_curriculum_mapping_id
+      WHERE fsa.faculty_id = $${params.length} AND fsa.is_active = TRUE AND fsa.deleted_at IS NULL
     )`);
   }
   if (filters.subjectId) push('sub.id =', filters.subjectId);
@@ -511,6 +514,7 @@ export async function getLmsReport(userId: string, role: Role, filters: ReportFi
         WHERE a.subject_id = sub.id AND asub.deleted_at IS NULL AND asub.status = 'Late Submission')::text AS late_submissions,
        COUNT(*) OVER()::text AS total_count
      FROM subjects sub
+     JOIN subject_curriculum_mappings scm ON scm.subject_id = sub.id AND scm.deleted_at IS NULL
      WHERE ${baseWhere}
      ORDER BY sub.code
      LIMIT $${limitN} OFFSET $${offsetN}`,
@@ -522,6 +526,7 @@ export async function getLmsReport(userId: string, role: Role, filters: ReportFi
      FROM assignment_submissions asub
      JOIN assignments a  ON a.id  = asub.assignment_id
      JOIN subjects    sub ON sub.id = a.subject_id
+     JOIN subject_curriculum_mappings scm ON scm.subject_id = sub.id AND scm.deleted_at IS NULL
      WHERE asub.deleted_at IS NULL AND ${baseWhere}
      GROUP BY month ORDER BY month`,
     baseParams
@@ -725,9 +730,9 @@ export async function getStudentReport(userId: string, role: Role, filters: Repo
       params.push(scope.facultyId);
       conditions.push(`EXISTS (
         SELECT 1 FROM faculty_subject_assignments fsa
-        JOIN subjects fsub ON fsub.id = fsa.subject_id
+        JOIN subject_curriculum_mappings scm ON scm.id = fsa.subject_curriculum_mapping_id
         WHERE fsa.faculty_id = $${params.length} AND fsa.section = st.section
-          AND fsub.program_id = st.program_id AND fsub.semester = st.semester
+          AND scm.program_id = st.program_id AND scm.semester = st.semester
           AND fsa.is_active = TRUE AND fsa.deleted_at IS NULL
       )`);
     }

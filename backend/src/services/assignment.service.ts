@@ -26,15 +26,16 @@ interface AssignmentRow {
 const DETAIL_COLS = `
   fsa.id,
   fsa.faculty_id,  f.full_name  AS faculty_name,  f.employee_number,
-  fsa.subject_id,  s.code       AS subject_code,   s.name AS subject_name,
-  d.name           AS department_name,              s.semester,
+  scm.subject_id,  s.code       AS subject_code,   s.name AS subject_name,
+  d.name           AS department_name,              scm.semester,
   fsa.academic_year, fsa.section, fsa.is_active, fsa.created_at
 `;
 
 const JOINS = `
   JOIN faculty     f ON f.id = fsa.faculty_id
-  JOIN subjects    s ON s.id = fsa.subject_id
-  JOIN departments d ON d.id = s.department_id
+  JOIN subject_curriculum_mappings scm ON scm.id = fsa.subject_curriculum_mapping_id
+  JOIN subjects    s ON s.id = scm.subject_id
+  JOIN departments d ON d.id = scm.department_id
 `;
 
 // ── Mapper ────────────────────────────────────────────────────────────────────
@@ -87,7 +88,7 @@ export async function listAssignments(filters: ListAssignmentsQuery): Promise<As
   const { rows } = await query<AssignmentRow>(
     `SELECT ${DETAIL_COLS} FROM faculty_subject_assignments fsa ${JOINS}
      WHERE ${conditions.join(' AND ')}
-     ORDER BY fsa.academic_year DESC, f.full_name ASC, s.semester ASC`,
+     ORDER BY fsa.academic_year DESC, f.full_name ASC, scm.semester ASC`,
     params
   );
   return rows.map(toDetail);
@@ -116,7 +117,7 @@ export async function getAssignmentsByFacultyId(
   const { rows } = await query<AssignmentRow>(
     `SELECT ${DETAIL_COLS} FROM faculty_subject_assignments fsa ${JOINS}
      WHERE ${conditions.join(' AND ')}
-     ORDER BY s.semester ASC, s.code ASC`,
+     ORDER BY scm.semester ASC, s.code ASC`,
     params
   );
   return rows.map(toDetail);
@@ -148,8 +149,8 @@ export async function createAssignment(
   actorId: string
 ): Promise<AssignmentDetail> {
   // Validate faculty exists
-  const { rows: f } = await query<{ id: string }>(
-    'SELECT id FROM faculty WHERE id = $1 AND deleted_at IS NULL',
+  const { rows: f } = await query<{ id: string; department_id: string }>(
+    'SELECT id, department_id FROM faculty WHERE id = $1 AND deleted_at IS NULL',
     [data.facultyId]
   );
   if (!f[0]) throw AppError.notFound('Faculty member not found');
@@ -164,11 +165,22 @@ export async function createAssignment(
     throw AppError.badRequest('Cannot assign an archived subject', 'SUBJECT_ARCHIVED');
   }
 
+  // Find curriculum mapping
+  const { rows: scm } = await query<{ id: string }>(
+    `SELECT id FROM subject_curriculum_mappings
+     WHERE subject_id = $1 AND department_id = $2 AND deleted_at IS NULL LIMIT 1`,
+    [data.subjectId, f[0].department_id]
+  );
+  if (!scm[0]) {
+    throw AppError.badRequest('Subject is not mapped to the faculty member\'s department curriculum', 'CURRICULUM_MISMATCH');
+  }
+  const scmId = scm[0].id;
+
   const { rows } = await query<{ id: string }>(
-    `INSERT INTO faculty_subject_assignments (faculty_id, subject_id, academic_year, section)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO faculty_subject_assignments (faculty_id, subject_id, subject_curriculum_mapping_id, academic_year, section)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING id`,
-    [data.facultyId, data.subjectId, data.academicYear, data.section]
+    [data.facultyId, data.subjectId, scmId, data.academicYear, data.section]
   );
   const assignmentId = rows[0].id;
 

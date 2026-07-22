@@ -51,7 +51,7 @@ function applyStudentScope(ctx: StudentCtx, conditions: string[], params: unknow
   params.push(ctx.semester);
   conditions.push(`tp.semester = $${params.length}`);
   params.push(ctx.programId);
-  conditions.push(`EXISTS (SELECT 1 FROM subjects sub WHERE sub.id = tp.subject_id AND sub.program_id = $${params.length})`);
+  conditions.push(`EXISTS (SELECT 1 FROM subject_curriculum_mappings scm WHERE scm.subject_id = tp.subject_id AND scm.program_id = $${params.length})`);
   if (ctx.section) {
     params.push(ctx.section);
     conditions.push(`tp.section = $${params.length}`);
@@ -167,7 +167,10 @@ export async function getCourseProgress(
     if (!filters.subjectId) throw AppError.badRequest('subjectId is required');
     const ctx = await resolveStudentCtx(userId);
     const { rows } = await query<{ id: string }>(
-      `SELECT id FROM subjects WHERE id = $1 AND program_id = $2 AND semester = $3 AND deleted_at IS NULL`,
+      `SELECT s.id
+       FROM subjects s
+       JOIN subject_curriculum_mappings scm ON scm.subject_id = s.id
+       WHERE s.id = $1 AND scm.program_id = $2 AND scm.semester = $3 AND s.deleted_at IS NULL`,
       [filters.subjectId, ctx.programId, ctx.semester]
     );
     if (!rows[0]) throw AppError.forbidden('This subject is not in your enrolled subjects');

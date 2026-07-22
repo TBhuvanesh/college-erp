@@ -122,8 +122,9 @@ async function assertAssignmentAccess(row: AssignmentRow, userId: string, role: 
   );
   if (!ctx[0]) throw AppError.notFound('Student profile not found');
   const { rows: sub } = await query<{ id: string }>(
-    `SELECT id FROM subjects
-     WHERE id = $1 AND program_id = $2 AND semester = $3 AND deleted_at IS NULL`,
+    `SELECT s.id FROM subjects s
+     JOIN subject_curriculum_mappings scm ON scm.subject_id = s.id
+     WHERE s.id = $1 AND scm.program_id = $2 AND scm.semester = $3 AND s.deleted_at IS NULL`,
     [row.subject_id, ctx[0].program_id, ctx[0].semester]
   );
   if (!sub[0]) throw AppError.forbidden('This assignment is not in your enrolled subjects');
@@ -152,14 +153,14 @@ export async function createAssignment(
 
   // Academic Workflow Engine — assignment creation has no built-in notification/
   // calendar sync of its own, so the default seeded rule wires those up here.
-  const { rows: subjectCtx } = await query<{ department_id: string; semester: number }>(
-    'SELECT department_id, semester FROM subjects WHERE id = $1',
+  const { rows: mappings } = await query<{ department_id: string; semester: number }>(
+    'SELECT department_id, semester FROM subject_curriculum_mappings WHERE subject_id = $1 AND deleted_at IS NULL',
     [data.subjectId]
   );
-  if (subjectCtx[0]) {
+  for (const m of mappings) {
     await emitWorkflowEvent('assignment.created', userId, {
-      departmentId: subjectCtx[0].department_id,
-      semester: subjectCtx[0].semester,
+      departmentId: m.department_id,
+      semester: m.semester,
       title: 'New Assignment Posted',
       message: `A new assignment "${assignment.title}" (${assignment.subjectCode}) is due on ${new Date(assignment.dueDate).toDateString()}.`,
       notificationType: 'Assignment',
@@ -205,11 +206,11 @@ export async function listAssignments(
     if (!ctx[0]) return { assignments: [], total: 0, page, limit, totalPages: 0 };
     params.push(ctx[0].program_id, ctx[0].semester);
     conditions.push(`EXISTS (
-      SELECT 1 FROM subjects s
-      WHERE s.id         = a.subject_id
-        AND s.program_id = $${params.length - 1}
-        AND s.semester   = $${params.length}
-        AND s.deleted_at IS NULL
+      SELECT 1 FROM subject_curriculum_mappings scm
+      WHERE scm.subject_id = a.subject_id
+        AND scm.program_id = $${params.length - 1}
+        AND scm.semester   = $${params.length}
+        AND scm.deleted_at IS NULL
     )`);
   }
 

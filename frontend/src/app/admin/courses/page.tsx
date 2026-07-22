@@ -110,9 +110,8 @@ export default function AdminCourses() {
     return matchesProgram && matchesReg;
   });
 
-  // Grouping years structure
   const getSubjectsByYear = (semesters: number[]) => {
-    return filteredSubjects.filter(s => semesters.includes(s.semester));
+    return filteredSubjects.filter(s => s.semester !== undefined && semesters.includes(s.semester));
   };
 
   const yearsConfig = [

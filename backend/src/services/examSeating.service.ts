@@ -76,7 +76,9 @@ async function assertExamViewAccess(userId: string, role: Role, examId: string):
     if (!facRows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
 
     const { rows: examRows } = await query<{ department_id: string; faculty_id: string }>(
-      `SELECT sub.department_id, e.faculty_id FROM exams e JOIN subjects sub ON sub.id = e.subject_id
+      `SELECT f.department_id, e.faculty_id 
+       FROM exams e 
+       JOIN faculty f ON f.id = e.faculty_id
        WHERE e.id = $1 AND e.deleted_at IS NULL`,
       [examId]
     );
@@ -153,7 +155,16 @@ export async function getExamSlots(userId: string, role: Role, filters: ListSlot
   };
 
   const departmentId = scope.departmentId ?? filters.departmentId;
-  if (departmentId) push('sub.department_id =', departmentId);
+  if (departmentId) {
+    params.push(departmentId);
+    conditions.push(`EXISTS (
+      SELECT 1 FROM subject_curriculum_mappings scm_dept
+      WHERE scm_dept.subject_id = e.subject_id
+        AND scm_dept.semester   = e.semester
+        AND scm_dept.department_id = $${params.length}
+        AND scm_dept.deleted_at IS NULL
+    )`);
+  }
   if (filters.from) push('e.exam_date >=', filters.from);
   if (filters.to) push('e.exam_date <=', filters.to);
 
@@ -174,11 +185,12 @@ export async function getExamSlots(userId: string, role: Role, filters: ListSlot
        TO_CHAR(e.start_time, 'HH24:MI')   AS start_time,
        TO_CHAR(e.end_time, 'HH24:MI')     AS end_time,
        e.id AS exam_id, sub.code AS subject_code, sub.name AS subject_name, e.section, e.exam_type::text AS exam_type,
-       (SELECT COUNT(*) FROM students st
-        WHERE st.program_id = sub.program_id AND st.semester = sub.semester AND st.section = e.section
-          AND st.status = 'active' AND st.deleted_at IS NULL)::text AS roster_size,
-       EXISTS (SELECT 1 FROM exam_seat_allocations esa WHERE esa.exam_id = e.id AND esa.deleted_at IS NULL) AS has_seating
-     FROM exams e JOIN subjects sub ON sub.id = e.subject_id
+        (SELECT COUNT(*) FROM students st
+         JOIN subject_curriculum_mappings scm ON scm.program_id = st.program_id AND scm.semester = st.current_semester AND scm.deleted_at IS NULL
+         WHERE scm.subject_id = e.subject_id AND st.current_semester = e.semester AND st.section = e.section
+           AND st.status = 'active' AND st.deleted_at IS NULL)::text AS roster_size,
+        EXISTS (SELECT 1 FROM exam_seat_allocations esa WHERE esa.exam_id = e.id AND esa.deleted_at IS NULL) AS has_seating
+      FROM exams e JOIN subjects sub ON sub.id = e.subject_id
      WHERE ${conditions.join(' AND ')}
      ORDER BY e.exam_date ASC, e.start_time ASC, sub.code ASC`,
     params
@@ -284,9 +296,12 @@ export async function generateSeatingPlan(
     status: string;
   }>(
     `SELECT e.id, TO_CHAR(e.exam_date,'YYYY-MM-DD') AS exam_date, e.start_time::text, e.end_time::text,
-       e.subject_id, sub.code AS subject_code, sub.program_id, sub.semester, sub.department_id, e.section,
+       e.subject_id, sub.code AS subject_code, scm.program_id, scm.semester, COALESCE(scm.department_id, f.department_id) AS department_id, e.section,
        e.exam_type::text AS exam_type, e.status::text AS status
-     FROM exams e JOIN subjects sub ON sub.id = e.subject_id
+     FROM exams e 
+     JOIN subjects sub ON sub.id = e.subject_id
+     JOIN faculty f ON f.id = e.faculty_id
+     LEFT JOIN subject_curriculum_mappings scm ON scm.subject_id = sub.id AND scm.semester = e.semester AND scm.department_id = f.department_id AND scm.deleted_at IS NULL
      WHERE e.id = ANY($1::uuid[]) AND e.deleted_at IS NULL`,
     [data.examIds]
   );
@@ -471,9 +486,10 @@ const SEAT_COLS = `
 const SEAT_JOINS = `
   JOIN exams e         ON e.id  = esa.exam_id
   JOIN subjects sub    ON sub.id = e.subject_id
-  JOIN departments dept ON dept.id = sub.department_id
   JOIN exam_rooms er   ON er.id = esa.room_id
   JOIN students st     ON st.id = esa.student_id
+  LEFT JOIN subject_curriculum_mappings scm ON scm.subject_id = sub.id AND scm.semester = e.semester AND scm.program_id = st.program_id AND scm.deleted_at IS NULL
+  LEFT JOIN departments dept ON dept.id = COALESCE(scm.department_id, st.department_id)
 `;
 
 interface SeatRow {
@@ -615,10 +631,12 @@ async function fetchAllocationForAdjustment(id: string): Promise<{
   departmentId: string;
 }> {
   const { rows } = await query<{ id: string; exam_id: string; room_id: string; student_id: string; seat_number: number; is_locked: boolean; department_id: string }>(
-    `SELECT esa.id, esa.exam_id, esa.room_id, esa.student_id, esa.seat_number, esa.is_locked, sub.department_id
+    `SELECT esa.id, esa.exam_id, esa.room_id, esa.student_id, esa.seat_number, esa.is_locked, COALESCE(scm.department_id, st.department_id) AS department_id
      FROM exam_seat_allocations esa
      JOIN exams e ON e.id = esa.exam_id
      JOIN subjects sub ON sub.id = e.subject_id
+     JOIN students st ON st.id = esa.student_id
+     LEFT JOIN subject_curriculum_mappings scm ON scm.subject_id = sub.id AND scm.semester = e.semester AND scm.program_id = st.program_id AND scm.deleted_at IS NULL
      WHERE esa.id = $1 AND esa.deleted_at IS NULL`,
     [id]
   );
@@ -875,7 +893,11 @@ export async function getSeatingAnalytics(
   const { rows: roomAgg } = await query<{ room_id: string; capacity: number }>(
     `SELECT DISTINCT esa.room_id, er.capacity FROM exam_seat_allocations esa
      JOIN exam_rooms er ON er.id = esa.room_id
-     JOIN exams e ON e.id = esa.exam_id JOIN subjects sub ON sub.id = e.subject_id JOIN departments dept ON dept.id = sub.department_id
+     JOIN exams e ON e.id = esa.exam_id 
+     JOIN subjects sub ON sub.id = e.subject_id 
+     JOIN students st ON st.id = esa.student_id
+     LEFT JOIN subject_curriculum_mappings scm ON scm.subject_id = sub.id AND scm.semester = e.semester AND scm.program_id = st.program_id AND scm.deleted_at IS NULL
+     LEFT JOIN departments dept ON dept.id = COALESCE(scm.department_id, st.department_id)
      WHERE ${conditions.join(' AND ')}`,
     params
   );
@@ -939,9 +961,12 @@ export async function checkSeatingConflicts(
     start_time: string;
     end_time: string;
   }>(
-    `SELECT e.id, sub.program_id, sub.semester, e.section, sub.department_id,
+    `SELECT e.id, scm.program_id, scm.semester, e.section, COALESCE(scm.department_id, f.department_id) AS department_id,
        TO_CHAR(e.exam_date, 'YYYY-MM-DD') AS exam_date, e.start_time::text, e.end_time::text
-     FROM exams e JOIN subjects sub ON sub.id = e.subject_id
+     FROM exams e 
+     JOIN subjects sub ON sub.id = e.subject_id
+     JOIN faculty f ON f.id = e.faculty_id
+     LEFT JOIN subject_curriculum_mappings scm ON scm.subject_id = sub.id AND scm.semester = e.semester AND scm.department_id = f.department_id AND scm.deleted_at IS NULL
      WHERE e.id = ANY($1::uuid[]) AND e.deleted_at IS NULL`,
     [data.examIds]
   );

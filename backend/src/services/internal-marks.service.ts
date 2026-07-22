@@ -146,8 +146,11 @@ export async function getRoster(
 
   // Verify subject exists and retrieve program_id + semester
   const { rows: sub } = await query<{ program_id: string; semester: number }>(
-    `SELECT program_id, semester FROM subjects WHERE id = $1 AND deleted_at IS NULL`,
-    [subjectId]
+    `SELECT scm.program_id, scm.semester
+     FROM faculty_subject_assignments fsa
+     JOIN subject_curriculum_mappings scm ON scm.id = fsa.subject_curriculum_mapping_id
+     WHERE fsa.faculty_id = $1 AND fsa.subject_id = $2 AND fsa.section = $3 AND fsa.deleted_at IS NULL`,
+    [facultyId, subjectId, section]
   );
   if (!sub[0]) throw AppError.notFound('Subject not found');
 

@@ -248,10 +248,11 @@ async function searchFaculty(userId: string, pattern: string): Promise<SearchRes
 
     // Only subjects this faculty is assigned to teach
     query<SubjectRow>(
-      `SELECT DISTINCT sub.id, sub.code, sub.name, d.name AS department_name, sub.semester
+      `SELECT DISTINCT sub.id, sub.code, sub.name, d.name AS department_name, scm.semester
        FROM faculty_subject_assignments fsa
-       JOIN subjects    sub ON sub.id = fsa.subject_id AND sub.deleted_at IS NULL
-       JOIN departments d   ON d.id   = sub.department_id
+       JOIN subject_curriculum_mappings scm ON scm.id = fsa.subject_curriculum_mapping_id AND scm.deleted_at IS NULL
+       JOIN subjects    sub ON sub.id = scm.subject_id AND sub.deleted_at IS NULL
+       JOIN departments d   ON d.id   = scm.department_id
        WHERE fsa.faculty_id  = $1
          AND fsa.is_active   = TRUE
          AND fsa.deleted_at  IS NULL
@@ -336,12 +337,13 @@ async function searchStudent(userId: string, pattern: string): Promise<SearchRes
   const [subjectsR, announcementsR, eventsR, examsR] = await Promise.all([
     // Only subjects in the student's own program and current semester
     query<SubjectRow>(
-      `SELECT sub.id, sub.code, sub.name, d.name AS department_name, sub.semester
+      `SELECT sub.id, sub.code, sub.name, d.name AS department_name, scm.semester
        FROM subjects sub
-       JOIN departments d ON d.id = sub.department_id
+       JOIN subject_curriculum_mappings scm ON scm.subject_id = sub.id AND scm.deleted_at IS NULL
+       JOIN departments d ON d.id = scm.department_id
        WHERE sub.deleted_at  IS NULL
-         AND sub.program_id  = $2
-         AND sub.semester    = $3
+         AND scm.program_id  = $2
+         AND scm.semester    = $3
          AND (sub.name ILIKE $1 OR sub.code ILIKE $1)
        ORDER BY sub.name ASC
        LIMIT ${LIMIT}`,

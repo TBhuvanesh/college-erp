@@ -11,6 +11,8 @@ import type {
   UpdateSubjectInput,
   UpdateSubjectStatusInput,
   ListSubjectsQuery,
+  CreateCurriculumMappingInput,
+  UpdateCurriculumMappingInput,
 } from '../types/subject';
 
 // ── Manual CRUD: Create ────────────────────────────────────────────────────────
@@ -38,8 +40,11 @@ export const getSubject = asyncHandler(async (req: Request, res: Response) => {
   const subject = await subjectService.getSubjectById(req.params.id);
 
   // HODs: restricted to their department
-  if (req.user?.role === 'faculty' && req.user?.designation === 'hod' && subject.department.id !== req.user.departmentId) {
-    throw AppError.forbidden('HODs can only view subjects in their own department');
+  if (req.user?.role === 'faculty' && req.user?.designation === 'hod') {
+    const hasAccess = subject.mappings.some(m => m.departmentId === req.user?.departmentId);
+    if (!hasAccess) {
+      throw AppError.forbidden('HODs can only view subjects in their own department');
+    }
   }
 
   sendSuccess(res, { subject });
@@ -65,6 +70,28 @@ export const deleteSubject = asyncHandler(async (req: Request, res: Response) =>
   sendSuccess(res, null, 'Subject archived successfully');
 });
 
+// ── Curriculum Mapping Operations ──────────────────────────────────────────────
+export const createCurriculumMapping = asyncHandler(async (req: Request, res: Response) => {
+  const { id: subjectId } = req.params;
+  const data = req.body as CreateCurriculumMappingInput;
+  const mappingId = await subjectService.createCurriculumMapping(subjectId, data, req.user!.id);
+  const subject = await subjectService.getSubjectById(subjectId);
+  sendSuccess(res, { mappingId, subject }, 'Curriculum mapping added successfully');
+});
+
+export const updateCurriculumMapping = asyncHandler(async (req: Request, res: Response) => {
+  const { mappingId } = req.params;
+  const data = req.body as UpdateCurriculumMappingInput;
+  const subject = await subjectService.updateCurriculumMapping(mappingId, data, req.user!.id);
+  sendSuccess(res, { subject }, 'Curriculum mapping updated successfully');
+});
+
+export const deleteCurriculumMapping = asyncHandler(async (req: Request, res: Response) => {
+  const { mappingId } = req.params;
+  const subject = await subjectService.deleteCurriculumMapping(mappingId, req.user!.id);
+  sendSuccess(res, { subject }, 'Curriculum mapping removed successfully');
+});
+
 // ── Spreadsheet Operations: Preview upload before import ─────────────────────
 export const importPreview = asyncHandler(async (req: Request, res: Response) => {
   if (!req.file) {
@@ -87,8 +114,8 @@ export const importCommit = asyncHandler(async (req: Request, res: Response) => 
     throw AppError.badRequest('Missing parsed row data list.', 'ROWS_REQUIRED');
   }
 
-  const importedCount = await importService.commitImportedSubjects(rows, req.user!.id);
-  sendSuccess(res, { importedCount }, `Successfully imported ${importedCount} subjects.`);
+  const summary = await importService.commitImportedSubjects(rows, req.user!.id);
+  sendSuccess(res, summary, `Successfully processed import of ${summary.rowsProcessed} curriculum rows.`);
 });
 
 // ── Spreadsheet Operations: Export to Excel/CSV/PDF ───────────────────────────
@@ -123,10 +150,20 @@ export const exportSubjects = asyncHandler(async (req: Request, res: Response) =
     { key: 'status', label: 'Status' },
   ];
 
+  // Helper formatting for subjects mapped to multiple departments
+  const formattedRows = result.subjects.map((sub: any) => ({
+    ...sub,
+    departmentName: sub.departmentName || sub.mappings?.map((m: any) => m.departmentCode).join(', ') || 'N/A',
+    programName: sub.programName || sub.mappings?.map((m: any) => m.programName).filter(Boolean).join(', ') || 'N/A',
+    regulation: sub.regulation || sub.mappings?.map((m: any) => m.regulation).join(', ') || 'N/A',
+    year: sub.year || sub.mappings?.map((m: any) => m.year).join(', ') || 'N/A',
+    semesterRaw: sub.semesterRaw || sub.mappings?.map((m: any) => m.semesterRaw).filter(Boolean).join(', ') || 'N/A',
+  }));
+
   const report: ReportResult = {
     title: 'Subjects Master Catalog',
     columns,
-    rows: result.subjects as any[],
+    rows: formattedRows,
     total: result.pagination.total,
     page: result.pagination.page,
     limit: result.pagination.limit,

@@ -207,16 +207,21 @@ interface SubjectContext {
   status: string;
 }
 
-async function fetchSubjectContext(subjectId: string): Promise<SubjectContext> {
+async function fetchSubjectContext(subjectId: string, facultyId: string, section: string): Promise<SubjectContext> {
   const { rows } = await query<{
     id: string;
     code: string;
     department_id: string;
     semester: number;
     status: string;
-  }>('SELECT id, code, department_id, semester, status FROM subjects WHERE id = $1 AND deleted_at IS NULL', [
-    subjectId,
-  ]);
+  }>(
+    `SELECT s.id, s.code, scm.department_id, scm.semester, s.status
+     FROM subjects s
+     JOIN subject_curriculum_mappings scm ON scm.subject_id = s.id
+     JOIN faculty_subject_assignments fsa ON fsa.subject_curriculum_mapping_id = scm.id
+     WHERE s.id = $1 AND fsa.faculty_id = $2 AND fsa.section = $3 AND s.deleted_at IS NULL AND fsa.deleted_at IS NULL`,
+    [subjectId, facultyId, section]
+  );
   if (!rows[0]) throw AppError.notFound('Subject not found');
   return {
     id: rows[0].id,
@@ -248,7 +253,10 @@ export async function assertTeachingPlanAccess(row: TeachingPlanRow, userId: str
 
   const ctx = await resolveStudentCtx(userId);
   const { rows } = await query<{ id: string }>(
-    `SELECT id FROM subjects WHERE id = $1 AND program_id = $2 AND semester = $3 AND deleted_at IS NULL`,
+    `SELECT s.id
+     FROM subjects s
+     JOIN subject_curriculum_mappings scm ON scm.subject_id = s.id
+     WHERE s.id = $1 AND scm.program_id = $2 AND scm.semester = $3 AND s.deleted_at IS NULL`,
     [row.subject_id, ctx.programId, ctx.semester]
   );
   if (!rows[0]) throw AppError.forbidden('This teaching plan is not in your enrolled subjects');
@@ -360,7 +368,7 @@ async function notifyStudents(
 
 export async function createTeachingPlan(userId: string, data: CreateTeachingPlanInput): Promise<TeachingPlan> {
   const facultyId = await resolveFacultyId(userId);
-  const subject = await fetchSubjectContext(data.subjectId);
+  const subject = await fetchSubjectContext(data.subjectId, facultyId, data.section);
 
   if (subject.status === 'archived') {
     throw AppError.badRequest('Cannot plan lessons for an archived subject', 'SUBJECT_ARCHIVED');

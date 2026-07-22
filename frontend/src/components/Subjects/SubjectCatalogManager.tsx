@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
-import type { SubjectSummary, ImportErrorLog } from "@/types/subject";
+import type { SubjectSummary, ImportErrorLog, ImportCommitResult } from "@/types/subject";
 import {
   Plus,
   Upload,
@@ -108,6 +108,7 @@ export default function SubjectCatalogManager({ mode }: SubjectCatalogManagerPro
   const [importPreviewData, setImportPreviewData] = useState<any[]>([]);
   const [importFailedRows, setImportFailedRows] = useState<ImportErrorLog[]>([]);
   const [importSummary, setImportSummary] = useState<any | null>(null);
+  const [importResultSummary, setImportResultSummary] = useState<ImportCommitResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Notifications ──
@@ -491,13 +492,9 @@ export default function SubjectCatalogManager({ mode }: SubjectCatalogManagerPro
         body: JSON.stringify({ rows: importPreviewData }),
       }, accessToken);
       
-      if (res.success) {
-        showToast(res.message || `Successfully imported ${importPreviewData.length} subjects!`);
-        setShowImportModal(false);
-        setImportFile(null);
-        setImportPreviewData([]);
-        setImportFailedRows([]);
-        setImportSummary(null);
+      if (res.success && res.data) {
+        setImportResultSummary(res.data);
+        showToast("Excel Import completed successfully!");
         fetchSubjectsList();
         fetchDashboardStats();
       } else {
@@ -532,6 +529,7 @@ export default function SubjectCatalogManager({ mode }: SubjectCatalogManagerPro
     setImportPreviewData([]);
     setImportFailedRows([]);
     setImportSummary(null);
+    setImportResultSummary(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -872,11 +870,35 @@ export default function SubjectCatalogManager({ mode }: SubjectCatalogManagerPro
                   <tr key={sub.id} className="hover:dark:bg-neutral-900/20 hover:bg-neutral-50/30 transition-colors">
                     <td className="p-4 font-mono font-bold dark:text-indigo-400 text-indigo-600">{sub.code}</td>
                     <td className="p-4 font-semibold dark:text-white text-text-primary">{sub.name}</td>
-                    <td className="p-4 text-text-secondary">{sub.departmentName}</td>
-                    <td className="p-4 text-text-secondary font-mono">{sub.programName || "—"}</td>
-                    <td className="p-4 font-mono text-text-secondary">{sub.regulation}</td>
                     <td className="p-4 text-text-secondary">
-                      Year {sub.year || "N/A"} • Sem {sub.semesterRaw || "N/A"} (Sem {sub.semester})
+                      {sub.departmentName || (sub.mappings && sub.mappings.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {Array.from(new Set(sub.mappings.map(m => m.departmentCode))).map((code, idx) => (
+                            <span key={idx} className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase">
+                              {code}
+                            </span>
+                          ))}
+                        </div>
+                      ) : "—")}
+                    </td>
+                    <td className="p-4 text-text-secondary font-mono">
+                      {sub.programName || (sub.mappings && sub.mappings.length > 0 ? (
+                        <span className="text-[10px] bg-neutral-500/10 text-neutral-400 px-1.5 py-0.5 rounded border border-neutral-500/20 font-sans font-bold">
+                          {sub.mappings.length} {sub.mappings.length === 1 ? "Mapping" : "Mappings"}
+                        </span>
+                      ) : "—")}
+                    </td>
+                    <td className="p-4 font-mono text-text-secondary">
+                      {sub.regulation || (sub.mappings && sub.mappings.length > 0 ? Array.from(new Set(sub.mappings.map(m => m.regulation))).join(", ") : "—")}
+                    </td>
+                    <td className="p-4 text-text-secondary">
+                      {sub.year ? (
+                        `Year ${sub.year} • Sem ${sub.semesterRaw || "N/A"} (Sem ${sub.semester})`
+                      ) : (sub.mappings && sub.mappings.length > 0 ? (
+                        <span className="text-[10px] font-semibold text-text-muted">
+                          {sub.mappings.length} Curricula
+                        </span>
+                      ) : "—")}
                     </td>
                     <td className="p-4 text-center font-bold dark:text-neutral-300 text-text-primary">{sub.credits}</td>
                     <td className="p-4 text-center font-mono text-text-muted">
@@ -1018,86 +1040,103 @@ export default function SubjectCatalogManager({ mode }: SubjectCatalogManagerPro
                     />
                   </div>
 
-                  {/* Department */}
-                  <div>
-                    <label className="text-[10px] text-text-muted uppercase font-bold block mb-1">Department *</label>
-                    <select
-                      value={formDeptId}
-                      required
-                      onChange={(e) => setFormDeptId(e.target.value)}
-                      className="w-full p-2 border dark:border-neutral-800 border-border-subtle rounded-lg dark:bg-neutral-900 bg-background text-text-primary"
-                    >
-                      {departments.map((d) => (
-                        <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
-                      ))}
-                    </select>
-                  </div>
+                  {!editingSubjectId ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t dark:border-neutral-900 border-border-subtle pt-4 col-span-1 sm:col-span-2">
+                      <div className="col-span-1 sm:col-span-2 text-[10px] text-indigo-400 font-bold uppercase tracking-wider mb-1">
+                        Initial Curriculum Placement Mapping
+                      </div>
+                      {/* Department */}
+                      <div>
+                        <label className="text-[10px] text-text-muted uppercase font-bold block mb-1">Department *</label>
+                        <select
+                          value={formDeptId}
+                          required
+                          onChange={(e) => setFormDeptId(e.target.value)}
+                          className="w-full p-2 border dark:border-neutral-800 border-border-subtle rounded-lg dark:bg-neutral-900 bg-background text-text-primary"
+                        >
+                          {departments.map((d) => (
+                            <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
+                          ))}
+                        </select>
+                      </div>
 
-                  {/* Program / Scheme Selection */}
-                  <div>
-                    <label className="text-[10px] text-text-muted uppercase font-bold block mb-1">Program (Free-text / DB match)</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <select
-                        value={formProgId}
-                        onChange={(e) => {
-                          setFormProgId(e.target.value);
-                          const progObj = programs.find(p => p.id === e.target.value);
-                          if (progObj) setFormProgramText(progObj.code);
-                        }}
-                        className="p-2 border dark:border-neutral-800 border-border-subtle rounded-lg dark:bg-neutral-900 bg-background text-text-primary text-[11px]"
-                      >
-                        <option value="">Database Match</option>
-                        {programs.map((p) => (
-                          <option key={p.id} value={p.id}>{p.code}</option>
-                        ))}
-                      </select>
-                      <input
-                        type="text"
-                        placeholder="Or type free-text..."
-                        value={formProgramText}
-                        onChange={(e) => setFormProgramText(e.target.value)}
-                        className="p-2 border dark:border-neutral-800 border-border-subtle rounded-lg dark:bg-neutral-900 bg-background text-text-primary"
-                      />
+                      {/* Program / Scheme Selection */}
+                      <div>
+                        <label className="text-[10px] text-text-muted uppercase font-bold block mb-1">Program (Free-text / DB match)</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <select
+                            value={formProgId}
+                            onChange={(e) => {
+                              setFormProgId(e.target.value);
+                              const progObj = programs.find(p => p.id === e.target.value);
+                              if (progObj) setFormProgramText(progObj.code);
+                            }}
+                            className="p-2 border dark:border-neutral-800 border-border-subtle rounded-lg dark:bg-neutral-900 bg-background text-text-primary text-[11px]"
+                          >
+                            <option value="">Database Match</option>
+                            {programs.map((p) => (
+                              <option key={p.id} value={p.id}>{p.code}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="text"
+                            placeholder="Or type free-text..."
+                            value={formProgramText}
+                            onChange={(e) => setFormProgramText(e.target.value)}
+                            className="p-2 border dark:border-neutral-800 border-border-subtle rounded-lg dark:bg-neutral-900 bg-background text-text-primary"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Regulation */}
+                      <div>
+                        <label className="text-[10px] text-text-muted uppercase font-bold block mb-1">Regulation *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. R22"
+                          value={formRegulation}
+                          onChange={(e) => setFormRegulation(e.target.value)}
+                          className="w-full p-2 border dark:border-neutral-800 border-border-subtle rounded-lg dark:bg-neutral-900 bg-background text-text-primary font-semibold"
+                        />
+                      </div>
+
+                      {/* Year / Sem raw */}
+                      <div>
+                        <label className="text-[10px] text-text-muted uppercase font-bold block mb-1">Curriculum Placement (Year / Semester) *</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <select
+                            value={formYear}
+                            onChange={(e) => setFormYear(e.target.value)}
+                            className="p-2 border dark:border-neutral-800 border-border-subtle rounded-lg dark:bg-neutral-900 bg-background text-text-primary"
+                          >
+                            <option value="I">Year I</option>
+                            <option value="II">Year II</option>
+                            <option value="III">Year III</option>
+                            <option value="IV">Year IV</option>
+                          </select>
+                          <select
+                            value={formSemRaw}
+                            onChange={(e) => setFormSemRaw(e.target.value)}
+                            className="p-2 border dark:border-neutral-800 border-border-subtle rounded-lg dark:bg-neutral-900 bg-background text-text-primary"
+                          >
+                            <option value="I">Semester I</option>
+                            <option value="II">Semester II</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Regulation */}
-                  <div>
-                    <label className="text-[10px] text-text-muted uppercase font-bold block mb-1">Regulation *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. R22"
-                      value={formRegulation}
-                      onChange={(e) => setFormRegulation(e.target.value)}
-                      className="w-full p-2 border dark:border-neutral-800 border-border-subtle rounded-lg dark:bg-neutral-900 bg-background text-text-primary font-semibold"
-                    />
-                  </div>
-
-                  {/* Year / Sem raw */}
-                  <div>
-                    <label className="text-[10px] text-text-muted uppercase font-bold block mb-1">Curriculum Placement (Year / Semester) *</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <select
-                        value={formYear}
-                        onChange={(e) => setFormYear(e.target.value)}
-                        className="p-2 border dark:border-neutral-800 border-border-subtle rounded-lg dark:bg-neutral-900 bg-background text-text-primary"
-                      >
-                        <option value="I">Year I</option>
-                        <option value="II">Year II</option>
-                        <option value="III">Year III</option>
-                        <option value="IV">Year IV</option>
-                      </select>
-                      <select
-                        value={formSemRaw}
-                        onChange={(e) => setFormSemRaw(e.target.value)}
-                        className="p-2 border dark:border-neutral-800 border-border-subtle rounded-lg dark:bg-neutral-900 bg-background text-text-primary"
-                      >
-                        <option value="I">Semester I</option>
-                        <option value="II">Semester II</option>
-                      </select>
+                  ) : (
+                    <div className="col-span-1 sm:col-span-2 p-3.5 rounded-lg border border-indigo-500/20 bg-indigo-500/5 text-indigo-400 leading-normal flex items-start gap-3">
+                      <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                      <div>
+                        <span className="font-bold">Subject Curriculum Mappings Notice</span>
+                        <p className="mt-0.5 text-[11px] opacity-90">
+                          Academic departments, regulation, and year/semester placements for this subject can be managed inside the detailed **Subject Profile page**. Click on the view profile eye icon in the catalog table to open it.
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* L - T - P Structure */}
                   <div>
@@ -1236,163 +1275,221 @@ export default function SubjectCatalogManager({ mode }: SubjectCatalogManagerPro
 
             <div className="p-5 space-y-6 max-h-[75vh] overflow-y-auto text-xs">
               
-              {/* Uploader Box */}
-              {!importFile ? (
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed dark:border-neutral-800 border-border-subtle hover:border-indigo-500/50 dark:hover:border-indigo-500/50 rounded-xl p-12 text-center cursor-pointer transition-all dark:bg-neutral-950/20 bg-neutral-50/50"
-                >
-                  <FileSpreadsheet className="mx-auto text-indigo-400 mb-3" size={40} />
-                  <p className="font-semibold text-xs dark:text-white text-text-primary">Select Academic Curriculum Spreadsheet</p>
-                  <p className="text-[10px] text-text-muted mt-1">Supports .xlsx, .xls, and .csv formats.</p>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept=".xlsx,.xls,.csv"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
+              {importResultSummary ? (
+                <div className="space-y-6 py-6 text-center animate-in fade-in duration-200">
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center mx-auto text-emerald-400">
+                    <Check size={24} />
+                  </div>
+                  <div>
+                    <h4 className="font-display font-bold text-lg dark:text-white text-text-primary">Curriculum Import Completed</h4>
+                    <p className="text-xs text-text-muted mt-1">Your academic curriculum spreadsheet has been processed successfully.</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 max-w-md mx-auto text-left border dark:border-neutral-800 border-border-subtle rounded-xl p-4 dark:bg-neutral-900/30 bg-neutral-50/50">
+                    <div>
+                      <span className="text-[10px] text-text-muted uppercase font-bold block">Rows Processed</span>
+                      <span className="font-display font-bold text-sm dark:text-white text-text-primary mt-0.5 block">{importResultSummary.rowsProcessed}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-emerald-400 uppercase font-bold block">New Subjects Created</span>
+                      <span className="font-display font-bold text-sm text-emerald-400 mt-0.5 block">{importResultSummary.newSubjectsCreated}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-indigo-400 uppercase font-bold block">New Mappings Created</span>
+                      <span className="font-display font-bold text-sm text-indigo-400 mt-0.5 block">{importResultSummary.newCurriculumMappings}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-amber-400 uppercase font-bold block">Existing Subjects Reused</span>
+                      <span className="font-display font-bold text-sm text-amber-400 mt-0.5 block">{importResultSummary.existingSubjectsReused}</span>
+                    </div>
+                    <div className="col-span-2 border-t dark:border-neutral-800 border-border-subtle pt-2.5 mt-1 flex justify-between">
+                      <div>
+                        <span className="text-[10px] text-text-muted uppercase font-bold block">Mappings Skipped (Duplicates)</span>
+                        <span className="font-display font-bold text-sm text-amber-400 mt-0.5 block">{importResultSummary.existingMappingsSkipped}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-rose-400 uppercase font-bold block">Failed Rows</span>
+                        <span className="font-display font-bold text-sm text-rose-400 mt-0.5 block">{importResultSummary.failedRows}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center pt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowImportModal(false);
+                        clearImportState();
+                      }}
+                      className="px-5 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 transition-all"
+                    >
+                      Close & Finish
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-between p-3 border dark:border-neutral-800 border-border-subtle rounded-lg dark:bg-neutral-900 bg-neutral-50">
-                  <div className="flex items-center gap-2 font-semibold">
-                    <FileSpreadsheet size={16} className="text-emerald-400" />
-                    <span>{importFile.name} ({(importFile.size / 1024).toFixed(1)} KB)</span>
-                  </div>
-                  <button
-                    onClick={clearImportState}
-                    className="text-rose-400 hover:text-rose-300 font-semibold"
-                  >
-                    Remove File
-                  </button>
-                </div>
-              )}
-
-              {/* Parsing Loading */}
-              {importLoading && (
-                <div className="py-12 flex flex-col items-center justify-center gap-3">
-                  <Loader2 className="animate-spin text-indigo-500" size={32} />
-                  <span className="font-semibold text-text-secondary">Processing spreadsheet schema and validating rows...</span>
-                </div>
-              )}
-
-              {/* Validation Results Summaries */}
-              {importSummary && (
-                <div className="space-y-4">
-                  
-                  {/* Summary Bar */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 dark:bg-neutral-900/40 bg-neutral-50/50 border dark:border-neutral-800 border-border-subtle rounded-xl">
-                    <div>
-                      <span className="text-[10px] text-text-muted uppercase font-bold block">Total Rows</span>
-                      <span className="font-display font-bold text-sm dark:text-white text-text-primary mt-1 block">{importSummary.total}</span>
+                <>
+                  {/* Uploader Box */}
+                  {!importFile ? (
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed dark:border-neutral-800 border-border-subtle hover:border-indigo-500/50 dark:hover:border-indigo-500/50 rounded-xl p-12 text-center cursor-pointer transition-all dark:bg-neutral-950/20 bg-neutral-50/50"
+                    >
+                      <FileSpreadsheet className="mx-auto text-indigo-400 mb-3" size={40} />
+                      <p className="font-semibold text-xs dark:text-white text-text-primary">Select Academic Curriculum Spreadsheet</p>
+                      <p className="text-[10px] text-text-muted mt-1">Supports .xlsx, .xls, and .csv formats.</p>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept=".xlsx,.xls,.csv"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
                     </div>
-                    <div>
-                      <span className="text-[10px] text-emerald-400 uppercase font-bold block">Valid to Import</span>
-                      <span className="font-display font-bold text-sm text-emerald-400 mt-1 block">{importSummary.imported}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-amber-400 uppercase font-bold block">Duplicate Skip Warnings</span>
-                      <span className="font-display font-bold text-sm text-amber-400 mt-1 block">{importSummary.duplicates}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-rose-400 uppercase font-bold block">Syntax Failures</span>
-                      <span className="font-display font-bold text-sm text-rose-400 mt-1 block">{importSummary.failed}</span>
-                    </div>
-                  </div>
-
-                  {/* Failures Warnings Logs */}
-                  {importFailedRows.length > 0 && (
-                    <div className="p-4 bg-rose-500/10 border border-rose-500/25 rounded-xl space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-rose-400 flex items-center gap-2">
-                          <AlertCircle size={14} />
-                          <span>Identified {importFailedRows.length} Syntax Failures</span>
-                        </span>
-                        <button
-                          onClick={downloadErrorReport}
-                          className="px-2 py-1 rounded bg-rose-500/20 text-rose-300 font-bold hover:bg-rose-500/35 transition-all text-[10px]"
-                        >
-                          Download Error Report (CSV)
-                        </button>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 border dark:border-neutral-800 border-border-subtle rounded-lg dark:bg-neutral-900 bg-neutral-50">
+                      <div className="flex items-center gap-2 font-semibold">
+                        <FileSpreadsheet size={16} className="text-emerald-400" />
+                        <span>{importFile.name} ({(importFile.size / 1024).toFixed(1)} KB)</span>
                       </div>
-                      <div className="max-h-28 overflow-y-auto space-y-1 font-mono text-[10px] text-rose-300">
-                        {importFailedRows.slice(0, 10).map((err, i) => (
-                          <div key={i}>
-                            Row {err.rowNumber} (Code: {err.subjectCode}): {err.error}
+                      <button
+                        onClick={clearImportState}
+                        className="text-rose-400 hover:text-rose-300 font-semibold"
+                      >
+                        Remove File
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Parsing Loading */}
+                  {importLoading && (
+                    <div className="py-12 flex flex-col items-center justify-center gap-3">
+                      <Loader2 className="animate-spin text-indigo-500" size={32} />
+                      <span className="font-semibold text-text-secondary">Processing spreadsheet schema and validating rows...</span>
+                    </div>
+                  )}
+
+                  {/* Validation Results Summaries */}
+                  {importSummary && (
+                    <div className="space-y-4">
+                      
+                      {/* Summary Bar */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 dark:bg-neutral-900/40 bg-neutral-50/50 border dark:border-neutral-800 border-border-subtle rounded-xl">
+                        <div>
+                          <span className="text-[10px] text-text-muted uppercase font-bold block">Total Rows</span>
+                          <span className="font-display font-bold text-sm dark:text-white text-text-primary mt-1 block">{importSummary.total}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-emerald-400 uppercase font-bold block">Valid to Import</span>
+                          <span className="font-display font-bold text-sm text-emerald-400 mt-1 block">{importSummary.imported}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-amber-400 uppercase font-bold block">Duplicate Skip Warnings</span>
+                          <span className="font-display font-bold text-sm text-amber-400 mt-1 block">{importSummary.duplicates}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-rose-400 uppercase font-bold block">Syntax Failures</span>
+                          <span className="font-display font-bold text-sm text-rose-400 mt-1 block">{importSummary.failed}</span>
+                        </div>
+                      </div>
+
+                      {/* Failures Warnings Logs */}
+                      {importFailedRows.length > 0 && (
+                        <div className="p-4 bg-rose-500/10 border border-rose-500/25 rounded-xl space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-rose-400 flex items-center gap-2">
+                              <AlertCircle size={14} />
+                              <span>Identified {importFailedRows.length} Syntax Failures</span>
+                            </span>
+                            <button
+                              onClick={downloadErrorReport}
+                              className="px-2 py-1 rounded bg-rose-500/20 text-rose-300 font-bold hover:bg-rose-500/35 transition-all text-[10px]"
+                            >
+                              Download Error Report (CSV)
+                            </button>
                           </div>
-                        ))}
-                        {importFailedRows.length > 10 && (
-                          <div className="font-sans italic text-text-muted mt-1">And {importFailedRows.length - 10} other error rows... Download full CSV report for complete logs.</div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Valid Rows Preview Table */}
-                  {importPreviewData.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="font-bold dark:text-white text-text-primary">Valid Curriculum Rows Preview ({importPreviewData.length})</h4>
-                      <div className="border dark:border-neutral-800 border-border-subtle rounded-lg overflow-hidden max-h-56 overflow-y-auto">
-                        <table className="w-full text-left text-[11px] border-collapse">
-                          <thead>
-                            <tr className="border-b dark:border-neutral-800 border-border-subtle dark:bg-neutral-900 bg-neutral-100 text-text-muted uppercase font-bold">
-                              <th className="p-2">Code</th>
-                              <th className="p-2">Subject Name</th>
-                              <th className="p-2">Department</th>
-                              <th className="p-2">Program</th>
-                              <th className="p-2">Reg</th>
-                              <th className="p-2">Year/Sem</th>
-                              <th className="p-2 text-center">Cr</th>
-                              <th className="p-2 text-center">L-T-P</th>
-                              <th className="p-2">Type</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y dark:divide-neutral-800/80 divide-border-subtle">
-                            {importPreviewData.map((row, idx) => (
-                              <tr key={idx} className="hover:dark:bg-neutral-900/20 hover:bg-neutral-50/20 font-normal">
-                                <td className="p-2 font-mono font-semibold text-indigo-400">{row.code}</td>
-                                <td className="p-2 font-medium text-text-primary">{row.name}</td>
-                                <td className="p-2 text-text-secondary">{row.departmentName}</td>
-                                <td className="p-2 text-text-secondary">{row.program}</td>
-                                <td className="p-2 text-text-secondary">{row.regulation}</td>
-                                <td className="p-2 text-text-secondary">Year {row.year} • Sem {row.semesterRaw}</td>
-                                <td className="p-2 text-center font-bold text-text-primary">{row.credits}</td>
-                                <td className="p-2 text-center text-text-muted">{row.lectureHours}-{row.tutorialHours}-{row.practicalHours}</td>
-                                <td className="p-2 text-text-secondary">{row.type}</td>
-                              </tr>
+                          <div className="max-h-28 overflow-y-auto space-y-1 font-mono text-[10px] text-rose-300">
+                            {importFailedRows.slice(0, 10).map((err, i) => (
+                              <div key={i}>
+                                Row {err.rowNumber} (Code: {err.subjectCode}): {err.error}
+                              </div>
                             ))}
-                          </tbody>
-                        </table>
-                      </div>
+                            {importFailedRows.length > 10 && (
+                              <div className="font-sans italic text-text-muted mt-1">And {importFailedRows.length - 10} other error rows... Download full CSV report for complete logs.</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Valid Rows Preview Table */}
+                      {importPreviewData.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="font-bold dark:text-white text-text-primary">Valid Curriculum Rows Preview ({importPreviewData.length})</h4>
+                          <div className="border dark:border-neutral-800 border-border-subtle rounded-lg overflow-hidden max-h-56 overflow-y-auto">
+                            <table className="w-full text-left text-[11px] border-collapse">
+                              <thead>
+                                <tr className="border-b dark:border-neutral-800 border-border-subtle dark:bg-neutral-900 bg-neutral-100 text-text-muted uppercase font-bold">
+                                  <th className="p-2">Code</th>
+                                  <th className="p-2">Subject Name</th>
+                                  <th className="p-2">Department</th>
+                                  <th className="p-2">Program</th>
+                                  <th className="p-2">Reg</th>
+                                  <th className="p-2">Year/Sem</th>
+                                  <th className="p-2 text-center">Cr</th>
+                                  <th className="p-2 text-center">L-T-P</th>
+                                  <th className="p-2">Type</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y dark:divide-neutral-800/80 divide-border-subtle">
+                                {importPreviewData.map((row, idx) => (
+                                  <tr key={idx} className="hover:dark:bg-neutral-900/20 hover:bg-neutral-50/20 font-normal">
+                                    <td className="p-2 font-mono font-semibold text-indigo-400">{row.code}</td>
+                                    <td className="p-2 font-medium text-text-primary">{row.name}</td>
+                                    <td className="p-2 text-text-secondary">{row.departmentName}</td>
+                                    <td className="p-2 text-text-secondary">{row.program}</td>
+                                    <td className="p-2 text-text-secondary">{row.regulation}</td>
+                                    <td className="p-2 text-text-secondary">Year {row.year} • Sem {row.semesterRaw}</td>
+                                    <td className="p-2 text-center font-bold text-text-primary">{row.credits}</td>
+                                    <td className="p-2 text-center text-text-muted">{row.lectureHours}-{row.tutorialHours}-{row.practicalHours}</td>
+                                    <td className="p-2 text-text-secondary">{row.type}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+
                     </div>
                   )}
-
-                </div>
+                </>
               )}
 
             </div>
 
-            <div className="p-5 border-t dark:border-neutral-800 border-border-subtle dark:bg-neutral-900/20 bg-neutral-50/50 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowImportModal(false);
-                  clearImportState();
-                }}
-                className="px-4 py-2 border dark:border-neutral-800 border-border-subtle rounded-lg text-text-secondary hover:dark:bg-neutral-900 hover:bg-neutral-100 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={importPreviewData.length === 0 || importLoading}
-                onClick={handleCommitImport}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-bold shadow flex items-center gap-1.5 disabled:opacity-50"
-              >
-                {importLoading && <Loader2 className="animate-spin" size={14} />}
-                <span>Import {importPreviewData.length} Subjects</span>
-              </button>
-            </div>
+            {!importResultSummary && (
+              <div className="p-5 border-t dark:border-neutral-800 border-border-subtle dark:bg-neutral-900/20 bg-neutral-50/50 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowImportModal(false);
+                    clearImportState();
+                  }}
+                  className="px-4 py-2 border dark:border-neutral-800 border-border-subtle rounded-lg text-text-secondary hover:dark:bg-neutral-900 hover:bg-neutral-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={importPreviewData.length === 0 || importLoading}
+                  onClick={handleCommitImport}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-bold shadow flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {importLoading && <Loader2 className="animate-spin" size={14} />}
+                  <span>Import {importPreviewData.length} Subjects</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

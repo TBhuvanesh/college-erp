@@ -15,12 +15,12 @@ const DETAIL_COLS = `
   fsa.faculty_id AS "facultyId",
   f.full_name AS "facultyName",
   f.employee_number AS "employeeNumber",
-  fsa.subject_id AS "subjectId",
+  scm.subject_id AS "subjectId",
   s.code AS "subjectCode",
   s.name AS "subjectName",
-  s.department_id AS "departmentId",
+  scm.department_id AS "departmentId",
   d.name AS "departmentName",
-  s.semester,
+  scm.semester,
   fsa.section,
   fsa.academic_year AS "academicYear",
   fsa.status,
@@ -36,8 +36,9 @@ const DETAIL_COLS = `
 
 const JOINS = `
   JOIN faculty f ON f.id = fsa.faculty_id
-  JOIN subjects s ON s.id = fsa.subject_id
-  JOIN departments d ON d.id = s.department_id
+  JOIN subject_curriculum_mappings scm ON scm.id = fsa.subject_curriculum_mapping_id
+  JOIN subjects s ON s.id = scm.subject_id
+  JOIN departments d ON d.id = scm.department_id
   LEFT JOIN users u_creator ON u_creator.id = fsa.created_by
   LEFT JOIN users u_remover ON u_remover.id = fsa.removed_by
 `;
@@ -63,10 +64,10 @@ export async function getAllocations(filters: ListAllocationsQuery): Promise<All
     conditions.push(`${condition} $${params.length}`);
   };
 
-  if (filters.departmentId) push('s.department_id =', filters.departmentId);
-  if (filters.semester) push('s.semester =', filters.semester);
+  if (filters.departmentId) push('scm.department_id =', filters.departmentId);
+  if (filters.semester) push('scm.semester =', filters.semester);
   if (filters.section) push('fsa.section =', filters.section);
-  if (filters.subjectId) push('fsa.subject_id =', filters.subjectId);
+  if (filters.subjectId) push('scm.subject_id =', filters.subjectId);
   if (filters.facultyId) push('fsa.faculty_id =', filters.facultyId);
   if (filters.academicYear) push('fsa.academic_year =', filters.academicYear);
   if (filters.status) push('fsa.status =', filters.status);
@@ -81,7 +82,7 @@ export async function getAllocations(filters: ListAllocationsQuery): Promise<All
   const { rows } = await query<any>(
     `SELECT ${DETAIL_COLS} FROM faculty_subject_assignments fsa ${JOINS}
      WHERE ${conditions.join(' AND ')}
-     ORDER BY fsa.academic_year DESC, d.name ASC, s.semester ASC, s.code ASC, fsa.section ASC`,
+     ORDER BY fsa.academic_year DESC, d.name ASC, scm.semester ASC, s.code ASC, fsa.section ASC`,
     params
   );
   return rows as AllocationDetail[];
@@ -100,9 +101,9 @@ export async function createAllocation(
   );
   if (!f[0]) throw AppError.notFound('Faculty member not found');
 
-  // Validate subject exists, get department and status
-  const { rows: s } = await query<{ id: string; department_id: string; status: string }>(
-    'SELECT id, department_id, status FROM subjects WHERE id = $1 AND deleted_at IS NULL',
+  // Validate subject exists, get status
+  const { rows: s } = await query<{ id: string; status: string }>(
+    'SELECT id, status FROM subjects WHERE id = $1 AND deleted_at IS NULL',
     [data.subjectId]
   );
   if (!s[0]) throw AppError.notFound('Subject not found');
@@ -110,15 +111,18 @@ export async function createAllocation(
     throw AppError.badRequest('Cannot assign an archived subject', 'SUBJECT_ARCHIVED');
   }
 
-  // 1. Validation: Faculty and subject must belong to same department
-  if (f[0].department_id !== s[0].department_id) {
-    throw AppError.badRequest(
-      'Department Mismatch: Faculty and subject must belong to the same department',
-      'DEPARTMENT_MISMATCH'
-    );
+  // Validate subject curriculum mapping exists for faculty's department
+  const { rows: scm } = await query<{ id: string }>(
+    `SELECT id FROM subject_curriculum_mappings 
+     WHERE subject_id = $1 AND department_id = $2 AND deleted_at IS NULL LIMIT 1`,
+    [data.subjectId, f[0].department_id]
+  );
+  if (!scm[0]) {
+    throw AppError.badRequest('Subject is not mapped to the faculty member\'s department curriculum', 'CURRICULUM_MISMATCH');
   }
+  const scmId = scm[0].id;
 
-  // 2. Validation: Prevent duplicate allocations for this subject + academic year + section
+  // Prevent duplicate allocations for this subject + academic year + section
   const { rows: duplicate } = await query<{ id: string }>(
     `SELECT id FROM faculty_subject_assignments
      WHERE subject_id = $1 AND academic_year = $2 AND section = $3 AND deleted_at IS NULL LIMIT 1`,
@@ -147,10 +151,10 @@ export async function createAllocation(
   const isActive = data.status === 'active';
   const { rows } = await query<{ id: string }>(
     `INSERT INTO faculty_subject_assignments (
-      faculty_id, subject_id, academic_year, section, status, is_active, created_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      faculty_id, subject_id, subject_curriculum_mapping_id, academic_year, section, status, is_active, created_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING id`,
-    [data.facultyId, data.subjectId, data.academicYear, data.section, data.status, isActive, actorId]
+    [data.facultyId, data.subjectId, scmId, data.academicYear, data.section, data.status, isActive, actorId]
   );
   const allocationId = rows[0].id;
 
@@ -171,24 +175,20 @@ export async function updateAllocation(
   data: UpdateAllocationInput,
   actorId: string
 ): Promise<{ allocation: AllocationDetail; warning?: string }> {
-  // Retrieve existing allocation
   const existing = await getAllocationById(id);
 
   const facultyId = data.facultyId || existing.facultyId;
   const subjectId = data.subjectId || existing.subjectId;
   const section = data.section || existing.section;
-  const status = data.status || existing.status;
 
-  // Validate faculty exists and get department
   const { rows: f } = await query<{ id: string; department_id: string }>(
     'SELECT id, department_id FROM faculty WHERE id = $1 AND deleted_at IS NULL',
     [facultyId]
   );
   if (!f[0]) throw AppError.notFound('Faculty member not found');
 
-  // Validate subject exists and get department
-  const { rows: s } = await query<{ id: string; department_id: string; status: string }>(
-    'SELECT id, department_id, status FROM subjects WHERE id = $1 AND deleted_at IS NULL',
+  const { rows: s } = await query<{ id: string; status: string }>(
+    'SELECT id, status FROM subjects WHERE id = $1 AND deleted_at IS NULL',
     [subjectId]
   );
   if (!s[0]) throw AppError.notFound('Subject not found');
@@ -196,15 +196,18 @@ export async function updateAllocation(
     throw AppError.badRequest('Cannot assign an archived subject', 'SUBJECT_ARCHIVED');
   }
 
-  // 1. Validation: Faculty and subject must belong to same department
-  if (f[0].department_id !== s[0].department_id) {
-    throw AppError.badRequest(
-      'Department Mismatch: Faculty and subject must belong to the same department',
-      'DEPARTMENT_MISMATCH'
-    );
+  // Validate mapping exists
+  const { rows: scm } = await query<{ id: string }>(
+    `SELECT id FROM subject_curriculum_mappings 
+     WHERE subject_id = $1 AND department_id = $2 AND deleted_at IS NULL LIMIT 1`,
+    [subjectId, f[0].department_id]
+  );
+  if (!scm[0]) {
+    throw AppError.badRequest('Subject is not mapped to the faculty member\'s department curriculum', 'CURRICULUM_MISMATCH');
   }
+  const scmId = scm[0].id;
 
-  // 2. Validation: Prevent duplicate subject + academic year + section (excluding this allocation)
+  // Prevent duplicate allocations
   const { rows: duplicate } = await query<{ id: string }>(
     `SELECT id FROM faculty_subject_assignments
      WHERE subject_id = $1 AND academic_year = $2 AND section = $3 AND id != $4 AND deleted_at IS NULL LIMIT 1`,
@@ -217,10 +220,10 @@ export async function updateAllocation(
     );
   }
 
-  // Calculate current workload of target faculty for warning
+  // Workload Warning
   const { rows: workload } = await query<{ count: string }>(
     `SELECT COUNT(*)::text AS count FROM faculty_subject_assignments
-     WHERE faculty_id = $1 AND academic_year = $2 AND id != $3 AND is_active = TRUE AND deleted_at IS NULL`,
+     WHERE faculty_id = $1 AND academic_year = $2 AND is_active = TRUE AND id != $3 AND deleted_at IS NULL`,
     [facultyId, existing.academicYear, id]
   );
   const currentLoadCount = parseInt(workload[0].count, 10);
@@ -229,12 +232,31 @@ export async function updateAllocation(
     warning = `Workload Warning: Faculty currently has ${currentLoadCount} active subject assignments. Exceeding recommended limit of 3.`;
   }
 
-  const isActive = status === 'active';
+  const setClauses: string[] = [];
+  const params: unknown[] = [];
+
+  const set = (col: string, val: unknown) => {
+    params.push(val);
+    setClauses.push(`${col} = $${params.length}`);
+  };
+
+  if (data.facultyId !== undefined) set('faculty_id', data.facultyId);
+  if (data.subjectId !== undefined) {
+    set('subject_id', data.subjectId);
+    set('subject_curriculum_mapping_id', scmId);
+  }
+  if (data.section !== undefined) set('section', data.section);
+  if (data.status !== undefined) {
+    set('status', data.status);
+    set('is_active', data.status === 'active');
+  }
+
+  params.push(id);
   await query(
     `UPDATE faculty_subject_assignments
-     SET faculty_id = $1, subject_id = $2, section = $3, status = $4, is_active = $5, updated_at = NOW()
-     WHERE id = $6`,
-    [facultyId, subjectId, section, status, isActive, id]
+     SET ${setClauses.join(', ')}, updated_at = NOW()
+     WHERE id = $${params.length}`,
+    params
   );
 
   await auditLog({
@@ -242,66 +264,7 @@ export async function updateAllocation(
     action: 'UPDATE_ALLOCATION',
     resource: 'faculty_subject_assignments',
     resourceId: id,
-    changes: { ...data, isActive },
-  });
-
-  const allocation = await getAllocationById(id);
-  return { allocation, warning };
-}
-
-export async function transferAllocation(
-  id: string,
-  newFacultyId: string,
-  actorId: string
-): Promise<{ allocation: AllocationDetail; warning?: string }> {
-  // Retrieve existing allocation
-  const existing = await getAllocationById(id);
-
-  // Validate new faculty exists and get department
-  const { rows: f } = await query<{ id: string; department_id: string }>(
-    'SELECT id, department_id FROM faculty WHERE id = $1 AND deleted_at IS NULL',
-    [newFacultyId]
-  );
-  if (!f[0]) throw AppError.notFound('New Faculty member not found');
-
-  // Validate new faculty belongs to same department as allocation's subject
-  const { rows: s } = await query<{ department_id: string }>(
-    'SELECT department_id FROM subjects WHERE id = $1',
-    [existing.subjectId]
-  );
-  if (f[0].department_id !== s[0].department_id) {
-    throw AppError.badRequest(
-      'Department Mismatch: Target faculty and allocation subject must belong to the same department',
-      'DEPARTMENT_MISMATCH'
-    );
-  }
-
-  // Workload check for warning
-  const { rows: workload } = await query<{ count: string }>(
-    `SELECT COUNT(*)::text AS count FROM faculty_subject_assignments
-     WHERE faculty_id = $1 AND academic_year = $2 AND id != $3 AND is_active = TRUE AND deleted_at IS NULL`,
-    [newFacultyId, existing.academicYear, id]
-  );
-  const currentLoadCount = parseInt(workload[0].count, 10);
-  let warning: string | undefined;
-  if (currentLoadCount >= 3) {
-    warning = `Workload Warning: Target faculty currently has ${currentLoadCount} active subject assignments. Exceeding recommended limit of 3.`;
-  }
-
-  // Perform transfer
-  await query(
-    `UPDATE faculty_subject_assignments
-     SET faculty_id = $1, updated_at = NOW()
-     WHERE id = $2`,
-    [newFacultyId, id]
-  );
-
-  await auditLog({
-    actorId,
-    action: 'TRANSFER_ALLOCATION',
-    resource: 'faculty_subject_assignments',
-    resourceId: id,
-    changes: { fromFacultyId: existing.facultyId, toFacultyId: newFacultyId },
+    changes: data as Record<string, unknown>,
   });
 
   const allocation = await getAllocationById(id);
@@ -328,6 +291,67 @@ export async function deleteAllocation(
     resourceId: id,
     changes: { removalReason: reason },
   });
+}
+
+export async function transferAllocation(
+  id: string,
+  newFacultyId: string,
+  actorId: string
+): Promise<{ allocation: AllocationDetail; warning?: string }> {
+  // Retrieve existing allocation
+  const existing = await getAllocationById(id);
+
+  // Validate new faculty exists and get department
+  const { rows: f } = await query<{ id: string; department_id: string }>(
+    'SELECT id, department_id FROM faculty WHERE id = $1 AND deleted_at IS NULL',
+    [newFacultyId]
+  );
+  if (!f[0]) throw AppError.notFound('New Faculty member not found');
+
+  // Validate new faculty belongs to same department mapping as allocation's subject
+  const { rows: scm } = await query<{ id: string }>(
+    `SELECT id FROM subject_curriculum_mappings 
+     WHERE subject_id = $1 AND department_id = $2 AND deleted_at IS NULL LIMIT 1`,
+    [existing.subjectId, f[0].department_id]
+  );
+  if (!scm[0]) {
+    throw AppError.badRequest(
+      'Curriculum Mismatch: Target faculty\'s department does not have this subject mapped in their curriculum',
+      'CURRICULUM_MISMATCH'
+    );
+  }
+  const scmId = scm[0].id;
+
+  // Workload check for warning
+  const { rows: workload } = await query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM faculty_subject_assignments
+     WHERE faculty_id = $1 AND academic_year = $2 AND id != $3 AND is_active = TRUE AND deleted_at IS NULL`,
+    [newFacultyId, existing.academicYear, id]
+  );
+  const currentLoadCount = parseInt(workload[0].count, 10);
+  let warning: string | undefined;
+  if (currentLoadCount >= 3) {
+    warning = `Workload Warning: Target faculty currently has ${currentLoadCount} active subject assignments. Exceeding recommended limit of 3.`;
+  }
+
+  // Perform transfer
+  await query(
+    `UPDATE faculty_subject_assignments
+     SET faculty_id = $1, subject_curriculum_mapping_id = $2, updated_at = NOW()
+     WHERE id = $3`,
+    [newFacultyId, scmId, id]
+  );
+
+  await auditLog({
+    actorId,
+    action: 'TRANSFER_ALLOCATION',
+    resource: 'faculty_subject_assignments',
+    resourceId: id,
+    changes: { fromFacultyId: existing.facultyId, toFacultyId: newFacultyId },
+  });
+
+  const allocation = await getAllocationById(id);
+  return { allocation, warning };
 }
 
 // ── Statistics & Analytics ─────────────────────────────────────────────────────
@@ -423,9 +447,9 @@ export async function getWorkloadStatistics(academicYear: string): Promise<Workl
   const { rows: deptDist } = await query<{ department_name: string; count: string }>(
     `SELECT d.name AS department_name, COUNT(*)::text AS count
      FROM faculty_subject_assignments fsa
-     JOIN subjects s ON s.id = fsa.subject_id
-     JOIN departments d ON d.id = s.department_id
-     WHERE fsa.academic_year = $1 AND fsa.deleted_at IS NULL
+     JOIN subject_curriculum_mappings scm ON scm.id = fsa.subject_curriculum_mapping_id
+     JOIN departments d ON d.id = scm.department_id
+     WHERE fsa.academic_year = $1 AND fsa.deleted_at IS NULL AND scm.deleted_at IS NULL
      GROUP BY d.name
      ORDER BY COUNT(*) DESC`,
     [academicYear]
@@ -437,12 +461,12 @@ export async function getWorkloadStatistics(academicYear: string): Promise<Workl
 
   // C. Semester Distribution
   const { rows: semDist } = await query<{ semester: number; count: string }>(
-    `SELECT s.semester, COUNT(*)::text AS count
+    `SELECT scm.semester, COUNT(*)::text AS count
      FROM faculty_subject_assignments fsa
-     JOIN subjects s ON s.id = fsa.subject_id
-     WHERE fsa.academic_year = $1 AND fsa.deleted_at IS NULL
-     GROUP BY s.semester
-     ORDER BY s.semester ASC`,
+     JOIN subject_curriculum_mappings scm ON scm.id = fsa.subject_curriculum_mapping_id
+     WHERE fsa.academic_year = $1 AND fsa.deleted_at IS NULL AND scm.deleted_at IS NULL
+     GROUP BY scm.semester
+     ORDER BY scm.semester ASC`,
     [academicYear]
   );
   const semesterDistribution = semDist.map((r) => ({
@@ -467,21 +491,30 @@ export async function getWorkloadStatistics(academicYear: string): Promise<Workl
 }
 
 export async function getSubjectProfile(subjectId: string): Promise<any> {
-  // 1. Get Subject details
+  // 1. Get Subject Master details
   const { rows: subRows } = await query<any>(
-    `SELECT s.id, s.code, s.name, s.semester, s.credits, s.status, s.program_id,
-            d.name AS "departmentName", p.name AS "programName",
-            s.regulation, s.year, s.semester_raw, s.lecture_hours, s.tutorial_hours, s.practical_hours, s.description, s.program
-     FROM subjects s
-     JOIN departments d ON d.id = s.department_id
-     LEFT JOIN programs p ON p.id = s.program_id
-     WHERE s.id = $1 AND s.deleted_at IS NULL`,
+    `SELECT id, code, name, credits, status,
+            lecture_hours, tutorial_hours, practical_hours, description
+     FROM subjects
+     WHERE id = $1 AND deleted_at IS NULL`,
     [subjectId]
   );
   if (!subRows[0]) throw AppError.notFound('Subject not found');
   const subject = subRows[0];
 
-  // 2. Get Assigned Faculty list
+  // 2. Fetch Mappings
+  const { rows: mapRows } = await query<any>(
+    `SELECT scm.id, scm.subject_id, scm.department_id, d.name AS department_name, d.code AS department_code,
+            scm.program_id, p.name AS program_name, p.code AS program_code, scm.program,
+            scm.regulation, scm.year, scm.semester, scm.semester_raw
+     FROM subject_curriculum_mappings scm
+     JOIN departments d ON d.id = scm.department_id
+     LEFT JOIN programs p ON p.id = scm.program_id
+     WHERE scm.subject_id = $1 AND scm.deleted_at IS NULL`,
+    [subjectId]
+  );
+
+  // 3. Get Assigned Faculty list
   const { rows: facRows } = await query<any>(
     `SELECT fsa.id AS "allocationId", f.id AS "facultyId", f.full_name AS "facultyName",
             f.employee_number AS "employeeNumber", fsa.section, fsa.status, fsa.academic_year AS "academicYear"
@@ -491,15 +524,16 @@ export async function getSubjectProfile(subjectId: string): Promise<any> {
     [subjectId]
   );
 
-  // 3. Count Enrolled Students
+  // 4. Count Enrolled Students (Distinct students across all curriculum mapping programs/semesters)
   const { rows: studRows } = await query<{ count: string }>(
-    `SELECT COUNT(*)::text AS count FROM students
-     WHERE program_id = $1 AND current_semester = $2 AND status = 'active' AND deleted_at IS NULL`,
-    [subject.program_id, subject.semester]
+    `SELECT COUNT(DISTINCT st.id)::text AS count FROM students st
+     JOIN subject_curriculum_mappings scm ON scm.program_id = st.program_id AND scm.semester = st.current_semester
+     WHERE scm.subject_id = $1 AND st.status = 'active' AND st.deleted_at IS NULL AND scm.deleted_at IS NULL`,
+    [subjectId]
   );
   const studentsEnrolled = parseInt(studRows[0].count, 10);
 
-  // 4. Attendance summary (number of sessions logged)
+  // 5. Attendance summary
   const { rows: attRows } = await query<{ count: string }>(
     `SELECT COUNT(DISTINCT attendance_date)::text AS count FROM attendance
      WHERE subject_id = $1`,
@@ -507,7 +541,7 @@ export async function getSubjectProfile(subjectId: string): Promise<any> {
   );
   const attendanceSessionsLogged = parseInt(attRows[0].count, 10);
 
-  // 5. LMS status
+  // 6. LMS status
   const { rows: matRows } = await query<{ count: string }>(
     `SELECT COUNT(*)::text AS count FROM course_materials WHERE subject_id = $1 AND deleted_at IS NULL`,
     [subjectId]
@@ -519,7 +553,7 @@ export async function getSubjectProfile(subjectId: string): Promise<any> {
   const materialsCount = parseInt(matRows[0].count, 10);
   const assignmentsCount = parseInt(lmsAssignRows[0].count, 10);
 
-  // 6. Internal marks submissions
+  // 7. Internal marks submissions
   const { rows: marksRows } = await query<{ count: string }>(
     `SELECT COUNT(*)::text AS count FROM internal_marks WHERE subject_id = $1 AND deleted_at IS NULL`,
     [subjectId]
@@ -530,12 +564,6 @@ export async function getSubjectProfile(subjectId: string): Promise<any> {
     id: subject.id,
     code: subject.code,
     name: subject.name,
-    departmentName: subject.departmentName,
-    programName: subject.program || subject.programName || null,
-    regulation: subject.regulation,
-    year: subject.year,
-    semester: subject.semester,
-    semesterRaw: subject.semester_raw,
     lectureHours: subject.lecture_hours,
     tutorialHours: subject.tutorial_hours,
     practicalHours: subject.practical_hours,
@@ -543,6 +571,21 @@ export async function getSubjectProfile(subjectId: string): Promise<any> {
     status: subject.status,
     description: subject.description,
     studentsEnrolled,
+    mappings: mapRows.map((m: any) => ({
+      id: m.id,
+      subjectId: m.subject_id,
+      departmentId: m.department_id,
+      departmentName: m.department_name,
+      departmentCode: m.department_code,
+      programId: m.program_id,
+      programName: m.program || m.program_name || null,
+      programCode: m.program_code,
+      program: m.program,
+      regulation: m.regulation,
+      year: m.year,
+      semester: m.semester,
+      semesterRaw: m.semester_raw
+    })),
     assignedFaculty: facRows.map((f: any) => ({
       allocationId: f.allocationId,
       facultyId: f.facultyId,
@@ -558,4 +601,3 @@ export async function getSubjectProfile(subjectId: string): Promise<any> {
     internalMarksStatus: internalMarksSubmittedCount > 0 ? `Submitted (${internalMarksSubmittedCount} marks records)` : 'Pending submissions',
   };
 }
-

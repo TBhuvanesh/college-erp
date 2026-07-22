@@ -126,9 +126,12 @@ interface ExamCriteriaRow {
 
 async function fetchExamsWithCriteria(examIds: string[]): Promise<ExamCriteriaRow[]> {
   const { rows } = await query<ExamCriteriaRow>(
-    `SELECT e.id, sub.department_id, e.semester, e.section, e.exam_type::text AS exam_type, e.subject_id,
+    `SELECT e.id, COALESCE(scm.department_id, f.department_id) AS department_id, e.semester, e.section, e.exam_type::text AS exam_type, e.subject_id,
        TO_CHAR(e.exam_date, 'YYYY-MM-DD') AS exam_date, e.status::text AS status
-     FROM exams e JOIN subjects sub ON sub.id = e.subject_id
+     FROM exams e 
+     JOIN subjects sub ON sub.id = e.subject_id
+     JOIN faculty f ON f.id = e.faculty_id
+     LEFT JOIN subject_curriculum_mappings scm ON scm.subject_id = sub.id AND scm.semester = e.semester AND scm.department_id = f.department_id AND scm.deleted_at IS NULL
      WHERE e.id = ANY($1::uuid[]) AND e.deleted_at IS NULL`,
     [examIds]
   );

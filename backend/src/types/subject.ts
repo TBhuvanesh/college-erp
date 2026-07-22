@@ -10,16 +10,24 @@ export type SubjectStatus = (typeof SUBJECT_STATUSES)[number];
 
 // ── Domain Interfaces ─────────────────────────────────────────────────────────
 
-interface DepartmentRef {
-  id: string;
-  name: string;
-  code: string;
-}
 
-interface ProgramRef {
+
+export interface SubjectCurriculumMappingDetail {
   id: string;
-  name: string;
-  code: string;
+  subjectId: string;
+  departmentId: string;
+  departmentName: string;
+  departmentCode: string;
+  programId: string | null;
+  programName: string | null;
+  programCode: string | null;
+  program: string | null;
+  regulation: string;
+  year: 'I' | 'II' | 'III' | 'IV';
+  semester: number;
+  semesterRaw: 'I' | 'II' | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /** Full subject record with resolved foreign keys — used in single-resource responses. */
@@ -27,22 +35,16 @@ export interface SubjectDetail {
   id: string;
   code: string;
   name: string;
-  department: DepartmentRef;
-  program: ProgramRef | null;
-  programName: string | null; // Stores free-text program from Excel/Imports
-  regulation: string;
-  year: 'I' | 'II' | 'III' | 'IV' | null;
-  semester: number;
-  semesterRaw: 'I' | 'II' | null;
-  lectureHours: number;
-  tutorialHours: number;
-  practicalHours: number;
   credits: number;
   type: SubjectType;
   status: SubjectStatus;
+  lectureHours: number;
+  tutorialHours: number;
+  practicalHours: number;
   description: string | null;
   createdAt: Date;
   updatedAt: Date;
+  mappings: SubjectCurriculumMappingDetail[];
 }
 
 /** Lightweight view used in paginated list responses. */
@@ -50,20 +52,23 @@ export interface SubjectSummary {
   id: string;
   code: string;
   name: string;
-  departmentId: string;
-  departmentName: string;
-  programId: string | null;
-  programName: string | null;
-  regulation: string;
-  year: string | null;
-  semester: number;
-  semesterRaw: string | null;
   credits: number;
   type: SubjectType;
   status: SubjectStatus;
   lectureHours: number;
   tutorialHours: number;
   practicalHours: number;
+  // If filtered by department, these fields represent that matching mapping's details:
+  departmentId?: string;
+  departmentName?: string;
+  programId?: string | null;
+  programName?: string | null;
+  regulation?: string;
+  year?: string | null;
+  semester?: number;
+  semesterRaw?: string | null;
+  // General view: all mappings
+  mappings?: SubjectCurriculumMappingDetail[];
 }
 
 export interface PaginatedSubjects {
@@ -77,6 +82,26 @@ export interface PaginatedSubjects {
 }
 
 // ── Zod Validation Schemas ────────────────────────────────────────────────────
+
+export const createCurriculumMappingSchema = z.object({
+  departmentId: z.string().uuid('Invalid department ID'),
+  programId: z.string().uuid('Invalid program ID').optional().nullable(),
+  program: z.string().max(100).trim().optional().nullable(),
+  regulation: z.string().max(20).trim().default('R22'),
+  year: z.enum(['I', 'II', 'III', 'IV']),
+  semesterRaw: z.enum(['I', 'II']).optional().nullable(),
+  semester: z.number().int().min(1).max(12).optional().nullable(),
+});
+
+export const updateCurriculumMappingSchema = z.object({
+  departmentId: z.string().uuid('Invalid department ID').optional(),
+  programId: z.string().uuid('Invalid program ID').optional().nullable(),
+  program: z.string().max(100).trim().optional().nullable(),
+  regulation: z.string().max(20).trim().optional(),
+  year: z.enum(['I', 'II', 'III', 'IV']).optional(),
+  semesterRaw: z.enum(['I', 'II']).optional().nullable(),
+  semester: z.number().int().min(1).max(12).optional().nullable(),
+});
 
 export const createSubjectSchema = z.object({
   code: z
@@ -109,13 +134,6 @@ export const createSubjectSchema = z.object({
 export const updateSubjectSchema = z
   .object({
     name: z.string().min(2).max(150).trim().optional(),
-    departmentId: z.string().uuid().optional(),
-    programId: z.string().uuid().optional().nullable(),
-    program: z.string().max(100).trim().optional().nullable(),
-    regulation: z.string().max(20).trim().optional(),
-    year: z.enum(['I', 'II', 'III', 'IV']).optional().nullable(),
-    semesterRaw: z.enum(['I', 'II']).optional().nullable(),
-    semester: z.number().int().min(1).max(12).optional().nullable(),
     lectureHours: z.number().int().min(0).max(10).optional(),
     tutorialHours: z.number().int().min(0).max(10).optional(),
     practicalHours: z.number().int().min(0).max(10).optional(),
@@ -150,3 +168,7 @@ export type CreateSubjectInput = z.infer<typeof createSubjectSchema>;
 export type UpdateSubjectInput = z.infer<typeof updateSubjectSchema>;
 export type UpdateSubjectStatusInput = z.infer<typeof updateSubjectStatusSchema>;
 export type ListSubjectsQuery = z.infer<typeof listSubjectsQuerySchema>;
+
+export type CreateCurriculumMappingInput = z.infer<typeof createCurriculumMappingSchema>;
+export type UpdateCurriculumMappingInput = z.infer<typeof updateCurriculumMappingSchema>;
+

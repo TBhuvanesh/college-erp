@@ -181,10 +181,11 @@ export const AllocationManager: React.FC = () => {
 
     if (selectedFacultyObj && selectedSubjectObj) {
       const facDeptId = selectedFacultyObj.departmentId || selectedFacultyObj.department?.id;
-      const subjDeptId = selectedSubjectObj.departmentId || selectedSubjectObj.department?.id;
+      
+      const hasMapping = selectedSubjectObj.mappings?.some((m: any) => m.departmentId === facDeptId);
 
-      if (facDeptId && subjDeptId && facDeptId !== subjDeptId) {
-        setValidationError("Department Mismatch: Selected faculty member and subject belong to different departments.");
+      if (facDeptId && selectedSubjectObj.mappings && !hasMapping) {
+        setValidationError("Department Mismatch: Selected subject is not mapped to this faculty member's department curriculum.");
       } else {
         setValidationError(null);
       }
@@ -356,19 +357,25 @@ export const AllocationManager: React.FC = () => {
 
   // Get subjects matching the program / department selected in modal
   const filteredModalSubjects = subjects.filter(s => {
-    if (formDept && s.departmentId !== formDept && s.department?.id !== formDept) return false;
+    if (formDept) {
+      const hasDeptMapping = s.mappings?.some((m: any) => m.departmentId === formDept);
+      if (!hasDeptMapping) return false;
+    }
     if (formProgram) {
       const selectedProg = programs.find(p => p.id === formProgram);
-      const matchesId = s.programId === formProgram;
-      const matchesName = selectedProg && s.programName && (
-        selectedProg.name.toLowerCase().includes(s.programName.toLowerCase()) ||
-        selectedProg.code.toLowerCase().includes(s.programName.toLowerCase()) ||
-        s.programName.toLowerCase().includes(selectedProg.name.toLowerCase()) ||
-        s.programName.toLowerCase().includes(selectedProg.code.toLowerCase())
-      );
+      const matchesId = s.mappings?.some((m: any) => m.programId === formProgram);
+      const matchesName = selectedProg && s.mappings?.some((m: any) => m.programName && (
+        selectedProg.name.toLowerCase().includes(m.programName.toLowerCase()) ||
+        selectedProg.code.toLowerCase().includes(m.programName.toLowerCase()) ||
+        m.programName.toLowerCase().includes(selectedProg.name.toLowerCase()) ||
+        m.programName.toLowerCase().includes(selectedProg.code.toLowerCase())
+      ));
       if (!matchesId && !matchesName) return false;
     }
-    if (formSemester && s.semester !== Number(formSemester)) return false;
+    if (formSemester) {
+      const hasSemMapping = s.mappings?.some((m: any) => Number(m.semester) === Number(formSemester));
+      if (!hasSemMapping) return false;
+    }
     return true;
   });
 

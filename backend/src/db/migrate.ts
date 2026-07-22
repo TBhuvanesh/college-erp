@@ -43,6 +43,7 @@ const MIGRATION_FILES = [
   '035_subjects_master_updates.sql',
   '036_subject_credits_decimal.sql',
   '037_subject_credits_check_constraint.sql',
+  '038_subjects_curriculum_mappings.sql',
 ];
 
 async function runMigrations(): Promise<void> {

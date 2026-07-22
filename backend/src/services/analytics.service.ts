@@ -38,13 +38,17 @@ export async function getInstitutionOverview(departmentId: string | null): Promi
   const deptParams = departmentId ? [departmentId] : [];
   const deptFilter = departmentId ? 'AND department_id = $1' : '';
 
+  const subQuery = departmentId
+    ? 'SELECT COUNT(DISTINCT subject_id)::text AS count FROM subject_curriculum_mappings WHERE deleted_at IS NULL AND department_id = $1'
+    : 'SELECT COUNT(*)::text AS count FROM subjects WHERE deleted_at IS NULL';
+
   const [stu, fac, dept, sub] = await Promise.all([
     query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM students WHERE deleted_at IS NULL ${deptFilter}`, deptParams),
     query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM faculty WHERE deleted_at IS NULL ${deptFilter}`, deptParams),
     departmentId
       ? query<{ count: string }>('SELECT COUNT(*)::text AS count FROM departments WHERE id = $1 AND deleted_at IS NULL', [departmentId])
       : query<{ count: string }>('SELECT COUNT(*)::text AS count FROM departments WHERE deleted_at IS NULL'),
-    query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM subjects WHERE deleted_at IS NULL ${deptFilter}`, deptParams),
+    query<{ count: string }>(subQuery, deptParams),
   ]);
 
   return {
@@ -73,7 +77,8 @@ export async function getAcademicAnalytics(departmentId: string | null): Promise
   );
 
   const resultParams: unknown[] = [];
-  const resultDeptWhere = departmentId ? 'AND sub.department_id = $1' : '';
+  const resultJoin = departmentId ? 'JOIN subject_curriculum_mappings scm ON scm.subject_id = r.subject_id' : '';
+  const resultDeptWhere = departmentId ? 'AND scm.department_id = $1 AND scm.deleted_at IS NULL' : '';
   if (departmentId) resultParams.push(departmentId);
 
   const gradeRes = await query<{
@@ -91,6 +96,7 @@ export async function getAcademicAnalytics(departmentId: string | null): Promise
        COUNT(*)::text AS total_results
      FROM results r
      JOIN subjects sub ON sub.id = r.subject_id
+     ${resultJoin}
      WHERE r.publication_status = 'Published' AND r.deleted_at IS NULL ${resultDeptWhere}`,
     resultParams
   );
@@ -101,6 +107,7 @@ export async function getAcademicAnalytics(departmentId: string | null): Promise
        COUNT(DISTINCT r.subject_id)::text AS total
      FROM results r
      JOIN subjects sub ON sub.id = r.subject_id
+     ${resultJoin}
      WHERE r.deleted_at IS NULL ${resultDeptWhere}`,
     resultParams
   );
@@ -158,24 +165,24 @@ export async function getTeachingAnalytics(userId: string, departmentId: string 
 
 async function getLmsAnalytics(departmentId: string | null): Promise<LmsAnalytics> {
   const materialParams: unknown[] = [];
-  const materialJoin = departmentId ? 'JOIN subjects sub ON sub.id = cm.subject_id' : '';
-  const materialWhere = departmentId ? 'AND sub.department_id = $1' : '';
+  const materialJoin = departmentId ? 'JOIN subject_curriculum_mappings scm ON scm.subject_id = cm.subject_id' : '';
+  const materialWhere = departmentId ? 'AND scm.department_id = $1 AND scm.deleted_at IS NULL' : '';
   if (departmentId) materialParams.push(departmentId);
 
   const assignParams: unknown[] = [];
-  const assignJoin = departmentId ? 'JOIN subjects sub ON sub.id = a.subject_id' : '';
-  const assignWhere = departmentId ? 'AND sub.department_id = $1' : '';
+  const assignJoin = departmentId ? 'JOIN subject_curriculum_mappings scm ON scm.subject_id = a.subject_id' : '';
+  const assignWhere = departmentId ? 'AND scm.department_id = $1 AND scm.deleted_at IS NULL' : '';
   if (departmentId) assignParams.push(departmentId);
 
   const expectedParams: unknown[] = [];
-  const expectedWhere = departmentId ? 'AND s.department_id = $1' : '';
+  const expectedWhere = departmentId ? 'AND scm.department_id = $1' : '';
   if (departmentId) expectedParams.push(departmentId);
 
   const submissionParams: unknown[] = [];
   const submissionJoin = departmentId
-    ? 'JOIN assignments a ON a.id = asub.assignment_id JOIN subjects sub ON sub.id = a.subject_id'
+    ? 'JOIN assignments a ON a.id = asub.assignment_id JOIN subject_curriculum_mappings scm ON scm.subject_id = a.subject_id'
     : '';
-  const submissionWhere = departmentId ? 'AND sub.department_id = $1' : '';
+  const submissionWhere = departmentId ? 'AND scm.department_id = $1 AND scm.deleted_at IS NULL' : '';
   if (departmentId) submissionParams.push(departmentId);
 
   const [materialRes, assignRes, expectedRes, submissionRes] = await Promise.all([
@@ -190,9 +197,9 @@ async function getLmsAnalytics(departmentId: string | null): Promise<LmsAnalytic
     query<{ expected: string }>(
       `SELECT COUNT(*)::text AS expected
        FROM assignments a
-       JOIN subjects s  ON s.id = a.subject_id
-       JOIN students st ON st.program_id = s.program_id AND st.semester = s.semester
-       WHERE a.deleted_at IS NULL AND s.deleted_at IS NULL AND st.deleted_at IS NULL AND st.status = 'active' ${expectedWhere}`,
+       JOIN subject_curriculum_mappings scm ON scm.subject_id = a.subject_id
+       JOIN students st ON st.program_id = scm.program_id AND st.semester = scm.semester
+       WHERE a.deleted_at IS NULL AND scm.deleted_at IS NULL AND st.deleted_at IS NULL AND st.status = 'active' ${expectedWhere}`,
       expectedParams
     ),
     query<{ total: string; late: string }>(
@@ -499,9 +506,9 @@ export async function getFacultyAnalytics(userId: string): Promise<FacultyAnalyt
     query<{ expected: string; submitted: string; late: string }>(
       `SELECT
          (SELECT COUNT(*) FROM assignments a
-            JOIN subjects s  ON s.id = a.subject_id
-            JOIN students st ON st.program_id = s.program_id AND st.semester = s.semester
-          WHERE a.faculty_id = $1 AND a.deleted_at IS NULL AND s.deleted_at IS NULL
+            JOIN subject_curriculum_mappings scm ON scm.subject_id = a.subject_id
+            JOIN students st ON st.program_id = scm.program_id AND st.semester = scm.semester
+          WHERE a.faculty_id = $1 AND a.deleted_at IS NULL AND scm.deleted_at IS NULL
             AND st.deleted_at IS NULL AND st.status = 'active')::text AS expected,
          (SELECT COUNT(*) FROM assignment_submissions asub
             JOIN assignments a ON a.id = asub.assignment_id
@@ -575,11 +582,11 @@ export async function getStudentAnalytics(userId: string): Promise<StudentAnalyt
     query<{ total: string; submitted: string }>(
       `SELECT COUNT(a.id)::text AS total, COUNT(asub.id)::text AS submitted
        FROM assignments a
-       JOIN subjects s  ON s.id = a.subject_id
-       JOIN students st ON st.program_id = s.program_id AND st.semester = s.semester
+       JOIN subject_curriculum_mappings scm ON scm.subject_id = a.subject_id
+       JOIN students st ON st.program_id = scm.program_id AND st.semester = scm.semester
        LEFT JOIN assignment_submissions asub
          ON asub.assignment_id = a.id AND asub.student_id = st.id AND asub.deleted_at IS NULL
-       WHERE st.user_id = $1 AND a.deleted_at IS NULL AND s.deleted_at IS NULL`,
+       WHERE st.user_id = $1 AND a.deleted_at IS NULL AND scm.deleted_at IS NULL`,
       [userId]
     ),
     roadmapService.getStudentRoadmap(userId, 'student', {}),

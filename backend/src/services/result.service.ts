@@ -107,7 +107,7 @@ const DETAIL_COLS = `
 const DETAIL_JOINS = `
   JOIN students    st  ON st.id  = r.student_id
   JOIN subjects    sub ON sub.id = r.subject_id
-  JOIN departments d   ON d.id   = sub.department_id
+  JOIN departments d   ON d.id   = st.department_id
   JOIN faculty     f   ON f.id   = r.faculty_id
 `;
 
@@ -261,10 +261,14 @@ export async function getRoster(
   section: string,
   userId: string
 ): Promise<RosterResultEntry[]> {
+  const facultyId = await resolveFacultyId(userId);
   // Verify subject exists and get its program context
   const { rows: sub } = await query<{ program_id: string; semester: number }>(
-    'SELECT program_id, semester FROM subjects WHERE id = $1 AND deleted_at IS NULL',
-    [subjectId]
+    `SELECT scm.program_id, scm.semester
+     FROM faculty_subject_assignments fsa
+     JOIN subject_curriculum_mappings scm ON scm.id = fsa.subject_curriculum_mapping_id
+     WHERE fsa.faculty_id = $1 AND fsa.subject_id = $2 AND fsa.section = $3 AND fsa.deleted_at IS NULL`,
+    [facultyId, subjectId, section]
   );
   if (!sub[0]) throw AppError.notFound('Subject not found');
 
@@ -403,8 +407,12 @@ export async function bulkSubmitResults(
 
   // Verify subject exists and get semester for denormalization
   const { rows: sub } = await query<{ id: string; semester: number }>(
-    'SELECT id, semester FROM subjects WHERE id = $1 AND deleted_at IS NULL',
-    [data.subjectId]
+    `SELECT s.id, scm.semester
+     FROM faculty_subject_assignments fsa
+     JOIN subject_curriculum_mappings scm ON scm.id = fsa.subject_curriculum_mapping_id
+     JOIN subjects s ON s.id = scm.subject_id
+     WHERE fsa.faculty_id = $1 AND fsa.subject_id = $2 AND fsa.section = $3 AND fsa.deleted_at IS NULL`,
+    [facultyId, data.subjectId, data.section]
   );
   if (!sub[0]) throw AppError.notFound('Subject not found');
 
