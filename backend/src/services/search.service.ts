@@ -229,9 +229,9 @@ async function searchFaculty(userId: string, pattern: string): Promise<SearchRes
     query<StudentRow>(
       `SELECT DISTINCT s.id, s.roll_number, s.full_name, d.name AS department_name, s.semester
        FROM faculty_subject_assignments fsa
-       JOIN subjects      sub ON sub.id = fsa.subject_id AND sub.deleted_at IS NULL
-       JOIN students      s   ON s.program_id    = sub.program_id
-                             AND s.semester      = sub.semester
+       JOIN subject_curriculum_mappings scm ON scm.id = fsa.subject_curriculum_mapping_id AND scm.deleted_at IS NULL
+       JOIN students      s   ON s.department_id = scm.department_id
+                             AND s.semester      = scm.semester
                              AND s.section       = fsa.section
                              AND s.academic_year = fsa.academic_year
                              AND s.deleted_at    IS NULL

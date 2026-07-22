@@ -47,7 +47,7 @@ export default function StudentCalendar() {
           setDepartments(res.data.departments);
         }
       } catch (err) {
-        console.error("Failed to load departments in StudentCalendar", err);
+        console.warn("Failed to load departments in StudentCalendar (session may be expired):", err);
       }
     };
     const timer = setTimeout(() => {

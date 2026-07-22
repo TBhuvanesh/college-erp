@@ -123,3 +123,44 @@ export const deleteExam = asyncHandler(async (req: Request, res: Response) => {
   await examService.deleteExam(req.params.id, req.user!.id);
   sendSuccess(res, null, 'Examination deleted successfully');
 });
+
+// ── Examination Sessions Controllers ──────────────────────────────────────────
+
+export const createSession = asyncHandler(async (req: Request, res: Response) => {
+  const session = await examService.createExaminationSession(req.body, req.user!.id);
+  sendCreated(res, { session }, 'Examination Session created successfully');
+});
+
+export const getSession = asyncHandler(async (req: Request, res: Response) => {
+  const session = await examService.getExaminationSessionById(req.params.id);
+  sendSuccess(res, { session });
+});
+
+export const listSessions = asyncHandler(async (req: Request, res: Response) => {
+  const filters = {
+    page: req.query.page ? Number(req.query.page) : 1,
+    limit: req.query.limit ? Number(req.query.limit) : 20,
+    departmentId: req.query.departmentId as string | undefined,
+    year: req.query.year as string | undefined,
+    semester: req.query.semester ? Number(req.query.semester) : undefined,
+    status: req.query.status as string | undefined,
+  };
+  const result = await examService.listExaminationSessions(filters);
+  sendSuccess(res, result);
+});
+
+export const configureSubjectSchedule = asyncHandler(async (req: Request, res: Response) => {
+  const session = await examService.configureSubjectSchedule(req.params.id, req.body, req.user!.id);
+  sendSuccess(res, { session }, 'Subject examination schedule configured successfully');
+});
+
+export const publishSession = asyncHandler(async (req: Request, res: Response) => {
+  const session = await examService.publishExaminationSession(req.params.id, req.user!.id);
+  sendSuccess(res, { session }, 'Examination Session published successfully');
+});
+
+export const deleteSession = asyncHandler(async (req: Request, res: Response) => {
+  await examService.deleteExaminationSession(req.params.id, req.user!.id);
+  sendSuccess(res, null, 'Examination Session deleted successfully');
+});
+

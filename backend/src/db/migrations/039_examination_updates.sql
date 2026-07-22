@@ -1,0 +1,3 @@
+-- Migration 039: Predefined examination types enum value updates
+-- Predefined types: Internal Assessment, Semester End Examination, Practical / Laboratory Exam, Viva, Improvement Exam, Supplementary Exam
+-- Executed programmatically in migrate.ts to support out-of-transaction ALTER TYPE operations

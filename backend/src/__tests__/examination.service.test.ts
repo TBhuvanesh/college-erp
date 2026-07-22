@@ -7,6 +7,9 @@ import {
   updateExam,
   updateExamStatus,
   deleteExam,
+  createExaminationSession,
+  configureSubjectSchedule,
+  publishExaminationSession,
 } from '../services/examination.service';
 import { AppError } from '../errors/AppError';
 
@@ -16,7 +19,10 @@ const mockQuery = jest.fn();
 
 jest.mock('../config/database', () => ({
   query: (...args: unknown[]) => mockQuery(...args),
-  withTransaction: jest.fn(),
+  withTransaction: async (fn: (client: any) => Promise<any>) => {
+    const mockClient = { query: mockQuery };
+    return fn(mockClient);
+  },
 }));
 
 // ── Dependency mocks ──────────────────────────────────────────────────────────
@@ -30,6 +36,11 @@ jest.mock('../services/assignment.service', () => ({
 jest.mock('../utils/audit', () => ({
   auditLog: jest.fn().mockResolvedValue(undefined),
 }));
+
+beforeEach(() => {
+  mockQuery.mockReset();
+  mockIsFacultyAssigned.mockReset();
+});
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -172,7 +183,7 @@ describe('getFacultySchedule', () => {
 // ── getStudentTimetable ───────────────────────────────────────────────────────
 
 describe('getStudentTimetable', () => {
-  const STUDENT_ROW = { program_id: 'prog-uuid-1', semester: 3, section: 'A' };
+  const STUDENT_ROW = { program_id: 'prog-uuid-1', semester: 3, section: 'A', department_id: 'dept-uuid-1' };
 
   it('returns timetable excluding cancelled exams by default', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [STUDENT_ROW] });
@@ -213,7 +224,7 @@ describe('createExam', () => {
     facultyId: 'fac-uuid-1',
     section: 'A',
     examType: 'Mid-1' as const,
-    examDate: '2026-07-15',
+    examDate: '2036-07-15',
     startTime: '09:00',
     endTime: '11:00',
     maximumMarks: 50,
@@ -223,10 +234,29 @@ describe('createExam', () => {
     mockQuery
       .mockResolvedValueOnce({ rows: [{ semester: 3 }] })          // subject lookup
       .mockResolvedValueOnce({ rows: [{ id: 'fac-uuid-1' }] })     // faculty lookup
+      .mockResolvedValueOnce({ rows: [] })                         // duplicate check query
       .mockResolvedValueOnce({ rows: [{ id: 'exam-uuid-1' }] })    // INSERT
       .mockResolvedValueOnce({ rows: [EXAM_ROW] });                 // getExamById
 
     const result = await createExam(BASE_INPUT, 'admin-user-uuid', 'admin');
+
+    expect(result.id).toBe('exam-uuid-1');
+    expect(mockIsFacultyAssigned).not.toHaveBeenCalled();
+  });
+
+  it('admin creates an exam and automatically resolves faculty from allocation', async () => {
+    const inputWithoutFaculty = { ...BASE_INPUT };
+    delete (inputWithoutFaculty as any).facultyId;
+
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ semester: 3 }] })                         // subject lookup
+      .mockResolvedValueOnce({ rows: [{ faculty_id: 'fac-allocated-uuid' }] })    // allocation lookup
+      .mockResolvedValueOnce({ rows: [{ id: 'fac-allocated-uuid' }] })            // faculty lookup
+      .mockResolvedValueOnce({ rows: [] })                                        // duplicate check query
+      .mockResolvedValueOnce({ rows: [{ id: 'exam-uuid-1' }] })                    // INSERT
+      .mockResolvedValueOnce({ rows: [EXAM_ROW] });                               // getExamById
+
+    const result = await createExam(inputWithoutFaculty, 'admin-user-uuid', 'admin');
 
     expect(result.id).toBe('exam-uuid-1');
     expect(mockIsFacultyAssigned).not.toHaveBeenCalled();
@@ -237,6 +267,7 @@ describe('createExam', () => {
       .mockResolvedValueOnce({ rows: [{ id: 'fac-uuid-1' }] })     // resolveFacultyId
       .mockResolvedValueOnce({ rows: [{ semester: 3 }] })          // subject lookup
       .mockResolvedValueOnce({ rows: [{ id: 'fac-uuid-1' }] })     // faculty lookup
+      .mockResolvedValueOnce({ rows: [] })                         // duplicate check query
       .mockResolvedValueOnce({ rows: [{ id: 'exam-uuid-1' }] })    // INSERT
       .mockResolvedValueOnce({ rows: [EXAM_ROW] });                 // getExamById
 
@@ -460,3 +491,106 @@ describe('deleteExam', () => {
     await expect(deleteExam('exam-uuid-1', 'admin-uuid')).resolves.toBeUndefined();
   });
 });
+
+// ── Examination Sessions ──────────────────────────────────────────────────────
+
+describe('Examination Sessions', () => {
+  it('creates an examination session and placeholder exam schedules', async () => {
+    mockQuery
+      .mockResolvedValueOnce({ rows: [] }) // duplicate check
+      .mockResolvedValueOnce({ rows: [{ id: 'sess-uuid-1' }] }) // insert session
+      .mockResolvedValueOnce({ rows: [{ type: 'Theory', code: 'CS101', name: 'DS' }] }) // subject check
+      .mockResolvedValueOnce({ rows: [] }) // insert placeholder exam
+      .mockResolvedValueOnce({
+        rows: [{
+          id: 'sess-uuid-1', name: 'Mid-I', academic_year: '2026-27', regulation: 'R22',
+          department_id: 'dept-1', department_name: 'CSE', department_code: 'CSE', year: 'III', semester: 5,
+          exam_type: 'Mid-1', sections: ['A', 'B'], subject_ids: ['sub-1'], status: 'Draft',
+          created_at: new Date(), updated_at: new Date()
+        }]
+      }) // fetch session
+      .mockResolvedValueOnce({ rows: [] }) // fetch exams
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', code: 'CS101', name: 'DS', type: 'Theory' }] }); // fetch subInfoRows
+
+    const session = await createExaminationSession({
+      name: 'Mid-I',
+      academicYear: '2026-27',
+      regulation: 'R22',
+      departmentId: 'dept-1',
+      year: 'III',
+      semester: 5,
+      examType: 'Mid-1',
+      sections: ['A', 'B'],
+      subjectIds: ['sub-1']
+    }, 'admin-uuid');
+
+    expect(session.id).toBe('sess-uuid-1');
+    expect(session.status).toBe('Draft');
+  });
+
+  it('configures theory subject schedule for a session', async () => {
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ status: 'Draft', sections: ['A', 'B'], semester: 5, exam_type: 'Mid-1' }] }) // session check
+      .mockResolvedValueOnce({ rows: [{ id: 'exam-1' }] }) // check existing exam
+      .mockResolvedValueOnce({ rows: [] }) // update exam
+      .mockResolvedValueOnce({ rows: [] }) // update session status
+      .mockResolvedValueOnce({
+        rows: [{
+          id: 'sess-uuid-1', name: 'Mid-I', academic_year: '2026-27', regulation: 'R22',
+          department_id: 'dept-1', department_name: 'CSE', department_code: 'CSE', year: 'III', semester: 5,
+          exam_type: 'Mid-1', sections: ['A', 'B'], subject_ids: ['sub-1'], status: 'Scheduling',
+          created_at: new Date(), updated_at: new Date()
+        }]
+      })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', code: 'CS101', name: 'DS', type: 'Theory' }] });
+
+    const session = await configureSubjectSchedule('sess-uuid-1', {
+      subjectId: 'sub-1',
+      examDate: '2026-07-22',
+      startTime: '09:30',
+      endTime: '11:00',
+      maximumMarks: 50,
+      venue: 'Hall A'
+    }, 'admin-uuid');
+
+    expect(session.status).toBe('Scheduling');
+  });
+
+  it('publishes an examination session and generates notifications & calendar events', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [{
+          id: 'sess-uuid-1', name: 'Mid-I', department_id: 'dept-1', department_name: 'CSE',
+          semester: 5, sections: ['A', 'B'], subject_ids: ['sub-1'], year: 'III'
+        }]
+      }) // fetch session
+      .mockResolvedValueOnce({
+        rows: [{
+          id: 'exam-1', subject_id: 'sub-1', subject_code: 'CS101', subject_name: 'DS',
+          section: 'A,B', exam_date: '2026-07-22', start_time: '09:30', end_time: '11:00', venue: 'Hall A'
+        }]
+      }) // fetch exams
+      .mockResolvedValueOnce({ rows: [] }) // update session status
+      .mockResolvedValueOnce({ rows: [] }) // update exams status
+      .mockResolvedValueOnce({ rows: [] }) // insert calendar event
+      .mockResolvedValueOnce({ rows: [{ user_id: 'stu-user-1' }] }) // fetch students
+      .mockResolvedValueOnce({ rows: [] }) // notification student
+      .mockResolvedValueOnce({ rows: [{ user_id: 'fac-user-1' }] }) // fetch faculty
+      .mockResolvedValueOnce({ rows: [] }) // notification faculty
+      .mockResolvedValueOnce({
+        rows: [{
+          id: 'sess-uuid-1', name: 'Mid-I', academic_year: '2026-27', regulation: 'R22',
+          department_id: 'dept-1', department_name: 'CSE', department_code: 'CSE', year: 'III', semester: 5,
+          exam_type: 'Mid-1', sections: ['A', 'B'], subject_ids: ['sub-1'], status: 'Published',
+          created_at: new Date(), updated_at: new Date()
+        }]
+      })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', code: 'CS101', name: 'DS', type: 'Theory' }] });
+
+    const session = await publishExaminationSession('sess-uuid-1', 'admin-uuid');
+    expect(session.status).toBe('Published');
+  });
+});
+

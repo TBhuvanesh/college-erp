@@ -1,6 +1,18 @@
 import { z } from 'zod';
 
-export const EXAM_TYPES = ['Mid-1', 'Mid-2', 'Lab Exam', 'Internal', 'End Semester'] as const;
+export const EXAM_TYPES = [
+  'Mid-1',
+  'Mid-2',
+  'Lab Exam',
+  'Internal',
+  'End Semester',
+  'Internal Assessment',
+  'Semester End Examination',
+  'Practical / Laboratory Exam',
+  'Viva',
+  'Improvement Exam',
+  'Supplementary Exam',
+] as const;
 export type ExamType = (typeof EXAM_TYPES)[number];
 
 export const EXAM_STATUSES = ['Scheduled', 'Ongoing', 'Completed', 'Cancelled'] as const;
@@ -94,8 +106,11 @@ const timeHHMM = z
 export const createExamSchema = z
   .object({
     subjectId: z.string().uuid('Invalid subject ID'),
-    facultyId: z.string().uuid('Invalid faculty ID'),
-    section: z.string().min(1).max(10).trim().toUpperCase(),
+    facultyId: z.string().uuid('Invalid faculty ID').optional(),
+    section: z.union([
+      z.string().min(1).max(10).trim().toUpperCase(),
+      z.array(z.string().min(1).max(10).trim().toUpperCase())
+    ]),
     examType: z.enum(EXAM_TYPES),
     examDate: isoDate,
     startTime: timeHHMM,
@@ -147,3 +162,97 @@ export const listExamsQuerySchema = z
   });
 
 export type ListExamsQuery = z.infer<typeof listExamsQuerySchema>;
+
+// ── Examination Sessions Redesign Types ────────────────────────────────────────
+
+export const SESSION_STATUSES = ['Draft', 'Scheduling', 'Ready for Review', 'Published', 'Archived'] as const;
+export type SessionStatus = (typeof SESSION_STATUSES)[number];
+
+export interface SubjectScheduleCard {
+  subjectId: string;
+  subjectCode: string;
+  subjectName: string;
+  subjectType: string;
+  status: 'Pending' | 'Scheduled';
+  examId?: string;
+  examDate?: string;
+  startTime?: string;
+  endTime?: string;
+  maximumMarks?: number;
+  venue?: string;
+  instructions?: string;
+  sectionSchedules?: Array<{
+    section: string;
+    examId: string;
+    examDate: string;
+    startTime: string;
+    endTime: string;
+    maximumMarks: number;
+    venue?: string;
+    instructions?: string;
+  }>;
+}
+
+export interface ExaminationSessionSummary {
+  id: string;
+  name: string;
+  academicYear: string;
+  regulation: string;
+  departmentId: string;
+  departmentName?: string;
+  departmentCode?: string;
+  year: string;
+  semester: number;
+  examType: ExamType;
+  sections: string[];
+  subjectIds: string[];
+  status: SessionStatus;
+  scheduledSubjectCount: number;
+  totalSubjectCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ExaminationSessionDetail extends ExaminationSessionSummary {
+  subjects: SubjectScheduleCard[];
+  warnings?: string[];
+}
+
+export const createSessionSchema = z.object({
+  name: z.string().min(2, 'Session name is required').trim(),
+  academicYear: z.string().default('2026-27'),
+  regulation: z.string().default('R22'),
+  departmentId: z.string().uuid('Invalid department ID'),
+  year: z.string().min(1, 'Year is required'),
+  semester: z.coerce.number().int().min(1).max(12),
+  examType: z.enum(EXAM_TYPES),
+  sections: z.array(z.string()).min(1, 'Select at least one section'),
+  subjectIds: z.array(z.string().uuid()).min(1, 'Select at least one subject'),
+});
+
+export type CreateSessionInput = z.infer<typeof createSessionSchema>;
+
+export const configureSubjectScheduleSchema = z.object({
+  subjectId: z.string().uuid('Invalid subject ID'),
+  section: z.string().optional(),
+  examDate: isoDate.optional(),
+  startTime: timeHHMM.optional(),
+  endTime: timeHHMM.optional(),
+  maximumMarks: z.coerce.number().min(1).max(200).default(50),
+  venue: z.string().optional(),
+  instructions: z.string().optional(),
+  sectionSchedules: z.array(
+    z.object({
+      section: z.string().min(1),
+      examDate: isoDate,
+      startTime: timeHHMM,
+      endTime: timeHHMM,
+      maximumMarks: z.coerce.number().min(1).max(200).default(50),
+      venue: z.string().optional(),
+      instructions: z.string().optional(),
+    })
+  ).optional(),
+});
+
+export type ConfigureSubjectScheduleInput = z.infer<typeof configureSubjectScheduleSchema>;
+

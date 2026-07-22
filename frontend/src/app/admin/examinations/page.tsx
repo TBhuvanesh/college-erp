@@ -19,1008 +19,1138 @@ import {
   CheckSquare,
   Lock,
   Search,
-  SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
   RefreshCw,
-  GraduationCap
+  GraduationCap,
+  Layers,
+  Send,
+  Building2,
+  FileCheck,
+  CheckCircle2,
+  AlertTriangle,
+  MapPin,
+  FileText
 } from "lucide-react";
 
-// Types
-interface SubjectSummary {
+interface Department {
   id: string;
-  code: string;
   name: string;
-  departmentName: string;
-  semester: number;
+  code: string;
 }
 
-interface FacultySummary {
-  id: string;
-  employeeNumber: string;
-  fullName: string;
-  email: string;
-  departmentName: string;
-  status: string;
-}
-
-interface ExamSummary {
-  id: string;
+interface SubjectCard {
   subjectId: string;
   subjectCode: string;
   subjectName: string;
-  facultyName: string;
+  subjectType: string;
+  status: 'Pending' | 'Scheduled';
+  examId?: string;
+  examDate?: string;
+  startTime?: string;
+  endTime?: string;
+  maximumMarks?: number;
+  venue?: string;
+  instructions?: string;
+  sectionSchedules?: Array<{
+    section: string;
+    examId: string;
+    examDate: string;
+    startTime: string;
+    endTime: string;
+    maximumMarks: number;
+    venue?: string;
+    instructions?: string;
+  }>;
+}
+
+interface SessionSummary {
+  id: string;
+  name: string;
+  academicYear: string;
+  regulation: string;
+  departmentId: string;
+  departmentName?: string;
+  departmentCode?: string;
+  year: string;
   semester: number;
-  section: string;
   examType: string;
-  examDate: string;
-  startTime: string;
-  endTime: string;
-  maximumMarks: number;
-  status: string;
+  sections: string[];
+  subjectIds: string[];
+  status: 'Draft' | 'Scheduling' | 'Ready for Review' | 'Published' | 'Archived';
+  scheduledSubjectCount: number;
+  totalSubjectCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface SessionDetail extends SessionSummary {
+  subjects: SubjectCard[];
+  warnings?: string[];
 }
 
 export default function AdminExaminations() {
   const { accessToken } = useAuth();
 
+  // Active View Mode: 'sessions_list' | 'builder_workspace'
+  const [viewMode, setViewMode] = useState<'sessions_list' | 'builder_workspace'>('sessions_list');
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [activeSession, setActiveSession] = useState<SessionDetail | null>(null);
+
   // Data lists
-  const [exams, setExams] = useState<ExamSummary[]>([]);
-  const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
-  const [faculty, setFaculty] = useState<FacultySummary[]>([]);
-  
-  // Stats counts
-  const [stats, setStats] = useState({
-    total: 0,
-    scheduled: 0,
-    ongoing: 0,
-    completed: 0,
-    cancelled: 0
-  });
+  const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
 
   // Filters state
-  const [subjectFilter, setSubjectFilter] = useState("ALL");
-  const [facultyFilter, setFacultyFilter] = useState("ALL");
-  const [semesterFilter, setSemesterFilter] = useState("ALL");
-  const [sectionFilter, setSectionFilter] = useState("");
+  const [deptFilter, setDeptFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
-  const [dateFilter, setDateFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Pagination state
   const [page, setPage] = useState(1);
-  const [limit] = useState(15);
+  const [limit] = useState(12);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
 
-  // Loading & error feedback
+  // Loading & error states
   const [loadingList, setLoadingList] = useState(true);
-  const [loadingDependencies, setLoadingDependencies] = useState(true);
+  const [loadingSession, setLoadingSession] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState("");
 
-  // Drawer / modal control states
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingExam, setEditingExam] = useState<ExamSummary | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [examToDelete, setExamToDelete] = useState<{ id: string; subjectName: string; examType: string } | null>(null);
-
-  // Form Fields
-  const [formSubjectId, setFormSubjectId] = useState("");
-  const [formFacultyId, setFormFacultyId] = useState("");
-  const [formSection, setFormSection] = useState("");
+  // Stage 1 Create Session Drawer state
+  const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
+  const [formName, setFormName] = useState("");
+  const [formAcademicYear, setFormAcademicYear] = useState("2026-27");
+  const [formRegulation, setFormRegulation] = useState("R22");
+  const [formDepartmentId, setFormDepartmentId] = useState("");
+  const [formYear, setFormYear] = useState("III");
+  const [formSemester, setFormSemester] = useState("I");
   const [formExamType, setFormExamType] = useState("Mid-1");
-  const [formDate, setFormDate] = useState("");
-  const [formStartTime, setFormStartTime] = useState("");
-  const [formEndTime, setFormEndTime] = useState("");
-  const [formMaxMarks, setFormMaxMarks] = useState("50");
+  const [formSections, setFormSections] = useState<string[]>(["A", "B"]);
+  const [availableSubjects, setAvailableSubjects] = useState<any[]>([]);
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+
+  // Stage 2 Subject Schedule Drawer state
+  const [scheduleDrawerOpen, setScheduleDrawerOpen] = useState(false);
+  const [editingSubjectCard, setEditingSubjectCard] = useState<SubjectCard | null>(null);
+  
+  // Single Theory Schedule Form state
+  const [schedExamDate, setSchedExamDate] = useState("");
+  const [schedStartTime, setSchedStartTime] = useState("09:30");
+  const [schedEndTime, setSchedEndTime] = useState("11:00");
+  const [schedMaxMarks, setSchedMaxMarks] = useState("50");
+  const [schedVenue, setSchedVenue] = useState("");
+  const [schedInstructions, setSchedInstructions] = useState("");
+  const [schedScope, setSchedScope] = useState("Entire Batch");
+
+  // Per-Section Lab Schedule Form state
+  const [labSectionSchedules, setLabSectionSchedules] = useState<Record<string, {
+    examDate: string;
+    startTime: string;
+    endTime: string;
+    maximumMarks: string;
+    venue: string;
+    instructions: string;
+  }>>({});
+
+  // Publish Modal state
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(""), 3500);
   };
 
-  // Fetch filter dropdown options and overall statistics
+  // Fetch departments & initial dependencies
   useEffect(() => {
     if (!accessToken) return;
-
     const fetchDependencies = async () => {
-      setLoadingDependencies(true);
       try {
-        const [subRes, facRes, allExamsRes] = await Promise.all([
-          apiFetch("/subjects?limit=150", {}, accessToken),
-          apiFetch("/faculty?limit=150", {}, accessToken),
-          // Fetch high limit for stats calculation
-          apiFetch("/examinations?limit=1000", {}, accessToken)
-        ]);
-
-        if (subRes.success && subRes.data?.subjects) {
-          setSubjects(subRes.data.subjects);
-        }
-        if (facRes.success && facRes.data?.faculty) {
-          setFaculty(facRes.data.faculty);
-        }
-        if (allExamsRes.success && allExamsRes.data?.exams) {
-          const list: ExamSummary[] = allExamsRes.data.exams;
-          setStats({
-            total: list.length,
-            scheduled: list.filter(e => e.status === "Scheduled").length,
-            ongoing: list.filter(e => e.status === "Ongoing").length,
-            completed: list.filter(e => e.status === "Completed").length,
-            cancelled: list.filter(e => e.status === "Cancelled").length
-          });
+        const res = await apiFetch("/departments?limit=100", {}, accessToken);
+        if (res.success && res.data?.departments) {
+          setDepartments(res.data.departments);
         }
       } catch (err) {
-        console.error("Failed to load dependency schemas for examinations admin", err);
-      } finally {
-        setLoadingDependencies(false);
+        console.error("Failed to load departments", err);
       }
     };
-
     fetchDependencies();
   }, [accessToken]);
 
-  // Fetch paginated exams list with filters
-  const fetchExams = useCallback(async () => {
+  // Fetch Sessions List
+  const fetchSessions = useCallback(async () => {
     if (!accessToken) return;
     setLoadingList(true);
     setError(null);
+
     try {
-      const queryParams = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString()
-      });
+      const queryParams = new URLSearchParams();
+      queryParams.set("page", page.toString());
+      queryParams.set("limit", limit.toString());
+      if (deptFilter !== "ALL") queryParams.set("departmentId", deptFilter);
+      if (statusFilter !== "ALL") queryParams.set("status", statusFilter);
 
-      if (subjectFilter !== "ALL") queryParams.append("subjectId", subjectFilter);
-      if (facultyFilter !== "ALL") queryParams.append("facultyId", facultyFilter);
-      if (semesterFilter !== "ALL") queryParams.append("semester", semesterFilter);
-      if (sectionFilter.trim()) queryParams.append("section", sectionFilter.trim().toUpperCase());
-      if (statusFilter !== "ALL") queryParams.append("status", statusFilter);
-      if (dateFilter) queryParams.append("date", dateFilter);
-
-      const res = await apiFetch(`/examinations?${queryParams.toString()}`, {}, accessToken);
+      const res = await apiFetch(`/examinations/sessions?${queryParams.toString()}`, {}, accessToken);
       if (res.success && res.data) {
-        setExams(res.data.exams || []);
-        if (res.data.pagination) {
-          setTotalPages(res.data.pagination.totalPages || 1);
-          setTotalRecords(res.data.pagination.total || 0);
-        }
+        setSessions(res.data.sessions || []);
+        setTotalPages(res.data.pagination?.totalPages || 1);
+        setTotalRecords(res.data.pagination?.total || 0);
       }
     } catch (err: any) {
-      setError(err.message || "Failed to load examinations schedule logs");
-      setExams([]);
+      setError(err.message || "Failed to load examination sessions");
     } finally {
       setLoadingList(false);
     }
-  }, [page, limit, subjectFilter, facultyFilter, semesterFilter, sectionFilter, statusFilter, dateFilter, accessToken]);
+  }, [accessToken, page, limit, deptFilter, statusFilter]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchExams();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [fetchExams]);
+    fetchSessions();
+  }, [fetchSessions]);
 
-  // Refresh overall statistics
-  const refreshStats = async () => {
+  // Fetch Session Detail for Stage 2 Schedule Builder
+  const fetchSessionDetail = useCallback(async (sessionId: string) => {
+    if (!accessToken) return;
+    setLoadingSession(true);
     try {
-      const res = await apiFetch("/examinations?limit=1000", {}, accessToken);
-      if (res.success && res.data?.exams) {
-        const list: ExamSummary[] = res.data.exams;
-        setStats({
-          total: list.length,
-          scheduled: list.filter(e => e.status === "Scheduled").length,
-          ongoing: list.filter(e => e.status === "Ongoing").length,
-          completed: list.filter(e => e.status === "Completed").length,
-          cancelled: list.filter(e => e.status === "Cancelled").length
-        });
+      const res = await apiFetch(`/examinations/sessions/${sessionId}`, {}, accessToken);
+      if (res.success && res.data?.session) {
+        setActiveSession(res.data.session);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to load session details");
+    } finally {
+      setLoadingSession(false);
     }
+  }, [accessToken]);
+
+  const openBuilderWorkspace = (session: SessionSummary) => {
+    setSelectedSessionId(session.id);
+    setViewMode('builder_workspace');
+    fetchSessionDetail(session.id);
   };
 
-  // Open add schedule form
-  const openAddDrawer = () => {
-    setEditingExam(null);
-    setError(null);
-    setFormSubjectId(subjects[0]?.id || "");
-    setFormFacultyId(faculty[0]?.id || "");
-    setFormSection("");
-    setFormExamType("Mid-1");
-    setFormDate(new Date().toLocaleDateString("en-CA"));
-    setFormStartTime("09:30");
-    setFormEndTime("11:00");
-    setFormMaxMarks("50");
-    setDrawerOpen(true);
-  };
+  // Stage 1: Fetch subjects dynamically based on Dept, Regulation, Year, Semester
+  useEffect(() => {
+    if (!accessToken || !createDrawerOpen || !formDepartmentId || !formYear || !formSemester) {
+      setAvailableSubjects([]);
+      return;
+    }
 
-  // Open edit schedule form
-  const openEditDrawer = (exam: ExamSummary) => {
-    setEditingExam(exam);
-    setError(null);
-    // Find matching subject to set form states (Wait, subjectId is from backend detail, but we can set formSubjectId)
-    setFormSubjectId(exam.subjectId);
-    // Match faculty name to ID from dropdown if possible
-    const matchedFaculty = faculty.find(f => f.fullName === exam.facultyName);
-    setFormFacultyId(matchedFaculty?.id || "");
-    setFormSection(exam.section);
-    setFormExamType(exam.examType);
-    setFormDate(exam.examDate);
-    setFormStartTime(exam.startTime);
-    setFormEndTime(exam.endTime);
-    setFormMaxMarks(exam.maximumMarks.toString());
-    setDrawerOpen(true);
-  };
+    const yearIdx = ["I", "II", "III", "IV"].indexOf(formYear);
+    const semIdx = ["I", "II"].indexOf(formSemester);
+    if (yearIdx === -1 || semIdx === -1) return;
+    const semesterNum = yearIdx * 2 + semIdx + 1;
 
-  // Submit form (create / edit)
-  const handleSubmit = async (e: React.FormEvent) => {
+    const loadMappedSubjects = async () => {
+      setLoadingSubjects(true);
+      try {
+        const res = await apiFetch(
+          `/subjects?limit=200&departmentId=${formDepartmentId}&regulation=${formRegulation}&year=${formYear}&semester=${semesterNum}`,
+          {},
+          accessToken
+        );
+        if (res.success && res.data?.subjects) {
+          setAvailableSubjects(res.data.subjects);
+          // Default select all mapped subjects
+          setSelectedSubjectIds(res.data.subjects.map((s: any) => s.id));
+        } else {
+          setAvailableSubjects([]);
+          setSelectedSubjectIds([]);
+        }
+      } catch (err) {
+        console.warn("Failed to load curriculum subjects for session creation", err);
+      } finally {
+        setLoadingSubjects(false);
+      }
+    };
+
+    loadMappedSubjects();
+  }, [accessToken, createDrawerOpen, formDepartmentId, formRegulation, formYear, formSemester]);
+
+  // Handle Stage 1 Session Creation
+  const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formName.trim() || !formDepartmentId || selectedSubjectIds.length === 0) {
+      setError("Please fill in all required fields and select at least one subject.");
+      return;
+    }
     setError(null);
     setSubmitting(true);
 
+    const yearIdx = ["I", "II", "III", "IV"].indexOf(formYear);
+    const semIdx = ["I", "II"].indexOf(formSemester);
+    const semesterNum = yearIdx * 2 + semIdx + 1;
+
     try {
-      if (!formSubjectId || !formSection || !formDate || !formStartTime || !formEndTime || !formMaxMarks) {
-        throw new Error("Please fill in all required fields.");
-      }
+      const payload = {
+        name: formName.trim(),
+        academicYear: formAcademicYear,
+        regulation: formRegulation,
+        departmentId: formDepartmentId,
+        year: formYear,
+        semester: semesterNum,
+        examType: formExamType,
+        sections: formSections,
+        subjectIds: selectedSubjectIds
+      };
 
-      if (formEndTime <= formStartTime) {
-        throw new Error("End time must be after start time");
-      }
+      const res = await apiFetch("/examinations/sessions", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }, accessToken);
 
-      const parsedMaxMarks = Number(formMaxMarks);
-      if (isNaN(parsedMaxMarks) || parsedMaxMarks < 1 || parsedMaxMarks > 200) {
-        throw new Error("Maximum marks must be a number between 1 and 200");
-      }
-
-      if (editingExam) {
-        // Edit Mode
-        const body = {
-          section: formSection.trim().toUpperCase(),
-          examDate: formDate,
-          startTime: formStartTime,
-          endTime: formEndTime,
-          maximumMarks: parsedMaxMarks
-        };
-
-        const res = await apiFetch(`/examinations/${editingExam.id}`, {
-          method: "PATCH",
-          body: JSON.stringify(body)
-        }, accessToken);
-
-        if (res.success) {
-          triggerToast(res.message || "Examination details updated successfully!");
-          setDrawerOpen(false);
-          fetchExams();
-          refreshStats();
-        }
-      } else {
-        // Create Mode
-        if (!formFacultyId) {
-          throw new Error("Faculty invigilator assignment is required.");
-        }
-
-        const body = {
-          subjectId: formSubjectId,
-          facultyId: formFacultyId,
-          section: formSection.trim().toUpperCase(),
-          examType: formExamType,
-          examDate: formDate,
-          startTime: formStartTime,
-          endTime: formEndTime,
-          maximumMarks: parsedMaxMarks
-        };
-
-        const res = await apiFetch("/examinations", {
-          method: "POST",
-          body: JSON.stringify(body)
-        }, accessToken);
-
-        if (res.success) {
-          triggerToast(res.message || "New examination scheduled successfully!");
-          setDrawerOpen(false);
-          fetchExams();
-          refreshStats();
-        }
+      if (res.success && res.data?.session) {
+        triggerToast("Examination Session created successfully!");
+        setCreateDrawerOpen(false);
+        fetchSessions();
+        // Immediately open Stage 2 Schedule Builder
+        openBuilderWorkspace(res.data.session);
       }
     } catch (err: any) {
-      setError(err.message || "Failed to submit examination details");
+      setError(err.message || "Failed to create examination session");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Status transitions
-  const transitionStatus = async (examId: string, nextStatus: string) => {
+  // Open Stage 2 Subject Schedule Drawer
+  const openSubjectScheduleDrawer = (card: SubjectCard) => {
+    setEditingSubjectCard(card);
+    setError(null);
+
+    const isLab = card.subjectType === "Practical" || card.subjectType === "Lab";
+    if (isLab && activeSession) {
+      const initialMap: Record<string, any> = {};
+      const secList = card.sectionSchedules && card.sectionSchedules.length > 0
+        ? card.sectionSchedules
+        : activeSession.sections.map(s => ({ section: s, examDate: "", startTime: "09:30", endTime: "11:00", maximumMarks: 50, venue: "", instructions: "" }));
+
+      secList.forEach(item => {
+        initialMap[item.section] = {
+          examDate: item.examDate || new Date().toLocaleDateString("en-CA"),
+          startTime: item.startTime || "09:30",
+          endTime: item.endTime || "11:00",
+          maximumMarks: item.maximumMarks ? item.maximumMarks.toString() : "50",
+          venue: item.venue || "",
+          instructions: item.instructions || ""
+        };
+      });
+      setLabSectionSchedules(initialMap);
+    } else {
+      setSchedExamDate(card.examDate || new Date().toLocaleDateString("en-CA"));
+      setSchedStartTime(card.startTime || "09:30");
+      setSchedEndTime(card.endTime || "11:00");
+      setSchedMaxMarks(card.maximumMarks ? card.maximumMarks.toString() : "50");
+      setSchedVenue(card.venue || "");
+      setSchedInstructions(card.instructions || "");
+      setSchedScope("Entire Batch");
+    }
+
+    setScheduleDrawerOpen(true);
+  };
+
+  // Save Subject Schedule Configuration
+  const handleSaveSubjectSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeSession || !editingSubjectCard) return;
+    setError(null);
+    setSubmitting(true);
+
+    const isLab = editingSubjectCard.subjectType === "Practical" || editingSubjectCard.subjectType === "Lab";
+
     try {
-      const res = await apiFetch(`/examinations/${examId}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: nextStatus })
+      let payload: any = {
+        subjectId: editingSubjectCard.subjectId
+      };
+
+      if (isLab) {
+        const secArray = Object.entries(labSectionSchedules).map(([sec, vals]) => ({
+          section: sec,
+          examDate: vals.examDate,
+          startTime: vals.startTime,
+          endTime: vals.endTime,
+          maximumMarks: Number(vals.maximumMarks),
+          venue: vals.venue,
+          instructions: vals.instructions
+        }));
+
+        payload.sectionSchedules = secArray;
+      } else {
+        if (!schedExamDate || !schedStartTime || !schedEndTime) {
+          throw new Error("Date, start time, and end time are required.");
+        }
+        if (schedEndTime <= schedStartTime) {
+          throw new Error("End time must be after start time.");
+        }
+
+        payload.examDate = schedExamDate;
+        payload.startTime = schedStartTime;
+        payload.endTime = schedEndTime;
+        payload.maximumMarks = Number(schedMaxMarks);
+        payload.venue = schedVenue;
+        payload.instructions = schedInstructions;
+      }
+
+      const res = await apiFetch(`/examinations/sessions/${activeSession.id}/schedule-subject`, {
+        method: "POST",
+        body: JSON.stringify(payload)
       }, accessToken);
 
-      if (res.success) {
-        triggerToast(`Exam advanced to status ${nextStatus}!`);
-        fetchExams();
-        refreshStats();
+      if (res.success && res.data?.session) {
+        triggerToast("Subject schedule configured successfully!");
+        setScheduleDrawerOpen(false);
+        setActiveSession(res.data.session);
+        fetchSessions();
       }
     } catch (err: any) {
-      alert(err.message || "Failed to transition examination status");
+      setError(err.message || "Failed to configure subject schedule");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // Soft-Delete Examination
-  const handleDeleteExam = async () => {
-    if (!examToDelete) return;
+  // Publish Examination Session
+  const handlePublishSession = async () => {
+    if (!activeSession) return;
+    setSubmitting(true);
     try {
-      const res = await apiFetch(`/examinations/${examToDelete.id}`, {
+      const res = await apiFetch(`/examinations/sessions/${activeSession.id}/publish`, {
+        method: "POST"
+      }, accessToken);
+
+      if (res.success && res.data?.session) {
+        triggerToast("Examination Session published successfully! Calendar events and notifications generated.");
+        setPublishModalOpen(false);
+        setActiveSession(res.data.session);
+        fetchSessions();
+      }
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to publish examination session");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Delete Session
+  const handleDeleteSession = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this examination session?")) return;
+    try {
+      const res = await apiFetch(`/examinations/sessions/${id}`, {
         method: "DELETE"
       }, accessToken);
-
       if (res.success) {
-        triggerToast("Examination schedule soft-deleted successfully!");
-        setDeleteConfirmOpen(false);
-        setExamToDelete(null);
-        fetchExams();
-        refreshStats();
+        triggerToast("Session deleted successfully.");
+        if (selectedSessionId === id) {
+          setViewMode('sessions_list');
+        }
+        fetchSessions();
       }
     } catch (err: any) {
-      alert(err.message || "Failed to delete examination schedule");
-      setDeleteConfirmOpen(false);
-      setExamToDelete(null);
+      alert(err.message || "Failed to delete session");
     }
   };
 
-  const handleClearFilters = () => {
-    setSubjectFilter("ALL");
-    setFacultyFilter("ALL");
-    setSemesterFilter("ALL");
-    setSectionFilter("");
-    setStatusFilter("ALL");
-    setDateFilter("");
-    setPage(1);
-    triggerToast("All directory filters cleared");
-  };
-
-  const handleFilterChange = (setter: (v: string) => void, val: string) => {
-    setter(val);
-    setPage(1);
-  };
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case "Scheduled": return "dark:text-blue-400 text-blue-700 bg-blue-500/10 border-blue-500/20";
-      case "Ongoing": return "dark:text-emerald-400 text-emerald-700 bg-emerald-500/10 border-emerald-500/20 animate-pulse";
-      case "Completed": return "dark:text-neutral-450 text-text-secondary bg-neutral-500/10 border-neutral-505/20";
-      case "Cancelled": return "dark:text-rose-400 text-rose-700 bg-rose-500/10 border-rose-500/20";
-      default: return "dark:text-neutral-450 text-text-secondary bg-neutral-500/10 border-neutral-505/20";
+  // Filtered Sessions
+  const filteredSessions = sessions.filter(s => {
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchName = s.name.toLowerCase().includes(q);
+      const matchDept = (s.departmentName || "").toLowerCase().includes(q) || (s.departmentCode || "").toLowerCase().includes(q);
+      if (!matchName && !matchDept) return false;
     }
-  };
+    return true;
+  });
 
   return (
-    <div className="space-y-6 relative">
+    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
       
-      {/* Toast popup */}
+      {/* Toast Feedback */}
       {toastMsg && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-blue-600 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xl shadow-blue-600/20 border border-blue-400/20 animate-fade-in">
-          <Sparkles size={14} className="animate-pulse" />
+        <div className="fixed top-5 right-5 z-50 bg-emerald-600 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xl flex items-center gap-2 animate-bounce">
+          <CheckCircle2 size={16} />
           <span>{toastMsg}</span>
         </div>
       )}
 
-      {/* Header and create triggers */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      {/* Header Banner */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b dark:border-neutral-800 border-border-subtle pb-5">
         <div>
-          <h2 className="font-display font-bold text-2xl text-text-primary">Examinations Control Center</h2>
-          <p className="text-xs text-text-muted mt-1">
-            Configure examination timetables, assign invigilators, cancel classes, and track evaluation cycles globally.
+          <div className="flex items-center gap-2 text-xs font-semibold text-blue-500 uppercase tracking-wider mb-1">
+            <GraduationCap size={16} />
+            <span>University Examinations Cell</span>
+          </div>
+          <h2 className="font-display font-bold text-2xl dark:text-white text-text-primary">
+            {viewMode === 'builder_workspace' ? "Stage 2: Visual Exam Schedule Builder" : "Examination Sessions Console"}
+          </h2>
+          <p className="text-xs dark:text-neutral-400 text-text-secondary mt-0.5">
+            {viewMode === 'builder_workspace' 
+              ? "Configure independent dates, times, venues, and section timetables for session subjects before publishing."
+              : "Create examination sessions, select mapped batch subjects, and build systematic exam schedules."}
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start md:self-auto">
+        <div className="flex items-center gap-3">
+          {viewMode === 'builder_workspace' ? (
+            <button
+              onClick={() => setViewMode('sessions_list')}
+              className="px-4 py-2 text-xs font-semibold rounded-lg dark:bg-neutral-800 bg-neutral-100 dark:hover:bg-neutral-750 hover:bg-neutral-200 dark:text-white text-text-primary border dark:border-neutral-750 border-border-subtle cursor-pointer transition flex items-center gap-1.5"
+            >
+              <ChevronLeft size={14} />
+              <span>Back to Sessions</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setError(null);
+                setFormName("");
+                setFormDepartmentId(departments[0]?.id || "");
+                setCreateDrawerOpen(true);
+              }}
+              className="px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/20 cursor-pointer transition flex items-center gap-2"
+            >
+              <Plus size={16} />
+              <span>Create Examination Session</span>
+            </button>
+          )}
+
           <button
-            onClick={openAddDrawer}
-            className="px-4 py-2 text-xs font-semibold rounded bg-blue-600 hover:bg-blue-500 text-white cursor-pointer transition flex items-center gap-1.5"
+            onClick={fetchSessions}
+            className="p-2 rounded-lg dark:bg-neutral-850 bg-neutral-100 hover:bg-neutral-200 dark:hover:bg-neutral-800 dark:text-neutral-400 text-text-secondary dark:hover:text-white border dark:border-neutral-800 border-border-subtle transition cursor-pointer"
+            title="Refresh Sessions List"
           >
-            <Plus size={14} />
-            <span>Create Examination</span>
-          </button>
-          <button
-            onClick={handleClearFilters}
-            className="px-4 py-2 text-xs font-semibold rounded bg-surface hover:bg-surface-elevated border border-border-subtle text-text-muted cursor-pointer transition flex items-center gap-1.5"
-          >
-            <RefreshCw size={12} />
-            <span>Clear Filters</span>
+            <RefreshCw size={14} className={loadingList ? "animate-spin" : ""} />
           </button>
         </div>
       </div>
 
-      {error && (
-        <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold rounded-lg flex items-center gap-2">
-          <AlertCircle size={16} />
-          <span>{error}</span>
+      {/* MODE 1: SESSIONS REGISTRY LIST & OVERVIEW */}
+      {viewMode === 'sessions_list' && (
+        <div className="space-y-6">
+
+          {/* Search and Filters Bar */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-surface dark:bg-neutral-900/60 p-4 rounded-xl border dark:border-neutral-800 border-border-subtle shadow-sm">
+            {/* Search Box */}
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 text-text-muted dark:text-neutral-500" size={14} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search session name or department..."
+                className="w-full pl-9 pr-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
+              />
+            </div>
+
+            {/* Department Filter */}
+            <select
+              value={deptFilter}
+              onChange={(e) => { setDeptFilter(e.target.value); setPage(1); }}
+              className="px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition cursor-pointer"
+            >
+              <option value="ALL">All Departments</option>
+              {departments.map(d => (
+                <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
+              ))}
+            </select>
+
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+              className="px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition cursor-pointer"
+            >
+              <option value="ALL">All Statuses</option>
+              {["Draft", "Scheduling", "Ready for Review", "Published", "Archived"].map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sessions Grid */}
+          {loadingList ? (
+            <div className="py-20 text-center">
+              <Loader2 className="animate-spin text-blue-500 mx-auto mb-3" size={24} />
+              <p className="text-xs text-text-muted dark:text-neutral-400 font-mono">Loading examination sessions registry...</p>
+            </div>
+          ) : filteredSessions.length === 0 ? (
+            <div className="py-20 text-center bg-surface dark:bg-neutral-900/30 rounded-xl border dark:border-neutral-800 border-border-subtle p-8">
+              <Layers size={32} className="text-text-muted dark:text-neutral-600 mx-auto mb-3" />
+              <h4 className="font-bold text-sm dark:text-white text-text-primary mb-1">No Examination Sessions Found</h4>
+              <p className="text-xs text-text-muted dark:text-neutral-400 max-w-sm mx-auto mb-4">
+                No active examination sessions match the selected filters. Click below to create a new session.
+              </p>
+              <button
+                onClick={() => {
+                  setError(null);
+                  setFormName("");
+                  setFormDepartmentId(departments[0]?.id || "");
+                  setCreateDrawerOpen(true);
+                }}
+                className="px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition"
+              >
+                Create Examination Session
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredSessions.map(session => {
+                const isPublished = session.status === "Published";
+                const isScheduling = session.status === "Scheduling";
+                const isDraft = session.status === "Draft";
+                const progressPct = session.totalSubjectCount > 0 
+                  ? Math.round((session.scheduledSubjectCount / session.totalSubjectCount) * 100)
+                  : 0;
+
+                return (
+                  <div
+                    key={session.id}
+                    className="bg-surface dark:bg-neutral-900 border dark:border-neutral-800 border-border-subtle rounded-xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-4"
+                  >
+                    <div className="space-y-3">
+                      {/* Status & Exam Type Badge */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                          {session.examType}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                          isPublished
+                            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                            : isScheduling
+                            ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                            : "bg-neutral-500/10 text-neutral-400 border-neutral-500/20"
+                        }`}>
+                          {session.status}
+                        </span>
+                      </div>
+
+                      {/* Title & Department info */}
+                      <div>
+                        <h3 className="font-display font-bold text-base dark:text-white text-text-primary line-clamp-1">
+                          {session.name}
+                        </h3>
+                        <p className="text-xs dark:text-neutral-400 text-text-secondary mt-0.5 flex items-center gap-1.5">
+                          <Building2 size={12} className="text-text-muted" />
+                          <span>{session.departmentName} ({session.departmentCode})</span>
+                        </p>
+                      </div>
+
+                      {/* Tags Bar */}
+                      <div className="flex flex-wrap gap-2 text-[10px] font-mono text-text-secondary dark:text-neutral-400">
+                        <span className="bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">Year {session.year}</span>
+                        <span className="bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">Sem {session.semester}</span>
+                        <span className="bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">Reg {session.regulation}</span>
+                        <span className="bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">Sec {session.sections.join(', ')}</span>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center justify-between text-[11px] font-mono">
+                          <span className="dark:text-neutral-400 text-text-muted">Scheduling Progress</span>
+                          <span className="font-bold dark:text-white text-text-primary">{session.scheduledSubjectCount} / {session.totalSubjectCount} Subjects</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-500 ${isPublished ? "bg-emerald-500" : "bg-blue-600"}`}
+                            style={{ width: `${progressPct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card Actions */}
+                    <div className="pt-3 border-t dark:border-neutral-800 border-border-subtle flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => openBuilderWorkspace(session)}
+                        className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-blue-600/10 hover:bg-blue-600/20 text-blue-500 dark:text-blue-400 border border-blue-500/20 cursor-pointer transition text-center flex items-center justify-center gap-1.5"
+                      >
+                        <Calendar size={13} />
+                        <span>Schedule Builder</span>
+                      </button>
+
+                      {!isPublished && (
+                        <button
+                          onClick={() => handleDeleteSession(session.id)}
+                          className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition border border-transparent hover:border-rose-500/20 cursor-pointer"
+                          title="Delete Session"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {!loadingList && totalPages > 1 && (
+            <div className="flex items-center justify-between border-t dark:border-neutral-800 border-border-subtle pt-4">
+              <span className="text-xs font-mono text-text-muted dark:text-neutral-500">
+                Showing page {page} of {totalPages} ({totalRecords} total sessions)
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(p - 1, 1))}
+                  disabled={page === 1}
+                  className="p-1.5 rounded dark:bg-neutral-850 bg-neutral-100 border dark:border-neutral-800 border-border-subtle disabled:opacity-40"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <button
+                  onClick={() => setPage(p => Math.min(p + 1, totalPages))}
+                  disabled={page === totalPages}
+                  className="p-1.5 rounded dark:bg-neutral-850 bg-neutral-100 border dark:border-neutral-800 border-border-subtle disabled:opacity-40"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Statistics dashboard */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-surface rounded-xl p-4 border border-border-subtle text-center">
-          <span className="text-[10px] text-text-muted uppercase font-bold tracking-wider block">Total Scheduled</span>
-          <span className="block text-2xl font-bold text-text-primary mt-1 font-mono">{stats.total}</span>
-        </div>
-        <div className="bg-surface rounded-xl p-4 border dark:border-blue-500/10 border-blue-500/20 dark:bg-blue-500/5 bg-blue-500/10 text-center">
-          <span className="text-[10px] dark:text-blue-400 text-blue-750 uppercase font-bold tracking-wider block">Scheduled</span>
-          <span className="block text-2xl font-bold dark:text-blue-400 text-blue-750 mt-1 font-mono">{stats.scheduled}</span>
-        </div>
-        <div className="bg-surface rounded-xl p-4 border dark:border-emerald-500/10 border-emerald-500/20 dark:bg-emerald-500/5 bg-emerald-500/10 text-center">
-          <span className="text-[10px] dark:text-emerald-400 text-emerald-750 uppercase font-bold tracking-wider block">Ongoing</span>
-          <span className="block text-2xl font-bold dark:text-emerald-400 text-emerald-750 mt-1 font-mono">{stats.ongoing}</span>
-        </div>
-        <div className="bg-surface rounded-xl p-4 border border-border-subtle text-center">
-          <span className="text-[10px] text-text-muted uppercase font-bold tracking-wider block">Completed</span>
-          <span className="block text-2xl font-bold text-text-muted mt-1 font-mono">{stats.completed}</span>
-        </div>
-        <div className="bg-surface rounded-xl p-4 border dark:border-rose-500/10 border-rose-500/20 dark:bg-rose-500/5 bg-rose-500/10 text-center">
-          <span className="text-[10px] dark:text-rose-400 text-rose-750 uppercase font-bold tracking-wider block">Cancelled</span>
-          <span className="block text-2xl font-bold dark:text-rose-400 text-rose-750 mt-1 font-mono">{stats.cancelled}</span>
-        </div>
-      </div>
-
-      {/* Directory filters panel */}
-      <div className="bg-surface border border-border-subtle rounded-xl p-4 space-y-4">
-        <div className="flex items-center gap-1.5 text-xs text-text-muted pb-2 border-b border-border-subtle">
-          <SlidersHorizontal size={14} className="text-blue-500" />
-          <span className="font-semibold text-text-primary">Search Filters Panel</span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-          {/* Subject Filter */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-text-muted">Subject</label>
-            <div className="flex items-center gap-2 bg-background border border-border-subtle rounded px-2.5 text-xs text-text-primary">
-              <BookOpen size={12} className="text-text-muted shrink-0" />
-              <select
-                value={subjectFilter}
-                onChange={(e) => handleFilterChange(setSubjectFilter, e.target.value)}
-                className="bg-transparent text-text-primary cursor-pointer py-2.5 flex-1 focus:outline-none"
-                disabled={loadingDependencies}
-              >
-                <option value="ALL">All Subjects</option>
-                {subjects.map(s => (
-                  <option key={s.id} value={s.id}>{s.code}</option>
-                ))}
-              </select>
+      {/* MODE 2: STAGE 2 VISUAL EXAM SCHEDULE BUILDER WORKSPACE */}
+      {viewMode === 'builder_workspace' && (
+        <div className="space-y-6 animate-fade-in">
+          {loadingSession ? (
+            <div className="py-20 text-center">
+              <Loader2 className="animate-spin text-blue-500 mx-auto mb-3" size={24} />
+              <p className="text-xs text-text-muted dark:text-neutral-400 font-mono">Loading examination schedule workspace...</p>
             </div>
-          </div>
-
-          {/* Faculty Filter */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-text-muted">Invigilator</label>
-            <div className="flex items-center gap-2 bg-background border border-border-subtle rounded px-2.5 text-xs text-text-primary">
-              <GraduationCap size={12} className="text-text-muted shrink-0" />
-              <select
-                value={facultyFilter}
-                onChange={(e) => handleFilterChange(setFacultyFilter, e.target.value)}
-                className="bg-transparent text-text-primary cursor-pointer py-2.5 flex-1 focus:outline-none"
-                disabled={loadingDependencies}
-              >
-                <option value="ALL">All Faculty</option>
-                {faculty.map(f => (
-                  <option key={f.id} value={f.id}>{f.fullName}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Semester Filter */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-text-muted">Semester</label>
-            <div className="flex items-center gap-2 bg-background border border-border-subtle rounded px-2.5 text-xs text-text-primary">
-              <Filter size={12} className="text-text-muted shrink-0" />
-              <select
-                value={semesterFilter}
-                onChange={(e) => handleFilterChange(setSemesterFilter, e.target.value)}
-                className="bg-transparent text-text-primary cursor-pointer py-2.5 flex-1 focus:outline-none"
-              >
-                <option value="ALL">All Semesters</option>
-                {[1,2,3,4,5,6,7,8,9,10,11,12].map(sem => (
-                  <option key={sem} value={sem.toString()}>Semester {sem}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Section Filter */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-text-muted">Section</label>
-            <input
-              type="text"
-              placeholder="e.g. A, B..."
-              value={sectionFilter}
-              onChange={(e) => handleFilterChange(setSectionFilter, e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-background border border-border-subtle rounded text-text-primary focus:outline-none focus:border-neutral-700"
-            />
-          </div>
-
-          {/* Status Filter */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-text-muted">Status</label>
-            <div className="flex items-center gap-2 bg-background border border-border-subtle rounded px-2.5 text-xs text-text-primary">
-              <Filter size={12} className="text-text-muted shrink-0" />
-              <select
-                value={statusFilter}
-                onChange={(e) => handleFilterChange(setStatusFilter, e.target.value)}
-                className="bg-transparent text-text-primary cursor-pointer py-2.5 flex-1 focus:outline-none"
-              >
-                <option value="ALL">All Status</option>
-                {["Scheduled", "Ongoing", "Completed", "Cancelled"].map(st => (
-                  <option key={st} value={st}>{st}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Date Filter */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase font-bold text-text-muted">Exam Date</label>
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => handleFilterChange(setDateFilter, e.target.value)}
-              className="w-full px-3 py-2.5 text-xs bg-background border border-border-subtle rounded text-text-primary focus:outline-none focus:border-neutral-700 font-mono"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Records table / list grids */}
-      <div className="bg-surface border border-border-subtle rounded-xl overflow-hidden">
-        
-        {/* Desktop View */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-surface/50 border-b border-border-subtle text-text-muted font-semibold">
-                <th className="px-4 py-3 font-mono">Exam Type</th>
-                <th className="px-4 py-3">Subject Course</th>
-                <th className="px-4 py-3">Sem & Sec</th>
-                <th className="px-4 py-3">Invigilator Faculty</th>
-                <th className="px-4 py-3 font-mono">Exam Date</th>
-                <th className="px-4 py-3">Time slot</th>
-                <th className="px-4 py-3">Max Marks</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-subtle text-text-secondary">
-              {loadingList ? (
-                <tr>
-                  <td colSpan={9} className="text-center py-12 text-text-muted">
-                    <Loader2 className="animate-spin text-blue-500 mx-auto mb-2" size={20} />
-                    <span className="font-mono text-[10px]">Scanning database logs...</span>
-                  </td>
-                </tr>
-              ) : exams.length > 0 ? (
-                exams.map((exam) => {
-                  const isTerminal = ["Completed", "Cancelled"].includes(exam.status);
-                  return (
-                    <tr key={exam.id} className="hover:bg-surface/20 transition">
-                      <td className="px-4 py-3 font-mono font-bold text-text-primary text-[10px]">{exam.examType}</td>
-                      <td className="px-4 py-3">
-                        <span className="font-semibold text-text-primary block">{exam.subjectName}</span>
-                        <span className="text-[10px] text-text-muted font-mono">{exam.subjectCode}</span>
-                      </td>
-                      <td className="px-4 py-3 font-semibold">Sem {exam.semester} - Section {exam.section}</td>
-                      <td className="px-4 py-3 text-text-muted">{exam.facultyName}</td>
-                      <td className="px-4 py-3 font-mono">{exam.examDate}</td>
-                      <td className="px-4 py-3 font-mono text-text-muted">{exam.startTime} - {exam.endTime}</td>
-                      <td className="px-4 py-3 font-mono text-center">{exam.maximumMarks}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border capitalize ${getStatusBadgeColor(exam.status)}`}>
-                          {exam.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-1.5">
-                          {/* Reschedule/Edit detail */}
-                          {!isTerminal ? (
-                            <button
-                              onClick={() => openEditDrawer(exam)}
-                              title="Edit Schedule details"
-                              className="p-1.5 rounded bg-surface-elevated hover:bg-surface-hover border dark:border-neutral-700 border-border-subtle text-text-muted hover:text-text-primary cursor-pointer transition"
-                            >
-                              <Edit size={12} />
-                            </button>
-                          ) : (
-                            <span className="p-1.5 rounded bg-surface/40 border border-border-subtle text-neutral-600 block cursor-not-allowed">
-                              <Lock size={12} />
-                            </span>
-                          )}
-
-                          {/* Quick Transitions */}
-                          {exam.status === "Scheduled" && (
-                            <>
-                              <button
-                                onClick={() => transitionStatus(exam.id, "Ongoing")}
-                                title="Advance to Ongoing status"
-                                className="p-1.5 rounded dark:bg-emerald-500/10 bg-emerald-50 hover:bg-emerald-500/20 border dark:border-emerald-500/20 border-emerald-200 text-emerald-600 dark:text-emerald-400 cursor-pointer transition"
-                              >
-                                <Play size={12} />
-                              </button>
-                              <button
-                                onClick={() => transitionStatus(exam.id, "Cancelled")}
-                                title="Cancel Examination schedule"
-                                className="p-1.5 rounded dark:bg-rose-500/10 bg-rose-50 hover:bg-rose-500/20 border dark:border-rose-500/20 border-rose-200 text-rose-600 dark:text-rose-400 cursor-pointer transition"
-                              >
-                                <X size={12} />
-                              </button>
-                            </>
-                          )}
-
-                          {exam.status === "Ongoing" && (
-                            <>
-                              <button
-                                onClick={() => transitionStatus(exam.id, "Completed")}
-                                title="Mark cycle Completed"
-                                className="p-1.5 rounded dark:bg-blue-500/10 bg-blue-50 hover:bg-blue-500/20 border dark:border-blue-500/20 border-blue-200 text-blue-600 dark:text-blue-400 cursor-pointer transition"
-                              >
-                                <CheckSquare size={12} />
-                              </button>
-                              <button
-                                onClick={() => transitionStatus(exam.id, "Cancelled")}
-                                title="Cancel active session"
-                                className="p-1.5 rounded dark:bg-rose-500/10 bg-rose-50 hover:bg-rose-500/20 border dark:border-rose-500/20 border-rose-200 text-rose-600 dark:text-rose-400 cursor-pointer transition"
-                              >
-                                <X size={12} />
-                              </button>
-                            </>
-                          )}
-
-                          {/* Delete schedule (only if not Completed) */}
-                          {exam.status !== "Completed" && (
-                            <button
-                              onClick={() => {
-                                setExamToDelete({ id: exam.id, subjectName: exam.subjectName, examType: exam.examType });
-                                setDeleteConfirmOpen(true);
-                              }}
-                              title="Delete examination schedule record"
-                              className="p-1.5 rounded bg-surface-elevated hover:bg-surface-hover border dark:border-neutral-700 border-border-subtle text-rose-500 hover:text-rose-600 cursor-pointer transition"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={9} className="text-center py-12 text-text-muted font-mono">
-                    No examination records found in database.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile Cards View */}
-        <div className="block md:hidden divide-y divide-border-subtle">
-          {loadingList ? (
-            <div className="text-center py-12 text-text-muted">
-              <Loader2 className="animate-spin text-blue-500 mx-auto mb-2" size={20} />
-              <span className="font-mono text-[10px]">Scanning database logs...</span>
-            </div>
-          ) : exams.length > 0 ? (
-            exams.map((exam) => {
-              const isTerminal = ["Completed", "Cancelled"].includes(exam.status);
-              return (
-                <div key={exam.id} className="p-4 flex flex-col gap-2.5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <span className="text-[9px] uppercase font-bold text-neutral-500 tracking-wider font-mono">{exam.examType}</span>
-                      <h4 className="text-sm font-bold dark:text-white text-text-primary leading-tight mt-0.5">{exam.subjectName}</h4>
-                      <span className="text-[10px] text-neutral-500 font-mono mt-0.5 block">
-                        {exam.subjectCode} / Section {exam.section}
+          ) : activeSession ? (
+            <>
+              {/* Session Overview Header */}
+              <div className="bg-surface dark:bg-neutral-900 border dark:border-neutral-800 border-border-subtle rounded-xl p-6 shadow-sm space-y-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                        {activeSession.examType}
+                      </span>
+                      <span className={`text-xs font-bold px-3 py-0.5 rounded-full border ${
+                        activeSession.status === "Published"
+                          ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                          : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                      }`}>
+                        {activeSession.status}
                       </span>
                     </div>
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold border capitalize shrink-0 ${getStatusBadgeColor(exam.status)}`}>
-                      {exam.status}
-                    </span>
+                    <h2 className="font-display font-bold text-xl dark:text-white text-text-primary">
+                      {activeSession.name}
+                    </h2>
+                    <p className="text-xs text-text-secondary dark:text-neutral-400">
+                      Department: <strong className="dark:text-white text-text-primary">{activeSession.departmentName} ({activeSession.departmentCode})</strong> | Year {activeSession.year} | Semester {activeSession.semester} | Regulation {activeSession.regulation} | Sections: {activeSession.sections.join(', ')}
+                    </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-y-2.5 gap-x-4 text-[10px] dark:text-neutral-300 text-text-secondary font-mono pt-2 border-t dark:border-neutral-900 border-border-subtle">
-                    <div>
-                      <span className="dark:text-neutral-500 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Invigilator</span>
-                      <span className="font-sans dark:text-neutral-205 text-text-primary">{exam.facultyName}</span>
-                    </div>
-                    <div>
-                      <span className="dark:text-neutral-500 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Semester</span>
-                      <span>Semester {exam.semester}</span>
-                    </div>
-                    <div>
-                      <span className="dark:text-neutral-505 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Date</span>
-                      <span>{exam.examDate}</span>
-                    </div>
-                    <div>
-                      <span className="dark:text-neutral-505 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Time slot</span>
-                      <span>{exam.startTime} - {exam.endTime}</span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="dark:text-neutral-505 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Maximum Marks</span>
-                      <span>{exam.maximumMarks} Marks</span>
-                    </div>
-                  </div>
-
-                  {/* Actions mobile panel */}
-                  <div className="flex flex-wrap gap-2 justify-end pt-2 border-t dark:border-neutral-900 border-border-subtle">
-                    {!isTerminal ? (
+                  {/* Actions */}
+                  <div className="flex items-center gap-3">
+                    {activeSession.status !== "Published" && (
                       <button
-                        onClick={() => openEditDrawer(exam)}
-                        className="px-3 py-1.5 rounded dark:bg-neutral-800 bg-neutral-100 dark:hover:bg-neutral-750 hover:bg-neutral-200 dark:text-neutral-300 text-text-primary border dark:border-neutral-700 border-border-subtle text-[10px] font-semibold cursor-pointer transition flex items-center gap-1"
+                        onClick={() => setPublishModalOpen(true)}
+                        className="px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-500/20 cursor-pointer transition flex items-center gap-2"
                       >
-                        <Edit size={11} />
-                        <span>Reschedule</span>
-                      </button>
-                    ) : (
-                      <span className="px-3 py-1.5 rounded dark:bg-neutral-950 bg-neutral-50 dark:text-neutral-600 text-text-muted border dark:border-neutral-900 border-border-subtle text-[10px] font-semibold cursor-not-allowed flex items-center gap-1">
-                        <Lock size={11} />
-                        <span>Locked</span>
-                      </span>
-                    )}
-
-                    {exam.status === "Scheduled" && (
-                      <>
-                        <button
-                          onClick={() => transitionStatus(exam.id, "Ongoing")}
-                          className="px-3 py-1.5 rounded dark:bg-emerald-500/10 bg-emerald-50 dark:hover:bg-emerald-500/20 hover:bg-emerald-100 dark:text-emerald-400 text-emerald-700 border dark:border-emerald-500/20 border-emerald-200 text-[10px] font-semibold cursor-pointer transition flex items-center gap-1"
-                        >
-                          <Play size={11} />
-                          <span>Start</span>
-                        </button>
-                        <button
-                          onClick={() => transitionStatus(exam.id, "Cancelled")}
-                          className="px-3 py-1.5 rounded dark:bg-rose-500/10 bg-rose-50 dark:hover:bg-rose-500/20 hover:bg-rose-100 dark:text-rose-400 text-rose-700 border dark:border-rose-500/20 border-rose-200 text-[10px] font-semibold cursor-pointer transition flex items-center gap-1"
-                        >
-                          <X size={11} />
-                          <span>Cancel</span>
-                        </button>
-                      </>
-                    )}
-
-                    {exam.status === "Ongoing" && (
-                      <>
-                        <button
-                          onClick={() => transitionStatus(exam.id, "Completed")}
-                          className="px-3 py-1.5 rounded dark:bg-blue-500/10 bg-blue-50 dark:hover:bg-blue-500/20 hover:bg-blue-100 dark:text-blue-400 text-blue-700 border dark:border-blue-500/20 border-blue-200 text-[10px] font-semibold cursor-pointer transition flex items-center gap-1"
-                        >
-                          <CheckSquare size={11} />
-                          <span>Complete</span>
-                        </button>
-                        <button
-                          onClick={() => transitionStatus(exam.id, "Cancelled")}
-                          className="px-3 py-1.5 rounded dark:bg-rose-500/10 bg-rose-50 dark:hover:bg-rose-500/20 hover:bg-rose-100 dark:text-rose-400 text-rose-700 border dark:border-rose-500/20 border-rose-200 text-[10px] font-semibold cursor-pointer transition flex items-center gap-1"
-                        >
-                          <X size={11} />
-                          <span>Cancel</span>
-                        </button>
-                      </>
-                    )}
-
-                    {exam.status !== "Completed" && (
-                      <button
-                        onClick={() => {
-                          setExamToDelete({ id: exam.id, subjectName: exam.subjectName, examType: exam.examType });
-                          setDeleteConfirmOpen(true);
-                        }}
-                        className="p-1.5 rounded dark:bg-neutral-800 bg-neutral-105 dark:hover:bg-neutral-750 hover:bg-neutral-200 border dark:border-neutral-750 border-border-subtle text-rose-500 hover:text-rose-600 transition"
-                      >
-                        <Trash2 size={12} />
+                        <Send size={14} />
+                        <span>Publish Schedule</span>
                       </button>
                     )}
                   </div>
                 </div>
-              );
-            })
-          ) : (
-            <div className="text-center py-12 text-neutral-500 font-mono text-xs">
-              No examination records found in database.
-            </div>
-          )}
+
+                {/* Progress Indicator */}
+                <div className="pt-2 border-t dark:border-neutral-800 border-border-subtle grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-neutral-50 dark:bg-neutral-950/50 p-3 rounded-lg border dark:border-neutral-850 border-border-subtle">
+                    <span className="text-[10px] text-text-muted dark:text-neutral-500 font-mono uppercase block">Total Session Subjects</span>
+                    <span className="text-base font-bold dark:text-white text-text-primary">{activeSession.totalSubjectCount}</span>
+                  </div>
+                  <div className="bg-neutral-50 dark:bg-neutral-950/50 p-3 rounded-lg border dark:border-neutral-850 border-border-subtle">
+                    <span className="text-[10px] text-text-muted dark:text-neutral-500 font-mono uppercase block">Configured Schedules</span>
+                    <span className="text-base font-bold text-emerald-500">{activeSession.scheduledSubjectCount}</span>
+                  </div>
+                  <div className="bg-neutral-50 dark:bg-neutral-950/50 p-3 rounded-lg border dark:border-neutral-850 border-border-subtle">
+                    <span className="text-[10px] text-text-muted dark:text-neutral-500 font-mono uppercase block">Pending Schedules</span>
+                    <span className="text-base font-bold text-amber-500">{activeSession.totalSubjectCount - activeSession.scheduledSubjectCount}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Warnings Banner */}
+              {activeSession.warnings && activeSession.warnings.length > 0 && (
+                <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl text-amber-500 text-xs space-y-1">
+                  <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-[10px]">
+                    <AlertTriangle size={14} />
+                    <span>Scheduling Conflict Warnings</span>
+                  </div>
+                  {activeSession.warnings.map((w, idx) => (
+                    <p key={idx} className="font-mono text-[11px] pl-5">{w}</p>
+                  ))}
+                </div>
+              )}
+
+              {/* Subject Cards Grid */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-sm dark:text-white text-text-primary uppercase tracking-wider font-mono">
+                    Subject Timetable Cards ({activeSession.subjects.length})
+                  </h3>
+                  <span className="text-xs text-text-muted">Click any subject card to configure its schedule</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {activeSession.subjects.map(card => {
+                    const isScheduled = card.status === "Scheduled";
+                    const isLab = card.subjectType === "Practical" || card.subjectType === "Lab";
+
+                    return (
+                      <div
+                        key={card.subjectId}
+                        onClick={() => activeSession.status !== "Published" && openSubjectScheduleDrawer(card)}
+                        className={`bg-surface dark:bg-neutral-900 border rounded-xl p-5 shadow-sm transition flex flex-col justify-between space-y-4 ${
+                          activeSession.status !== "Published" ? "cursor-pointer hover:border-blue-500/50" : ""
+                        } ${isScheduled ? "dark:border-emerald-500/30 border-emerald-500/40" : "dark:border-neutral-800 border-border-subtle"}`}
+                      >
+                        <div className="space-y-3">
+                          {/* Subject Header */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <span className="text-[10px] font-mono font-bold text-blue-500">{card.subjectCode}</span>
+                              <h4 className="font-display font-bold text-base dark:text-white text-text-primary">
+                                {card.subjectName}
+                              </h4>
+                            </div>
+
+                            <div className="flex flex-col items-end gap-1">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                                isLab ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                              }`}>
+                                {isLab ? "Practical Lab" : "Theory Course"}
+                              </span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                isScheduled ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+                              }`}>
+                                {isScheduled ? "Scheduled" : "Pending Date"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Schedule Details */}
+                          {isLab && card.sectionSchedules && card.sectionSchedules.length > 0 ? (
+                            <div className="space-y-2 pt-2 border-t dark:border-neutral-800 border-border-subtle">
+                              <span className="text-[10px] font-mono text-text-muted uppercase block font-bold">Section Timetables</span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {card.sectionSchedules.map(secItem => (
+                                  <div key={secItem.section} className="bg-neutral-50 dark:bg-neutral-950/60 p-2.5 rounded-lg text-xs space-y-1 border dark:border-neutral-850 border-border-subtle">
+                                    <div className="font-bold dark:text-white text-text-primary flex items-center justify-between">
+                                      <span>Section {secItem.section}</span>
+                                      <span className="text-[10px] text-text-muted font-mono">{secItem.maximumMarks} Marks</span>
+                                    </div>
+                                    <div className="text-[11px] dark:text-neutral-400 text-text-secondary flex items-center gap-1 font-mono">
+                                      <Calendar size={11} className="text-blue-500" />
+                                      <span>{secItem.examDate || "Not Set"}</span>
+                                    </div>
+                                    <div className="text-[11px] dark:text-neutral-400 text-text-secondary flex items-center gap-1 font-mono">
+                                      <Clock size={11} className="text-blue-500" />
+                                      <span>{secItem.startTime ? `${secItem.startTime} - ${secItem.endTime}` : "Not Set"}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-3 py-2 border-y dark:border-neutral-800 border-border-subtle text-xs">
+                              <div>
+                                <span className="text-[10px] text-text-muted font-mono uppercase block">Exam Date</span>
+                                <span className="font-semibold dark:text-white text-text-primary font-mono">
+                                  {card.examDate || "Not Assigned"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-text-muted font-mono uppercase block">Time & Marks</span>
+                                <span className="font-semibold dark:text-white text-text-primary font-mono">
+                                  {card.startTime ? `${card.startTime} - ${card.endTime} (${card.maximumMarks}M)` : "Not Assigned"}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          {card.venue && (
+                            <p className="text-xs text-text-secondary dark:text-neutral-400 flex items-center gap-1.5 font-mono">
+                              <MapPin size={12} className="text-rose-500" />
+                              <span>Venue: {card.venue}</span>
+                            </p>
+                          )}
+                        </div>
+
+                        {activeSession.status !== "Published" && (
+                          <div className="pt-2 text-right">
+                            <span className="text-xs font-semibold text-blue-500 hover:underline">
+                              {isScheduled ? "Modify Schedule →" : "Configure Schedule →"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : null}
         </div>
+      )}
 
-        {/* Pagination Block */}
-        {!loadingList && totalPages > 1 && (
-          <div className="flex items-center justify-between border-t dark:border-neutral-850 border-border-subtle p-4 dark:bg-neutral-950/30 bg-neutral-50">
-            <div className="text-[10px] font-mono dark:text-neutral-500 text-text-muted">
-              Showing {(page - 1) * limit + 1} - {Math.min(page * limit, totalRecords)} of {totalRecords} exams
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage(p => Math.max(p - 1, 1))}
-                disabled={page === 1}
-                className="p-1.5 rounded dark:bg-neutral-900 bg-neutral-100 border dark:border-neutral-850 border-border-subtle hover:bg-neutral-200 disabled:opacity-40 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary cursor-pointer disabled:cursor-not-allowed transition"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <span className="text-[10px] font-mono dark:text-white text-text-primary font-bold px-2">
-                {page} / {totalPages}
-              </span>
-              <button
-                onClick={() => setPage(p => Math.min(p + 1, totalPages))}
-                disabled={page === totalPages}
-                className="p-1.5 rounded dark:bg-neutral-900 bg-neutral-100 border dark:border-neutral-850 border-border-subtle hover:bg-neutral-200 disabled:opacity-40 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary cursor-pointer disabled:cursor-not-allowed transition"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Create/Edit slideover form drawer */}
-      {drawerOpen && (
+      {/* STAGE 1 DRAWER: CREATE EXAMINATION SESSION */}
+      {createDrawerOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-neutral-950/70 backdrop-blur-sm animate-fade-in">
-          {/* Backdrop Click */}
-          <div className="absolute inset-0 cursor-default" onClick={() => setDrawerOpen(false)}></div>
-
-          {/* Drawer Panel */}
-          <div className="relative w-full max-w-md h-full dark:bg-neutral-900 bg-surface border-l dark:border-neutral-800 border-border-subtle p-6 flex flex-col shadow-2xl z-10 overflow-y-auto">
-            {/* Header */}
+          <div className="absolute inset-0 cursor-default" onClick={() => setCreateDrawerOpen(false)} />
+          <div className="relative w-full max-w-xl h-full dark:bg-neutral-900 bg-surface border-l dark:border-neutral-800 border-border-subtle p-6 flex flex-col shadow-2xl z-10 overflow-y-auto">
+            
+            {/* Drawer Header */}
             <div className="flex items-center justify-between border-b dark:border-neutral-800 border-border-subtle pb-4 mb-4">
-              <h3 className="font-display font-bold dark:text-white text-text-primary text-lg flex items-center gap-2">
-                <Sparkles size={18} className="text-blue-500" />
-                <span>{editingExam ? "Edit Examination details" : "Schedule New Examination"}</span>
-              </h3>
+              <div>
+                <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Stage 1 Workflow</span>
+                <h3 className="font-display font-bold dark:text-white text-text-primary text-lg">
+                  Create Examination Session
+                </h3>
+              </div>
               <button
-                onClick={() => setDrawerOpen(false)}
-                className="p-1 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary cursor-pointer border dark:border-neutral-800 border-border-subtle"
+                onClick={() => setCreateDrawerOpen(false)}
+                className="p-1 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-400 text-text-secondary"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Error notifications */}
             {error && (
               <div className="p-3 mb-4 rounded bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-semibold">
                 {error}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4 flex-1 flex flex-col justify-between">
+            <form onSubmit={handleCreateSession} className="space-y-4 flex-1 flex flex-col justify-between">
               <div className="space-y-4">
                 
-                {/* Subject selection (Read-only if editing) */}
+                {/* Session Name */}
                 <div>
-                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Subject Course <span className="text-rose-500">*</span></label>
-                  <select
-                    required
-                    disabled={!!editingExam || subjects.length === 0}
-                    value={formSubjectId}
-                    onChange={(e) => setFormSubjectId(e.target.value)}
-                    className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle dark:text-white text-text-primary disabled:opacity-50 focus:outline-none focus:border-blue-600 transition cursor-pointer"
-                  >
-                    <option value="">Select Subject</option>
-                    {subjects.map(s => (
-                      <option key={s.id} value={s.id}>{s.code}: {s.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Faculty selection (Read-only if editing) */}
-                <div>
-                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Invigilator Faculty <span className="text-rose-500">*</span></label>
-                  <select
-                    required
-                    disabled={!!editingExam || faculty.length === 0}
-                    value={formFacultyId}
-                    onChange={(e) => setFormFacultyId(e.target.value)}
-                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle dark:text-white text-text-primary disabled:opacity-50 focus:outline-none focus:border-blue-600 transition cursor-pointer"
-                  >
-                    <option value="">Assign Faculty</option>
-                    {faculty.map(f => (
-                      <option key={f.id} value={f.id}>{f.fullName} ({f.employeeNumber})</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Target Section (Always editable) */}
-                <div>
-                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Target Section <span className="text-rose-500">*</span></label>
+                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">
+                    Examination Session Name <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     type="text"
                     required
-                    value={formSection}
-                    onChange={(e) => setFormSection(e.target.value)}
-                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
-                    placeholder="e.g. A"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    placeholder="e.g. Mid-I Examinations Nov 2026"
+                    className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
                   />
                 </div>
 
-                {/* Exam Type (Read-only if editing) */}
+                {/* Academic Year & Regulation */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Academic Year</label>
+                    <select
+                      value={formAcademicYear}
+                      onChange={(e) => setFormAcademicYear(e.target.value)}
+                      className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white text-text-primary"
+                    >
+                      {["2025-26", "2026-27", "2027-28"].map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Regulation</label>
+                    <select
+                      value={formRegulation}
+                      onChange={(e) => setFormRegulation(e.target.value)}
+                      className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white text-text-primary"
+                    >
+                      {["R22", "R26"].map(r => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Department */}
                 <div>
-                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Evaluation Cycle <span className="text-rose-500">*</span></label>
+                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">
+                    Department / Branch <span className="text-rose-500">*</span>
+                  </label>
                   <select
                     required
-                    disabled={!!editingExam}
-                    value={formExamType}
-                    onChange={(e) => setFormExamType(e.target.value)}
-                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle dark:text-white text-text-primary disabled:opacity-50 focus:outline-none focus:border-blue-600 transition cursor-pointer"
+                    value={formDepartmentId}
+                    onChange={(e) => setFormDepartmentId(e.target.value)}
+                    className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white text-text-primary"
                   >
-                    {["Mid-1", "Mid-2", "Lab Exam", "Internal", "End Semester"].map(t => (
-                      <option key={t} value={t}>{t}</option>
+                    <option value="">Select Department</option>
+                    {departments.map(d => (
+                      <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
                     ))}
                   </select>
                 </div>
 
-                {/* Date Picker */}
-                <div>
-                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Exam Date <span className="text-rose-500">*</span></label>
-                  <input
-                    type="date"
-                    required
-                    value={formDate}
-                    onChange={(e) => setFormDate(e.target.value)}
-                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
-                  />
+                {/* Year, Semester & Exam Type */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Year</label>
+                    <select
+                      value={formYear}
+                      onChange={(e) => setFormYear(e.target.value)}
+                      className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white text-text-primary"
+                    >
+                      {["I", "II", "III", "IV"].map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Semester</label>
+                    <select
+                      value={formSemester}
+                      onChange={(e) => setFormSemester(e.target.value)}
+                      className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white text-text-primary"
+                    >
+                      {["I", "II"].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Exam Type</label>
+                    <select
+                      value={formExamType}
+                      onChange={(e) => setFormExamType(e.target.value)}
+                      className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white text-text-primary"
+                    >
+                      {["Mid-1", "Mid-2", "Internal Assessment", "Semester End Examination", "Practical / Laboratory Exam", "Viva", "Improvement Exam", "Supplementary Exam"].map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                {/* Time picker selectors */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Start Time <span className="text-rose-500">*</span></label>
-                    <input
-                      type="time"
-                      required
-                      value={formStartTime}
-                      onChange={(e) => setFormStartTime(e.target.value)}
-                      className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">End Time <span className="text-rose-500">*</span></label>
-                    <input
-                      type="time"
-                      required
-                      value={formEndTime}
-                      onChange={(e) => setFormEndTime(e.target.value)}
-                      className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
-                    />
+                {/* Applicable Sections */}
+                <div>
+                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Applicable Sections</label>
+                  <div className="flex items-center gap-4 py-1">
+                    {["A", "B", "C", "D"].map(sec => (
+                      <label key={sec} className="flex items-center gap-1.5 text-xs dark:text-white text-text-primary cursor-pointer font-mono">
+                        <input
+                          type="checkbox"
+                          value={sec}
+                          checked={formSections.includes(sec)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormSections([...formSections, sec]);
+                            } else {
+                              setFormSections(formSections.filter(x => x !== sec));
+                            }
+                          }}
+                        />
+                        <span>Section {sec}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
 
-                {/* Maximum Marks */}
-                <div>
-                  <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Maximum Marks <span className="text-rose-500">*</span></label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    max={200}
-                    value={formMaxMarks}
-                    onChange={(e) => setFormMaxMarks(e.target.value)}
-                    className="w-full px-3 py-2 text-xs dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
-                    placeholder="e.g. 50"
-                  />
+                {/* Subject Selection Cards Checklist */}
+                <div className="pt-2 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase">
+                      Curriculum Subjects ({selectedSubjectIds.length} Selected)
+                    </label>
+                    {availableSubjects.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (selectedSubjectIds.length === availableSubjects.length) {
+                            setSelectedSubjectIds([]);
+                          } else {
+                            setSelectedSubjectIds(availableSubjects.map(s => s.id));
+                          }
+                        }}
+                        className="text-[10px] text-blue-500 font-semibold hover:underline cursor-pointer"
+                      >
+                        {selectedSubjectIds.length === availableSubjects.length ? "Deselect All" : "Select All"}
+                      </button>
+                    )}
+                  </div>
+
+                  {loadingSubjects ? (
+                    <div className="py-6 text-center text-xs text-blue-500 flex items-center justify-center gap-2">
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Fetching mapped curriculum subjects...</span>
+                    </div>
+                  ) : availableSubjects.length === 0 ? (
+                    <div className="p-4 text-center text-xs dark:text-neutral-400 text-text-muted bg-neutral-50 dark:bg-neutral-950/40 rounded-lg border dark:border-neutral-800 border-border-subtle">
+                      Select Department, Year, and Semester above to load curriculum subjects.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-56 overflow-y-auto p-1">
+                      {availableSubjects.map(sub => {
+                        const checked = selectedSubjectIds.includes(sub.id);
+                        return (
+                          <div
+                            key={sub.id}
+                            onClick={() => {
+                              if (checked) {
+                                setSelectedSubjectIds(selectedSubjectIds.filter(id => id !== sub.id));
+                              } else {
+                                setSelectedSubjectIds([...selectedSubjectIds, sub.id]);
+                              }
+                            }}
+                            className={`p-3 rounded-lg border text-xs cursor-pointer transition flex items-start gap-2.5 ${
+                              checked 
+                                ? "bg-blue-500/10 dark:border-blue-500/40 border-blue-500/50" 
+                                : "bg-neutral-50 dark:bg-neutral-950/40 dark:border-neutral-800 border-border-subtle opacity-70"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {}}
+                              className="mt-0.5 cursor-pointer"
+                            />
+                            <div>
+                              <span className="font-mono text-[10px] font-bold text-blue-500 block">{sub.code}</span>
+                              <span className="font-bold dark:text-white text-text-primary block line-clamp-1">{sub.name}</span>
+                              <span className="text-[10px] text-text-muted dark:text-neutral-500 font-mono">
+                                {sub.type || "Theory"}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
               </div>
 
-              {/* Drawer actions */}
-              <div className="flex items-center gap-3 pt-6 border-t dark:border-neutral-800 border-border-subtle mt-6">
+              {/* Drawer Actions */}
+              <div className="flex items-center gap-3 pt-4 border-t dark:border-neutral-800 border-border-subtle mt-4">
                 <button
                   type="button"
-                  onClick={() => setDrawerOpen(false)}
-                  className="flex-1 py-2 text-xs font-semibold rounded dark:bg-neutral-800 bg-neutral-100 dark:hover:bg-neutral-750 hover:bg-neutral-200 dark:text-neutral-300 text-text-primary border dark:border-neutral-800 border-border-subtle cursor-pointer transition text-center"
+                  onClick={() => setCreateDrawerOpen(false)}
+                  className="flex-1 py-2 text-xs font-semibold rounded-lg dark:bg-neutral-800 bg-neutral-100 dark:hover:bg-neutral-750 hover:bg-neutral-200 dark:text-neutral-300 text-text-primary border dark:border-neutral-800 border-border-subtle cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 py-2 text-xs font-semibold rounded bg-blue-600 hover:bg-blue-500 text-white cursor-pointer transition flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white cursor-pointer transition flex items-center justify-center gap-1.5"
                 >
                   {submitting && <Loader2 size={12} className="animate-spin" />}
-                  <span>{editingExam ? "Save Changes" : "Create Schedule"}</span>
+                  <span>Create Session & Build Schedule</span>
                 </button>
               </div>
             </form>
@@ -1028,29 +1158,270 @@ export default function AdminExaminations() {
         </div>
       )}
 
-      {/* Delete confirmation dialogue modal overlay */}
-      {deleteConfirmOpen && examToDelete && (
+      {/* STAGE 2 SUBJECT SCHEDULE DRAWER */}
+      {scheduleDrawerOpen && editingSubjectCard && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-neutral-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="absolute inset-0 cursor-default" onClick={() => setScheduleDrawerOpen(false)} />
+          <div className="relative w-full max-w-lg h-full dark:bg-neutral-900 bg-surface border-l dark:border-neutral-800 border-border-subtle p-6 flex flex-col shadow-2xl z-10 overflow-y-auto">
+            
+            <div className="flex items-center justify-between border-b dark:border-neutral-800 border-border-subtle pb-4 mb-4">
+              <div>
+                <span className="text-[10px] font-bold text-blue-500 font-mono">{editingSubjectCard.subjectCode}</span>
+                <h3 className="font-display font-bold dark:text-white text-text-primary text-lg">
+                  Configure Schedule: {editingSubjectCard.subjectName}
+                </h3>
+              </div>
+              <button
+                onClick={() => setScheduleDrawerOpen(false)}
+                className="p-1 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-400"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {error && (
+              <div className="p-3 mb-4 rounded bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-semibold">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveSubjectSchedule} className="space-y-4 flex-1 flex flex-col justify-between">
+              <div className="space-y-4">
+                
+                {/* PRACTICAL / LAB PER-SECTION TIMETABLE SCHEDULER */}
+                {(editingSubjectCard.subjectType === "Practical" || editingSubjectCard.subjectType === "Lab") ? (
+                  <div className="space-y-4">
+                    <p className="text-xs text-amber-500 font-mono bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
+                      Laboratory Practical exams support separate date and time schedules for each section.
+                    </p>
+
+                    {Object.entries(labSectionSchedules).map(([sec, vals]) => (
+                      <div key={sec} className="bg-neutral-50 dark:bg-neutral-950/60 p-4 rounded-xl border dark:border-neutral-800 border-border-subtle space-y-3">
+                        <h4 className="font-bold text-xs dark:text-white text-text-primary flex items-center justify-between">
+                          <span>Section {sec} Timetable</span>
+                        </h4>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Exam Date</label>
+                            <input
+                              type="date"
+                              required
+                              value={vals.examDate}
+                              onChange={(e) => setLabSectionSchedules({
+                                ...labSectionSchedules,
+                                [sec]: { ...vals, examDate: e.target.value }
+                              })}
+                              className="w-full px-2.5 py-1.5 text-xs dark:bg-neutral-900 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Max Marks</label>
+                            <input
+                              type="number"
+                              required
+                              value={vals.maximumMarks}
+                              onChange={(e) => setLabSectionSchedules({
+                                ...labSectionSchedules,
+                                [sec]: { ...vals, maximumMarks: e.target.value }
+                              })}
+                              className="w-full px-2.5 py-1.5 text-xs dark:bg-neutral-900 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Start Time</label>
+                            <input
+                              type="time"
+                              required
+                              value={vals.startTime}
+                              onChange={(e) => setLabSectionSchedules({
+                                ...labSectionSchedules,
+                                [sec]: { ...vals, startTime: e.target.value }
+                              })}
+                              className="w-full px-2.5 py-1.5 text-xs dark:bg-neutral-900 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">End Time</label>
+                            <input
+                              type="time"
+                              required
+                              value={vals.endTime}
+                              onChange={(e) => setLabSectionSchedules({
+                                ...labSectionSchedules,
+                                [sec]: { ...vals, endTime: e.target.value }
+                              })}
+                              className="w-full px-2.5 py-1.5 text-xs dark:bg-neutral-900 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Exam Venue / Lab Hall</label>
+                          <input
+                            type="text"
+                            value={vals.venue}
+                            onChange={(e) => setLabSectionSchedules({
+                              ...labSectionSchedules,
+                              [sec]: { ...vals, venue: e.target.value }
+                            })}
+                            placeholder="e.g. AI Lab 204"
+                            className="w-full px-2.5 py-1.5 text-xs dark:bg-neutral-900 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  /* THEORY EXAM SINGLE / BATCH SCHEDULER */
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Exam Scope</label>
+                      <select
+                        value={schedScope}
+                        onChange={(e) => setSchedScope(e.target.value)}
+                        className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white"
+                      >
+                        <option value="Entire Batch">Entire Batch (All Sections)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Exam Date <span className="text-rose-500">*</span></label>
+                      <input
+                        type="date"
+                        required
+                        value={schedExamDate}
+                        onChange={(e) => setSchedExamDate(e.target.value)}
+                        className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Start Time <span className="text-rose-500">*</span></label>
+                        <input
+                          type="time"
+                          required
+                          value={schedStartTime}
+                          onChange={(e) => setSchedStartTime(e.target.value)}
+                          className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">End Time <span className="text-rose-500">*</span></label>
+                        <input
+                          type="time"
+                          required
+                          value={schedEndTime}
+                          onChange={(e) => setSchedEndTime(e.target.value)}
+                          className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Maximum Marks <span className="text-rose-500">*</span></label>
+                      <input
+                        type="number"
+                        required
+                        min={1}
+                        max={200}
+                        value={schedMaxMarks}
+                        onChange={(e) => setSchedMaxMarks(e.target.value)}
+                        className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Exam Venue (Optional)</label>
+                      <input
+                        type="text"
+                        value={schedVenue}
+                        onChange={(e) => setSchedVenue(e.target.value)}
+                        placeholder="e.g. Main Auditorium / Exam Hall 101"
+                        className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold dark:text-neutral-400 text-text-secondary uppercase mb-1">Instructions (Optional)</label>
+                      <textarea
+                        rows={2}
+                        value={schedInstructions}
+                        onChange={(e) => setSchedInstructions(e.target.value)}
+                        placeholder="e.g. Non-programmable scientific calculators permitted."
+                        className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded-lg dark:text-white"
+                      />
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              <div className="flex items-center gap-3 pt-4 border-t dark:border-neutral-800 border-border-subtle mt-4">
+                <button
+                  type="button"
+                  onClick={() => setScheduleDrawerOpen(false)}
+                  className="flex-1 py-2 text-xs font-semibold rounded-lg dark:bg-neutral-800 bg-neutral-100 dark:hover:bg-neutral-750 hover:bg-neutral-200 dark:text-neutral-300 border dark:border-neutral-800 border-border-subtle cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white cursor-pointer transition flex items-center justify-center gap-1.5"
+                >
+                  {submitting && <Loader2 size={12} className="animate-spin" />}
+                  <span>Save Subject Schedule</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* PUBLISH CONFIRMATION MODAL */}
+      {publishModalOpen && activeSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="dark:bg-neutral-900 bg-surface border dark:border-neutral-800 border-border-subtle p-6 rounded-xl max-w-sm w-full mx-4 shadow-2xl animate-scale-up space-y-4">
-            <h3 className="font-display font-bold dark:text-white text-text-primary text-base">De-register Examination?</h3>
+          <div className="dark:bg-neutral-900 bg-surface border dark:border-neutral-800 border-border-subtle p-6 rounded-xl max-w-md w-full mx-4 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-emerald-500">
+              <Send size={24} />
+              <h3 className="font-display font-bold dark:text-white text-text-primary text-lg">
+                Publish Examination Schedule?
+              </h3>
+            </div>
+            
             <p className="text-xs dark:text-neutral-400 text-text-secondary leading-relaxed">
-              Are you sure you want to delete the scheduled <strong className="dark:text-white text-text-primary">{examToDelete.examType}</strong> exam for <strong className="dark:text-white text-text-primary">{examToDelete.subjectName}</strong>? This action will clear the schedule from students&apos; rosters and cannot be undone.
+              You are about to publish the examination schedule for <strong className="dark:text-white text-text-primary">{activeSession.name}</strong>.
             </p>
+
+            <ul className="text-xs text-text-secondary dark:text-neutral-400 space-y-1.5 font-mono bg-neutral-50 dark:bg-neutral-955 p-3 rounded-lg border dark:border-neutral-850 border-border-subtle">
+              <li>• Official Academic Calendar events will be created.</li>
+              <li>• Target notifications sent to enrolled students in {activeSession.departmentCode} (Year {activeSession.year}, Sem {activeSession.semester}).</li>
+              <li>• Notifications sent to assigned subject faculty.</li>
+            </ul>
+
             <div className="flex items-center gap-3 pt-2">
               <button
-                onClick={() => {
-                  setDeleteConfirmOpen(false);
-                  setExamToDelete(null);
-                }}
-                className="flex-1 py-2 rounded dark:bg-neutral-800 bg-neutral-100 hover:bg-neutral-200 dark:text-neutral-300 text-text-primary border dark:border-neutral-800 border-border-subtle font-bold text-xs cursor-pointer transition"
+                onClick={() => setPublishModalOpen(false)}
+                className="flex-1 py-2 rounded-lg dark:bg-neutral-800 bg-neutral-100 hover:bg-neutral-200 dark:text-neutral-300 font-semibold text-xs cursor-pointer"
               >
-                No, Keep
+                Cancel
               </button>
               <button
-                onClick={handleDeleteExam}
-                className="flex-1 py-2 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs cursor-pointer transition"
+                onClick={handlePublishSession}
+                disabled={submitting}
+                className="flex-1 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs cursor-pointer flex items-center justify-center gap-1.5"
               >
-                Yes, Delete
+                {submitting && <Loader2 size={12} className="animate-spin" />}
+                <span>Confirm & Publish</span>
               </button>
             </div>
           </div>

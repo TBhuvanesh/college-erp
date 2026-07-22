@@ -44,6 +44,8 @@ const MIGRATION_FILES = [
   '036_subject_credits_decimal.sql',
   '037_subject_credits_check_constraint.sql',
   '038_subjects_curriculum_mappings.sql',
+  '039_examination_updates.sql',
+  '040_examination_sessions_redesign.sql',
 ];
 
 async function runMigrations(): Promise<void> {
@@ -149,6 +151,35 @@ async function runMigrations(): Promise<void> {
           "ALTER TYPE workflow_trigger_event ADD VALUE IF NOT EXISTS 'exam_seating.published'",
           "ALTER TYPE exam_session_status ADD VALUE IF NOT EXISTS 'validated' AFTER 'generated'",
           "ALTER TYPE exam_session_status ADD VALUE IF NOT EXISTS 'completed' AFTER 'published'",
+        ];
+        for (const stmt of enumAdditions) {
+          try {
+            await client.query(stmt);
+            console.log(`  ${stmt}`);
+          } catch (err: any) {
+            if (err.message && err.message.includes('already exists')) {
+              console.log('  Enum value already exists, skipping.');
+            } else {
+              throw err;
+            }
+          }
+        }
+
+        await client.query('BEGIN');
+        await client.query(sql);
+        await client.query(
+          'INSERT INTO schema_migrations (version) VALUES ($1)',
+          [file]
+        );
+        await client.query('COMMIT');
+      } else if (file === '039_examination_updates.sql') {
+        const enumAdditions = [
+          "ALTER TYPE exam_type ADD VALUE 'Internal Assessment'",
+          "ALTER TYPE exam_type ADD VALUE 'Semester End Examination'",
+          "ALTER TYPE exam_type ADD VALUE 'Practical / Laboratory Exam'",
+          "ALTER TYPE exam_type ADD VALUE 'Viva'",
+          "ALTER TYPE exam_type ADD VALUE 'Improvement Exam'",
+          "ALTER TYPE exam_type ADD VALUE 'Supplementary Exam'",
         ];
         for (const stmt of enumAdditions) {
           try {

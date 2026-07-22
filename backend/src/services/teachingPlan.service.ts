@@ -496,8 +496,8 @@ export async function listTeachingPlans(
   } else if (role === 'student') {
     const ctx = await resolveStudentCtx(userId);
     push('tp.semester =', ctx.semester);
-    params.push(ctx.programId);
-    conditions.push(`EXISTS (SELECT 1 FROM subjects sub WHERE sub.id = tp.subject_id AND sub.program_id = $${params.length})`);
+    params.push(ctx.departmentId);
+    conditions.push(`EXISTS (SELECT 1 FROM subject_curriculum_mappings scm WHERE scm.subject_id = tp.subject_id AND scm.department_id = $${params.length} AND scm.deleted_at IS NULL)`);
     if (ctx.section) push('tp.section =', ctx.section);
   } else if (facultyId) {
     push('tp.faculty_id =', facultyId);

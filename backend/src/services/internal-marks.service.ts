@@ -241,15 +241,18 @@ export async function getStudentSummary(userId: string): Promise<StudentMarksSum
        sub.id                                                    AS subject_id,
        sub.code                                                  AS subject_code,
        sub.name                                                  AS subject_name,
-       sub.semester,
+       scm.semester,
        m.assessment_type,
        m.obtained_marks,
        m.maximum_marks,
        m.remarks
      FROM students st
+     JOIN subject_curriculum_mappings scm
+       ON scm.department_id = st.department_id
+      AND scm.semester   = st.semester
+      AND scm.deleted_at IS NULL
      JOIN subjects sub
-       ON sub.program_id = st.program_id
-      AND sub.semester   = st.semester
+       ON sub.id = scm.subject_id
       AND sub.deleted_at IS NULL
       AND sub.status     != 'archived'
      LEFT JOIN internal_marks m
@@ -257,7 +260,7 @@ export async function getStudentSummary(userId: string): Promise<StudentMarksSum
       AND m.student_id = st.id
      WHERE st.user_id    = $1
        AND st.deleted_at IS NULL
-     ORDER BY sub.semester ASC, sub.code ASC, m.assessment_type ASC`,
+     ORDER BY scm.semester ASC, sub.code ASC, m.assessment_type ASC`,
     [userId]
   );
 

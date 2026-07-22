@@ -718,7 +718,7 @@ export default function FacultyExaminations() {
                     onChange={(e) => setFormExamType(e.target.value)}
                     className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary disabled:opacity-60 focus:outline-none focus:border-blue-600 transition cursor-pointer"
                   >
-                    {["Mid-1", "Mid-2", "Lab Exam", "Internal", "End Semester"].map(t => (
+                    {["Mid-1", "Mid-2", "Internal Assessment", "Semester End Examination", "Practical / Laboratory Exam", "Viva", "Improvement Exam", "Supplementary Exam"].map(t => (
                       <option key={t} value={t}>{t}</option>
                     ))}
                   </select>

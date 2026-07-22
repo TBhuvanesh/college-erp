@@ -61,6 +61,50 @@ router.post(
   examController.createExam
 );
 
+// ── Examination Sessions Endpoints ─────────────────────────────────────────────
+
+router.get(
+  '/sessions',
+  authenticate,
+  requireRole('admin', 'faculty'),
+  examController.listSessions
+);
+
+router.post(
+  '/sessions',
+  authenticate,
+  requireRole('admin'),
+  examController.createSession
+);
+
+router.get(
+  '/sessions/:id',
+  authenticate,
+  requireRole('admin', 'faculty'),
+  examController.getSession
+);
+
+router.post(
+  '/sessions/:id/schedule-subject',
+  authenticate,
+  requireRole('admin'),
+  examController.configureSubjectSchedule
+);
+
+router.post(
+  '/sessions/:id/publish',
+  authenticate,
+  requireRole('admin'),
+  examController.publishSession
+);
+
+router.delete(
+  '/sessions/:id',
+  authenticate,
+  requireRole('admin'),
+  examController.deleteSession
+);
+
 // ── Individual exam endpoints (/:id must come last) ───────────────────────────
 
 // Admin + Faculty + Student: view single exam

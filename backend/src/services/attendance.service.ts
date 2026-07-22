@@ -267,15 +267,18 @@ export async function getStudentSummary(userId: string): Promise<StudentAttendan
        sub.id                                                    AS subject_id,
        sub.code                                                  AS subject_code,
        sub.name                                                  AS subject_name,
-       sub.semester,
+       scm.semester,
        f.id                                                      AS faculty_id,
        f.full_name                                               AS faculty_name,
        COUNT(a.id)                                               AS total_classes,
        COUNT(a.id) FILTER (WHERE a.status = 'present')          AS attended_classes
      FROM students st
+     JOIN subject_curriculum_mappings scm
+       ON scm.department_id = st.department_id
+      AND scm.semester   = st.semester
+      AND scm.deleted_at IS NULL
      JOIN subjects sub
-       ON sub.program_id = st.program_id
-      AND sub.semester   = st.semester
+       ON sub.id = scm.subject_id
       AND sub.deleted_at IS NULL
       AND sub.status    != 'archived'
      LEFT JOIN faculty_subject_assignments fsa
@@ -289,8 +292,8 @@ export async function getStudentSummary(userId: string): Promise<StudentAttendan
       AND a.student_id = st.id
      WHERE st.user_id   = $1
        AND st.deleted_at IS NULL
-     GROUP BY sub.id, sub.code, sub.name, sub.semester, f.id, f.full_name
-     ORDER BY sub.semester ASC, sub.code ASC`,
+     GROUP BY sub.id, sub.code, sub.name, scm.semester, f.id, f.full_name
+     ORDER BY scm.semester ASC, sub.code ASC`,
     [userId]
   );
 

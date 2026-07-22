@@ -82,6 +82,16 @@ export function getEventCategoryInfo(type: string, title = ""): CategoryInfo {
   const lowerType = (type || "").toLowerCase();
   const lowerTitle = (title || "").toLowerCase();
   
+  if (lowerType.includes("exam") || lowerTitle.includes("exam") || lowerTitle.includes("test") || lowerTitle.includes("mid-") || lowerType.includes("viva") || lowerTitle.includes("viva")) {
+    return {
+      label: "Examination",
+      color: "#ef4444", // red
+      bgClass: "dark:bg-red-500/10 bg-red-50",
+      borderClass: "dark:border-red-500/20 border-red-200",
+      textClass: "dark:text-red-400 text-red-750"
+    };
+  }
+
   if (lowerType.includes("assignment") || lowerTitle.includes("assignment") || lowerTitle.includes("project deadline")) {
     return {
       label: "Assignment Deadline",
@@ -238,7 +248,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           setDepartments(res.data.departments);
         }
       } catch (err) {
-        console.error("Failed to load departments in CalendarView", err);
+        console.warn("Failed to load departments in CalendarView (session may be expired):", err);
       }
     };
     if (accessToken) {
@@ -329,7 +339,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         setAnnouncements(mapped);
       }
     } catch (err) {
-      console.error("Failed to load secondary calendar event lists:", err);
+      console.warn("Failed to load secondary calendar event lists (session may be expired):", err);
     } finally {
       setLoadingExtras(false);
     }
