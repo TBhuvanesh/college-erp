@@ -1,6 +1,7 @@
 import { query } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
+import { eventBus } from './eventBus.service';
 import type { Role } from '../types/roles';
 import type {
   Notification,
@@ -289,7 +290,20 @@ export async function createNotification(
      WHERE n.id = $1 AND n.deleted_at IS NULL`,
     [rows[0].id]
   );
-  return toNotification(created[0]);
+  const result = toNotification(created[0]);
+
+  eventBus.publish('NOTIFICATION_EMITTED', {
+    notificationId: result.id,
+    userId: result.recipientUserId || undefined,
+    title: result.title,
+    message: result.message,
+    type: result.type,
+    targetRole: result.targetRole || undefined,
+    departmentId: result.departmentId || undefined,
+    semester: result.semester || undefined,
+  });
+
+  return result;
 }
 
 export async function listNotifications(

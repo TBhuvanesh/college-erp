@@ -1,6 +1,8 @@
 import { createApp } from './app';
 import { env } from './config/env';
 import { pool } from './config/database';
+import { Server as SocketIOServer } from 'socket.io';
+import { eventBus } from './services/eventBus.service';
 
 async function start(): Promise<void> {
   // Test database connection on startup
@@ -18,6 +20,24 @@ async function start(): Promise<void> {
   const server = app.listen(env.PORT, () => {
     console.log(`Server running on port ${env.PORT} [${env.NODE_ENV}]`);
   });
+
+  const io = new SocketIOServer(server, {
+    cors: {
+      origin: env.CORS_ORIGIN.split(',').map((o) => o.trim()),
+      credentials: true,
+      methods: ['GET', 'POST'],
+    },
+  });
+
+  eventBus.init(io);
+
+  io.on('connection', (socket) => {
+    console.log(`Client connected to WebSocket: ${socket.id}`);
+    socket.on('disconnect', () => {
+      console.log(`Client disconnected from WebSocket: ${socket.id}`);
+    });
+  });
+
 
   const shutdown = (signal: string) => {
     console.log(`${signal}: shutting down gracefully…`);

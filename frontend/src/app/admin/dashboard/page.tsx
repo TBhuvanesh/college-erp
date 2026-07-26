@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useSimulation } from "@/context/SimulationContext";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
 import {
@@ -45,13 +44,6 @@ const BASE_DASHBOARD_TIME = Date.now();
 
 export default function AdminDashboard() {
   const { accessToken } = useAuth();
-  const {
-    students,
-    faculty,
-    addStudent,
-    addFaculty,
-    generateInvoice
-  } = useSimulation();
 
   // Modals state
   const [studentModalOpen, setStudentModalOpen] = useState(false);
@@ -62,6 +54,7 @@ export default function AdminDashboard() {
   const [toastMsg, setToastMsg] = useState("");
 
   // API Integration States
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [apiStudents, setApiStudents] = useState<any[]>([]);
   const [apiFaculty, setApiFaculty] = useState<any[]>([]);
   const [apiSubjects, setApiSubjects] = useState<any[]>([]);
@@ -75,7 +68,9 @@ export default function AdminDashboard() {
   const [apiNotifications, setApiNotifications] = useState<any[]>([]);
   const [apiPersonalEntries, setApiPersonalEntries] = useState<any[]>([]);
   const [apiOpportunities, setApiOpportunities] = useState<any[]>([]);
-  
+  const [apiDepartments, setApiDepartments] = useState<any[]>([]);
+  const [apiPrograms, setApiPrograms] = useState<any[]>([]);
+
   const [loading, setLoading] = useState(false);
 
   // Sync / Fetch function
@@ -83,7 +78,8 @@ export default function AdminDashboard() {
     if (!accessToken) return;
     setLoading(true);
     try {
-      const [studRes, facRes, subRes, attRes, feeRes, examRes, annRes, calRes, lmsRes, subLmsRes, notifRes, oppRes, persRes] = await Promise.all([
+      const [dashRes, studRes, facRes, subRes, attRes, feeRes, examRes, annRes, calRes, lmsRes, subLmsRes, notifRes, oppRes, persRes, deptRes, progRes] = await Promise.all([
+        apiFetch("/dashboard/admin", {}, accessToken),
         apiFetch("/students?limit=500", {}, accessToken),
         apiFetch("/faculty?limit=500", {}, accessToken),
         apiFetch("/subjects?limit=500", {}, accessToken),
@@ -96,9 +92,12 @@ export default function AdminDashboard() {
         apiFetch("/lms/submissions?limit=100", {}, accessToken),
         apiFetch("/notifications?limit=20", {}, accessToken),
         apiFetch("/opportunities?limit=50", {}, accessToken),
-        apiFetch("/calendar-entries?limit=100", {}, accessToken)
+        apiFetch("/calendar-entries?limit=100", {}, accessToken),
+        apiFetch("/departments", {}, accessToken),
+        apiFetch("/departments/programs/list", {}, accessToken)
       ]);
 
+      if (dashRes.success && dashRes.data) setDashboardStats(dashRes.data);
       if (studRes.success && studRes.data?.students) setApiStudents(studRes.data.students);
       if (facRes.success && facRes.data?.faculty) setApiFaculty(facRes.data.faculty);
       if (subRes.success && subRes.data?.subjects) setApiSubjects(subRes.data.subjects);
@@ -112,6 +111,8 @@ export default function AdminDashboard() {
       if (notifRes.success && notifRes.data?.notifications) setApiNotifications(notifRes.data.notifications);
       if (oppRes.success && oppRes.data?.opportunities) setApiOpportunities(oppRes.data.opportunities);
       if (persRes.success && persRes.data?.entries) setApiPersonalEntries(persRes.data.entries);
+      if (deptRes.success && deptRes.data?.departments) setApiDepartments(deptRes.data.departments);
+      if (progRes.success && progRes.data?.programs) setApiPrograms(progRes.data.programs);
     } catch (err) {
       console.error("Admin dashboard failed to load API data", err);
     } finally {
@@ -126,30 +127,54 @@ export default function AdminDashboard() {
     return () => clearTimeout(timer);
   }, [loadAdminData]);
 
+  useEffect(() => {
+    window.addEventListener('realtimeDashboardUpdate', loadAdminData);
+    return () => {
+      window.removeEventListener('realtimeDashboardUpdate', loadAdminData);
+    };
+  }, [loadAdminData]);
+
+  // Default academic year, e.g. Aug 2026 -> "2026-2027", Mar 2027 -> "2026-2027"
+  const defaultAcademicYear = (() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    return now.getMonth() >= 6 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+  })();
+
   // Form states
   const [studentForm, setStudentForm] = useState({
-    name: "",
-    rollNo: "",
+    fullName: "",
+    rollNumber: "",
     email: "",
-    department: "CSE",
-    semester: "Semester 3",
+    password: "",
+    departmentId: "",
+    programId: "",
+    semester: "3",
+    section: "",
+    academicYear: defaultAcademicYear,
   });
 
   const [invoiceForm, setInvoiceForm] = useState({
     studentId: "",
-    type: "Academic Tuition Fee",
-    amount: "106000",
+    feeType: "Tuition Fee",
+    totalAmount: "106000",
     dueDate: "2026-07-15",
+    academicYear: defaultAcademicYear,
+    semester: "3",
+    remarks: "",
   });
 
   const [facultyForm, setFacultyForm] = useState({
-    name: "",
-    employeeId: "",
+    fullName: "",
+    employeeNumber: "",
     email: "",
-    department: "CSE",
-    subjectId: "cs-301",
-    semester: "Semester 3",
+    password: "",
+    departmentId: "",
+    designation: "assistant_professor",
   });
+
+  const [formError, setFormError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
@@ -173,17 +198,20 @@ export default function AdminDashboard() {
   };
 
   // 1. Math metrics counts
-  const totalStudents = apiStudents.length;
-  const activeFaculty = apiFaculty.length;
-  const totalSubjects = apiSubjects.length;
+  const totalStudents = dashboardStats?.institutionOverview?.totalStudents ?? apiStudents.length;
+  const activeFaculty = dashboardStats?.institutionOverview?.totalFaculty ?? apiFaculty.length;
+  const totalSubjects = dashboardStats?.institutionOverview?.totalSubjects ?? apiSubjects.length;
   
   // 2. Fee Collection Summary
-  const totalTarget = apiFees.reduce((acc, curr) => acc + (curr.totalAmount || curr.amount || 0), 0);
-  const totalCollected = apiFees.reduce((acc, curr) => acc + (curr.paidAmount || (curr.status === "Paid" ? curr.amount : 0)), 0);
-  const outstandingFees = apiFees.reduce((acc, curr) => acc + (curr.pendingAmount || (curr.status !== "Paid" ? curr.amount : 0)), 0);
+  const totalTarget = dashboardStats?.feeStatistics?.totalBilled ?? apiFees.reduce((acc, curr) => acc + (curr.totalAmount || curr.amount || 0), 0);
+  const totalCollected = dashboardStats?.feeStatistics?.totalCollected ?? apiFees.reduce((acc, curr) => acc + (curr.paidAmount || (curr.status === "Paid" ? curr.amount : 0)), 0);
+  const outstandingFees = dashboardStats?.feeStatistics?.totalOutstanding ?? apiFees.reduce((acc, curr) => acc + (curr.pendingAmount || (curr.status !== "Paid" ? curr.amount : 0)), 0);
 
   // 3. Average Attendance
   const avgAttendance = (() => {
+    if (dashboardStats?.academicOverview?.attendanceSummary) {
+      return dashboardStats.academicOverview.attendanceSummary.averagePercentage.toFixed(1);
+    }
     if (apiAttendance.length === 0) return "0.0";
     const present = apiAttendance.filter(att => att.status === "present" || att.status === "Present" || att.status === "Late").length;
     return ((present / apiAttendance.length) * 100).toFixed(1);
@@ -191,6 +219,15 @@ export default function AdminDashboard() {
 
   // 4. Examination Statistics
   const examStats = (() => {
+    if (dashboardStats?.examinationBreakdown) {
+      const breakdown = dashboardStats.examinationBreakdown;
+      return {
+        scheduled: breakdown.scheduled,
+        ongoing: breakdown.ongoing,
+        completed: breakdown.completed,
+        total: breakdown.total
+      };
+    }
     const scheduled = apiExams.filter(ex => ex.status === "Scheduled").length;
     const ongoing = apiExams.filter(ex => ex.status === "Ongoing").length;
     const completed = apiExams.filter(ex => ex.status === "Completed").length;
@@ -327,89 +364,119 @@ export default function AdminDashboard() {
   // Mock Pending Maker-Checker Approvals
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
 
-  // Form Submissions
-  const handleAddStudent = (e: React.FormEvent) => {
+  // Form Submissions — all write through the real backend API
+  const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentForm.name || !studentForm.rollNo || !studentForm.email) {
-      alert("Please enter all fields");
+    setFormError("");
+    if (!studentForm.fullName || !studentForm.rollNumber || !studentForm.email || !studentForm.password ||
+        !studentForm.departmentId || !studentForm.programId || !studentForm.academicYear) {
+      setFormError("Please fill in all required fields");
       return;
     }
-    const created = addStudent({
-      ...studentForm,
-      status: "Good Standing",
-      program: "B.Tech CSE",
-      advisor: "Dr. Amit Verma",
-      advisorEmail: "amit.verma@sreyas.ac.in"
-    });
-    setStudentForm({
-      name: "",
-      rollNo: "",
-      email: "",
-      department: "CSE",
-      semester: "Semester 3"
-    });
-    setStudentModalOpen(false);
-    triggerToast(`Student ${created.name} successfully registered in registry!`);
-    loadAdminData();
+    setSubmitting(true);
+    try {
+      const res = await apiFetch("/students", {
+        method: "POST",
+        body: JSON.stringify({
+          email: studentForm.email,
+          password: studentForm.password,
+          rollNumber: studentForm.rollNumber,
+          fullName: studentForm.fullName,
+          departmentId: studentForm.departmentId,
+          programId: studentForm.programId,
+          semester: Number(studentForm.semester),
+          section: studentForm.section || undefined,
+          academicYear: studentForm.academicYear,
+        }),
+      }, accessToken);
+
+      if (!res.success) throw new Error(res.message || "Failed to register student");
+
+      setStudentForm({
+        fullName: "", rollNumber: "", email: "", password: "",
+        departmentId: "", programId: "", semester: "3", section: "", academicYear: defaultAcademicYear,
+      });
+      setStudentModalOpen(false);
+      triggerToast(`Student ${studentForm.fullName} successfully registered in registry!`);
+      loadAdminData();
+    } catch (err: any) {
+      setFormError(err.message || "Failed to register student");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleGenerateInvoice = (e: React.FormEvent) => {
+  const handleGenerateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!invoiceForm.studentId) {
-      alert("Please select a student");
+    setFormError("");
+    if (!invoiceForm.studentId || !invoiceForm.totalAmount || !invoiceForm.dueDate || !invoiceForm.academicYear) {
+      setFormError("Please fill in all required fields");
       return;
     }
-    const targetStud = apiStudents.find(s => s.id === invoiceForm.studentId) || students.find(s => s.id === invoiceForm.studentId);
+    const targetStud = apiStudents.find(s => s.id === invoiceForm.studentId);
     if (!targetStud) return;
 
-    const created = generateInvoice({
-      studentId: invoiceForm.studentId,
-      studentName: targetStud.name,
-      studentRollNo: targetStud.rollNo,
-      semester: targetStud.semester,
-      type: invoiceForm.type,
-      amount: parseFloat(invoiceForm.amount) || 106000,
-      dueDate: invoiceForm.dueDate
-    });
+    setSubmitting(true);
+    try {
+      const res = await apiFetch("/fees", {
+        method: "POST",
+        body: JSON.stringify({
+          studentId: invoiceForm.studentId,
+          academicYear: invoiceForm.academicYear,
+          semester: Number(invoiceForm.semester),
+          feeType: invoiceForm.feeType,
+          totalAmount: Number(invoiceForm.totalAmount),
+          dueDate: invoiceForm.dueDate,
+          remarks: invoiceForm.remarks || undefined,
+        }),
+      }, accessToken);
 
-    setInvoiceModalOpen(false);
-    triggerToast(`Fee Invoice generated for ${created.studentName}: ₹${created.amount.toLocaleString('en-IN')}`);
-    loadAdminData();
+      if (!res.success) throw new Error(res.message || "Failed to generate invoice");
+
+      setInvoiceModalOpen(false);
+      triggerToast(`Fee Invoice generated for ${targetStud.name}: ₹${Number(invoiceForm.totalAmount).toLocaleString('en-IN')}`);
+      loadAdminData();
+    } catch (err: any) {
+      setFormError(err.message || "Failed to generate invoice");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleAddFaculty = (e: React.FormEvent) => {
+  const handleAddFaculty = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!facultyForm.name || !facultyForm.employeeId || !facultyForm.email) {
-      alert("Please enter all fields");
+    setFormError("");
+    if (!facultyForm.fullName || !facultyForm.employeeNumber || !facultyForm.email || !facultyForm.password || !facultyForm.departmentId) {
+      setFormError("Please fill in all required fields");
       return;
     }
-    
-    const subjName = facultyForm.subjectId === "cs-301" 
-      ? "CS-301: Database Management Systems" 
-      : "CS-302: Design & Analysis of Algorithms";
+    setSubmitting(true);
+    try {
+      const res = await apiFetch("/faculty", {
+        method: "POST",
+        body: JSON.stringify({
+          email: facultyForm.email,
+          password: facultyForm.password,
+          employeeNumber: facultyForm.employeeNumber,
+          fullName: facultyForm.fullName,
+          departmentId: facultyForm.departmentId,
+          designation: facultyForm.designation,
+        }),
+      }, accessToken);
 
-    const created = addFaculty({
-      name: facultyForm.name,
-      employeeId: facultyForm.employeeId,
-      email: facultyForm.email,
-      department: facultyForm.department,
-      assignedSubjects: [
-        { subjectId: facultyForm.subjectId, subjectName: subjName, semester: facultyForm.semester }
-      ],
-      status: "Active"
-    });
+      if (!res.success) throw new Error(res.message || "Failed to onboard faculty");
 
-    setFacultyForm({
-      name: "",
-      employeeId: "",
-      email: "",
-      department: "CSE",
-      subjectId: "cs-301",
-      semester: "Semester 3"
-    });
-    setFacultyModalOpen(false);
-    triggerToast(`Faculty ${created.name} onboarded and subject allocated successfully!`);
-    loadAdminData();
+      setFacultyForm({
+        fullName: "", employeeNumber: "", email: "", password: "", departmentId: "", designation: "assistant_professor",
+      });
+      setFacultyModalOpen(false);
+      triggerToast(`Faculty ${facultyForm.fullName} onboarded successfully!`);
+      loadAdminData();
+    } catch (err: any) {
+      setFormError(err.message || "Failed to onboard faculty");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleApprove = (id: string) => {
@@ -707,16 +774,19 @@ export default function AdminDashboard() {
       {/* 1. Onboard Student Modal */}
       {studentModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md bg-surface border border-border-subtle rounded-xl p-5 shadow-2xl animate-scale-up">
+          <div className="w-full max-w-md bg-surface border border-border-subtle rounded-xl p-5 shadow-2xl animate-scale-up max-h-[90vh] overflow-y-auto">
             <h3 className="font-display font-bold text-lg text-text-primary mb-3 text-left">Onboard Student Profile</h3>
+            {formError && (
+              <div className="mb-3 px-3 py-2 rounded bg-red-500/10 border border-red-500/30 text-[11px] text-red-500 font-semibold">{formError}</div>
+            )}
             <form onSubmit={handleAddStudent} className="space-y-3">
               <div>
                 <label className="text-[10px] uppercase font-bold text-text-muted block text-left">Student Name</label>
                 <input
                   type="text"
                   placeholder="e.g. Rahul Sharma"
-                  value={studentForm.name}
-                  onChange={e => setStudentForm({ ...studentForm, name: e.target.value })}
+                  value={studentForm.fullName}
+                  onChange={e => setStudentForm({ ...studentForm, fullName: e.target.value })}
                   className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
@@ -727,21 +797,49 @@ export default function AdminDashboard() {
                   <input
                     type="text"
                     placeholder="e.g. 2026CSE004"
-                    value={studentForm.rollNo}
-                    onChange={e => setStudentForm({ ...studentForm, rollNo: e.target.value })}
+                    value={studentForm.rollNumber}
+                    onChange={e => setStudentForm({ ...studentForm, rollNumber: e.target.value })}
                     className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] uppercase font-bold text-text-muted block">Department</label>
                   <select
-                    value={studentForm.department}
-                    onChange={e => setStudentForm({ ...studentForm, department: e.target.value })}
+                    value={studentForm.departmentId}
+                    onChange={e => setStudentForm({ ...studentForm, departmentId: e.target.value, programId: "" })}
                     className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                   >
-                    <option value="CSE">CSE (Computer Science)</option>
-                    <option value="ECE">ECE (Electronics)</option>
+                    <option value="">-- Select --</option>
+                    {apiDepartments.map((d: any) => (
+                      <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
+                    ))}
                   </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-left">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-text-muted block">Program</label>
+                  <select
+                    value={studentForm.programId}
+                    onChange={e => setStudentForm({ ...studentForm, programId: e.target.value })}
+                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="">-- Select --</option>
+                    {apiPrograms.filter((p: any) => !studentForm.departmentId || p.departmentId === studentForm.departmentId).map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.name} ({p.code})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-text-muted block">Section (optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. A"
+                    value={studentForm.section}
+                    onChange={e => setStudentForm({ ...studentForm, section: e.target.value })}
+                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
+                  />
                 </div>
               </div>
 
@@ -757,15 +855,38 @@ export default function AdminDashboard() {
               </div>
 
               <div>
-                <label className="text-[10px] uppercase font-bold text-text-muted block text-left">Semester Batch</label>
-                <select
-                  value={studentForm.semester}
-                  onChange={e => setStudentForm({ ...studentForm, semester: e.target.value })}
+                <label className="text-[10px] uppercase font-bold text-text-muted block text-left">Temporary Password</label>
+                <input
+                  type="password"
+                  placeholder="Min 8 chars, upper+lower+number"
+                  value={studentForm.password}
+                  onChange={e => setStudentForm({ ...studentForm, password: e.target.value })}
                   className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="Semester 1">Semester 1 (Autumn)</option>
-                  <option value="Semester 3">Semester 3 (Autumn)</option>
-                </select>
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-left">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-text-muted block">Semester</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={studentForm.semester}
+                    onChange={e => setStudentForm({ ...studentForm, semester: e.target.value })}
+                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-text-muted block">Academic Year</label>
+                  <input
+                    type="text"
+                    placeholder="2026-2027"
+                    value={studentForm.academicYear}
+                    onChange={e => setStudentForm({ ...studentForm, academicYear: e.target.value })}
+                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-border-subtle">
@@ -778,9 +899,10 @@ export default function AdminDashboard() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded transition shadow-lg shadow-blue-600/20 cursor-pointer"
+                  disabled={submitting}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded transition shadow-lg shadow-blue-600/20 cursor-pointer disabled:opacity-50"
                 >
-                  Register Student
+                  {submitting ? "Registering..." : "Register Student"}
                 </button>
               </div>
             </form>
@@ -791,26 +913,26 @@ export default function AdminDashboard() {
       {/* 2. Issue Invoice Modal */}
       {invoiceModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md bg-surface border border-border-subtle rounded-xl p-5 shadow-2xl animate-scale-up">
+          <div className="w-full max-w-md bg-surface border border-border-subtle rounded-xl p-5 shadow-2xl animate-scale-up max-h-[90vh] overflow-y-auto">
             <h3 className="font-display font-bold text-lg text-text-primary mb-3 text-left">Issue Tuition Invoice</h3>
+            {formError && (
+              <div className="mb-3 px-3 py-2 rounded bg-red-500/10 border border-red-500/30 text-[11px] text-red-500 font-semibold">{formError}</div>
+            )}
             <form onSubmit={handleGenerateInvoice} className="space-y-3">
               <div>
                 <label className="text-[10px] uppercase font-bold text-text-muted block text-left">Select Enrolled Student</label>
                 <select
                   value={invoiceForm.studentId}
-                  onChange={e => setInvoiceForm({ ...invoiceForm, studentId: e.target.value })}
+                  onChange={e => {
+                    const stud = apiStudents.find(s => s.id === e.target.value);
+                    setInvoiceForm({ ...invoiceForm, studentId: e.target.value, semester: stud?.semester ? String(stud.semester) : invoiceForm.semester });
+                  }}
                   className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                 >
                   <option value="">-- Choose Student --</option>
                   {apiStudents.map(s => (
                     <option key={s.id} value={s.id}>
-                      {s.name} ({s.rollNo}) - {s.semester}
-                    </option>
-                  ))}
-                  {/* simulation fallback */}
-                  {apiStudents.length === 0 && students.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.rollNo}) - {s.semester}
+                      {s.name || s.fullName} ({s.rollNo || s.rollNumber}) - Sem {s.semester}
                     </option>
                   ))}
                 </select>
@@ -818,14 +940,16 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-2 gap-3 text-left">
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-text-muted block">Invoice Type</label>
+                  <label className="text-[10px] uppercase font-bold text-text-muted block">Fee Type</label>
                   <select
-                    value={invoiceForm.type}
-                    onChange={e => setInvoiceForm({ ...invoiceForm, type: e.target.value })}
+                    value={invoiceForm.feeType}
+                    onChange={e => setInvoiceForm({ ...invoiceForm, feeType: e.target.value })}
                     className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                   >
-                    <option value="Academic Tuition Fee">Academic Tuition Fee</option>
-                    <option value="Lab Fee">Lab Fee</option>
+                    <option value="Tuition Fee">Tuition Fee</option>
+                    <option value="Examination Fee">Examination Fee</option>
+                    <option value="Laboratory Fee">Laboratory Fee</option>
+                    <option value="Miscellaneous Fee">Miscellaneous Fee</option>
                   </select>
                 </div>
                 <div>
@@ -833,8 +957,32 @@ export default function AdminDashboard() {
                   <input
                     type="number"
                     placeholder="106000"
-                    value={invoiceForm.amount}
-                    onChange={e => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
+                    value={invoiceForm.totalAmount}
+                    onChange={e => setInvoiceForm({ ...invoiceForm, totalAmount: e.target.value })}
+                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-left">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-text-muted block">Semester</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={invoiceForm.semester}
+                    onChange={e => setInvoiceForm({ ...invoiceForm, semester: e.target.value })}
+                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-text-muted block">Academic Year</label>
+                  <input
+                    type="text"
+                    placeholder="2026-2027"
+                    value={invoiceForm.academicYear}
+                    onChange={e => setInvoiceForm({ ...invoiceForm, academicYear: e.target.value })}
                     className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                   />
                 </div>
@@ -860,9 +1008,10 @@ export default function AdminDashboard() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded transition shadow-lg shadow-blue-600/20 cursor-pointer"
+                  disabled={submitting}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded transition shadow-lg shadow-blue-600/20 cursor-pointer disabled:opacity-50"
                 >
-                  Generate Invoice
+                  {submitting ? "Generating..." : "Generate Invoice"}
                 </button>
               </div>
             </form>
@@ -873,16 +1022,19 @@ export default function AdminDashboard() {
       {/* 3. Onboard Faculty Modal */}
       {facultyModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md bg-surface border border-border-subtle rounded-xl p-5 shadow-2xl animate-scale-up">
-            <h3 className="font-display font-bold text-lg text-text-primary mb-3 text-left">Onboard Faculty & Allocation</h3>
+          <div className="w-full max-w-md bg-surface border border-border-subtle rounded-xl p-5 shadow-2xl animate-scale-up max-h-[90vh] overflow-y-auto">
+            <h3 className="font-display font-bold text-lg text-text-primary mb-3 text-left">Onboard Faculty</h3>
+            {formError && (
+              <div className="mb-3 px-3 py-2 rounded bg-red-500/10 border border-red-500/30 text-[11px] text-red-500 font-semibold">{formError}</div>
+            )}
             <form onSubmit={handleAddFaculty} className="space-y-3">
               <div>
                 <label className="text-[10px] uppercase font-bold text-text-muted block text-left">Faculty Name</label>
                 <input
                   type="text"
                   placeholder="e.g. Dr. Robert Finch"
-                  value={facultyForm.name}
-                  onChange={e => setFacultyForm({ ...facultyForm, name: e.target.value })}
+                  value={facultyForm.fullName}
+                  onChange={e => setFacultyForm({ ...facultyForm, fullName: e.target.value })}
                   className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                 />
               </div>
@@ -893,20 +1045,22 @@ export default function AdminDashboard() {
                   <input
                     type="text"
                     placeholder="e.g. EMP-CS509"
-                    value={facultyForm.employeeId}
-                    onChange={e => setFacultyForm({ ...facultyForm, employeeId: e.target.value })}
+                    value={facultyForm.employeeNumber}
+                    onChange={e => setFacultyForm({ ...facultyForm, employeeNumber: e.target.value })}
                     className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] uppercase font-bold text-text-muted block">Department</label>
                   <select
-                    value={facultyForm.department}
-                    onChange={e => setFacultyForm({ ...facultyForm, department: e.target.value })}
+                    value={facultyForm.departmentId}
+                    onChange={e => setFacultyForm({ ...facultyForm, departmentId: e.target.value })}
                     className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
                   >
-                    <option value="CSE">CSE (Computer Science)</option>
-                    <option value="ECE">ECE (Electronics)</option>
+                    <option value="">-- Select --</option>
+                    {apiDepartments.map((d: any) => (
+                      <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -922,28 +1076,30 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3 text-left">
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-text-muted block">Allocated Subject</label>
-                  <select
-                    value={facultyForm.subjectId}
-                    onChange={e => setFacultyForm({ ...facultyForm, subjectId: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="cs-301">CS-301 Database Systems</option>
-                    <option value="cs-302">CS-302 Design & Algorithms</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-text-muted block">Semester Batch</label>
-                  <select
-                    value={facultyForm.semester}
-                    onChange={e => setFacultyForm({ ...facultyForm, semester: e.target.value })}
-                    className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="Semester 3">Semester 3</option>
-                  </select>
-                </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-text-muted block text-left">Temporary Password</label>
+                <input
+                  type="password"
+                  placeholder="Min 8 chars, upper+lower+number"
+                  value={facultyForm.password}
+                  onChange={e => setFacultyForm({ ...facultyForm, password: e.target.value })}
+                  className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-text-muted block text-left">Designation</label>
+                <select
+                  value={facultyForm.designation}
+                  onChange={e => setFacultyForm({ ...facultyForm, designation: e.target.value })}
+                  className="w-full mt-1 px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="professor">Professor</option>
+                  <option value="associate_professor">Associate Professor</option>
+                  <option value="assistant_professor">Assistant Professor</option>
+                  <option value="lecturer">Lecturer</option>
+                  <option value="hod">HOD</option>
+                </select>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-border-subtle">
@@ -956,9 +1112,10 @@ export default function AdminDashboard() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded transition shadow-lg shadow-blue-600/20 cursor-pointer"
+                  disabled={submitting}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded transition shadow-lg shadow-blue-600/20 cursor-pointer disabled:opacity-50"
                 >
-                  Onboard Faculty
+                  {submitting ? "Onboarding..." : "Onboard Faculty"}
                 </button>
               </div>
             </form>

@@ -95,7 +95,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { name: "Subjects", href: "/admin/subjects", icon: BookOpen },
         { name: "Curriculum Scheme", href: "/admin/courses", icon: BookOpen },
-        { name: "Subject Allocation", href: "/admin/subject-allocations", icon: UserCheck },
+        { name: "Teaching Assignments", href: "/admin/subject-allocations", icon: UserCheck },
         { name: "Attendance Registry", href: "/admin/attendance", icon: Calendar },
         { name: "Examinations", href: "/admin/examinations", icon: FileText },
         { name: "Results Desk", href: "/admin/results", icon: GraduationCap },
@@ -115,6 +115,7 @@ export const Sidebar: React.FC = () => {
     {
       section: "System",
       items: [
+        { name: "Data Import Center", href: "/admin/import", icon: Database },
         { name: "ERP Settings", href: "/admin/settings", icon: Settings },
       ]
     }
@@ -196,7 +197,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { name: "Subjects", href: "/hod/subjects", icon: BookOpen },
         { name: "Class Schedules", href: "/hod/classes", icon: BookOpen },
-        { name: "Subject Allocation", href: "/hod/subject-allocations", icon: UserCheck },
+        { name: "Teaching Assignments", href: "/hod/subject-allocations", icon: UserCheck },
         { name: "Attendance Registry", href: "/hod/attendance", icon: Calendar },
         { name: "Feedback Analysis", href: "/hod/feedback", icon: ClipboardList },
         { name: "Exam Seating", href: "/hod/seating", icon: ClipboardList },

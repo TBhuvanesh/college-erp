@@ -52,6 +52,7 @@ interface SubjectCard {
   maximumMarks?: number;
   venue?: string;
   instructions?: string;
+  examStatus?: string;
   sectionSchedules?: Array<{
     section: string;
     examId: string;
@@ -61,6 +62,7 @@ interface SubjectCard {
     maximumMarks: number;
     venue?: string;
     instructions?: string;
+    examStatus?: string;
   }>;
 }
 
@@ -429,6 +431,28 @@ export default function AdminExaminations() {
       }
     } catch (err: any) {
       triggerToast(err.message || "Failed to publish examination session");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Transition Individual Exam Status (for completion and marks entry)
+  const handleTransitionExamStatus = async (examId: string, nextStatus: string) => {
+    if (!accessToken || !selectedSessionId) return;
+    setSubmitting(true);
+    try {
+      const res = await apiFetch(`/examinations/${examId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: nextStatus })
+      }, accessToken);
+
+      if (res.success) {
+        triggerToast(`Exam status advanced to ${nextStatus}!`);
+        // Refresh session detail to load updated exam statuses
+        await fetchSessionDetail(selectedSessionId);
+      }
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to update examination status");
     } finally {
       setSubmitting(false);
     }
@@ -811,7 +835,13 @@ export default function AdminExaminations() {
                         onClick={() => activeSession.status !== "Published" && openSubjectScheduleDrawer(card)}
                         className={`bg-surface dark:bg-neutral-900 border rounded-xl p-5 shadow-sm transition flex flex-col justify-between space-y-4 ${
                           activeSession.status !== "Published" ? "cursor-pointer hover:border-blue-500/50" : ""
-                        } ${isScheduled ? "dark:border-emerald-500/30 border-emerald-500/40" : "dark:border-neutral-800 border-border-subtle"}`}
+                        } ${
+                          activeSession.status === "Published"
+                            ? "border-blue-500/10 dark:border-neutral-850"
+                            : isScheduled
+                            ? "dark:border-emerald-500/30 border-emerald-500/40"
+                            : "dark:border-neutral-800 border-border-subtle"
+                        }`}
                       >
                         <div className="space-y-3">
                           {/* Subject Header */}
@@ -829,11 +859,25 @@ export default function AdminExaminations() {
                               }`}>
                                 {isLab ? "Practical Lab" : "Theory Course"}
                               </span>
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                isScheduled ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
-                              }`}>
-                                {isScheduled ? "Scheduled" : "Pending Date"}
-                              </span>
+                              {activeSession.status === "Published" ? (
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  card.examStatus === "Scripts Distributed"
+                                    ? "bg-teal-500/10 text-teal-400 border border-teal-500/20"
+                                    : card.examStatus === "Completed"
+                                    ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                                    : card.examStatus === "Ongoing"
+                                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse"
+                                    : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                                }`}>
+                                  {card.examStatus || "Scheduled"}
+                                </span>
+                              ) : (
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  isScheduled ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+                                }`}>
+                                  {isScheduled ? "Scheduled" : "Pending Date"}
+                                </span>
+                              )}
                             </div>
                           </div>
 
@@ -843,19 +887,76 @@ export default function AdminExaminations() {
                               <span className="text-[10px] font-mono text-text-muted uppercase block font-bold">Section Timetables</span>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {card.sectionSchedules.map(secItem => (
-                                  <div key={secItem.section} className="bg-neutral-50 dark:bg-neutral-950/60 p-2.5 rounded-lg text-xs space-y-1 border dark:border-neutral-850 border-border-subtle">
-                                    <div className="font-bold dark:text-white text-text-primary flex items-center justify-between">
-                                      <span>Section {secItem.section}</span>
-                                      <span className="text-[10px] text-text-muted font-mono">{secItem.maximumMarks} Marks</span>
+                                  <div key={secItem.section} className="bg-neutral-50 dark:bg-neutral-950/60 p-2.5 rounded-lg text-xs space-y-2 border dark:border-neutral-850 border-border-subtle flex flex-col justify-between">
+                                    <div className="space-y-1">
+                                      <div className="font-bold dark:text-white text-text-primary flex items-center justify-between gap-1">
+                                        <span>Section {secItem.section}</span>
+                                        {activeSession.status === "Published" ? (
+                                          <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
+                                            secItem.examStatus === "Scripts Distributed"
+                                              ? "bg-teal-500/10 text-teal-400"
+                                              : secItem.examStatus === "Completed"
+                                              ? "bg-purple-500/10 text-purple-400"
+                                              : secItem.examStatus === "Ongoing"
+                                              ? "bg-emerald-500/10 text-emerald-400 animate-pulse"
+                                              : "bg-blue-500/10 text-blue-400"
+                                          }`}>
+                                            {secItem.examStatus || "Scheduled"}
+                                          </span>
+                                        ) : (
+                                          <span className="text-[10px] text-text-muted font-mono">{secItem.maximumMarks} Marks</span>
+                                        )}
+                                      </div>
+                                      <div className="text-[11px] dark:text-neutral-400 text-text-secondary flex items-center gap-1 font-mono">
+                                        <Calendar size={11} className="text-blue-500" />
+                                        <span>{secItem.examDate || "Not Set"}</span>
+                                      </div>
+                                      <div className="text-[11px] dark:text-neutral-400 text-text-secondary flex items-center gap-1 font-mono">
+                                        <Clock size={11} className="text-blue-500" />
+                                        <span>{secItem.startTime ? `${secItem.startTime} - ${secItem.endTime}` : "Not Set"}</span>
+                                      </div>
                                     </div>
-                                    <div className="text-[11px] dark:text-neutral-400 text-text-secondary flex items-center gap-1 font-mono">
-                                      <Calendar size={11} className="text-blue-500" />
-                                      <span>{secItem.examDate || "Not Set"}</span>
-                                    </div>
-                                    <div className="text-[11px] dark:text-neutral-400 text-text-secondary flex items-center gap-1 font-mono">
-                                      <Clock size={11} className="text-blue-500" />
-                                      <span>{secItem.startTime ? `${secItem.startTime} - ${secItem.endTime}` : "Not Set"}</span>
-                                    </div>
+                                    {activeSession.status === "Published" && secItem.examId && (
+                                      <div className="pt-1.5 border-t dark:border-neutral-800 border-border-subtle mt-1" onClick={(e) => e.stopPropagation()}>
+                                        {secItem.examStatus === "Scheduled" || !secItem.examStatus ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleTransitionExamStatus(secItem.examId, "Ongoing")}
+                                            className="w-full py-1 text-[10px] font-semibold rounded bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition flex items-center justify-center gap-1"
+                                          >
+                                            <Play size={10} />
+                                            <span>Start Exam</span>
+                                          </button>
+                                        ) : secItem.examStatus === "Ongoing" ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleTransitionExamStatus(secItem.examId, "Completed")}
+                                            className="w-full py-1 text-[10px] font-semibold rounded bg-blue-600 hover:bg-blue-500 text-white cursor-pointer transition flex items-center justify-center gap-1"
+                                          >
+                                            <CheckCircle2 size={10} />
+                                            <span>Complete</span>
+                                          </button>
+                                        ) : secItem.examStatus === "Completed" ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleTransitionExamStatus(secItem.examId, "Scripts Distributed")}
+                                            className="w-full py-1 text-[10px] font-semibold rounded bg-purple-600 hover:bg-purple-500 text-white cursor-pointer transition flex items-center justify-center gap-1"
+                                          >
+                                            <FileCheck size={10} />
+                                            <span>Enable Marks</span>
+                                          </button>
+                                        ) : secItem.examStatus === "Scripts Distributed" ? (
+                                          <span className="w-full py-1 text-[10px] font-semibold rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 flex items-center justify-center gap-1 font-mono">
+                                            <CheckSquare size={10} />
+                                            <span>Enabled</span>
+                                          </span>
+                                        ) : (
+                                          <span className="w-full py-1 text-[10px] font-semibold rounded bg-neutral-500/10 text-neutral-400 text-center font-mono block">
+                                            {secItem.examStatus}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>
@@ -890,6 +991,46 @@ export default function AdminExaminations() {
                             <span className="text-xs font-semibold text-blue-500 hover:underline">
                               {isScheduled ? "Modify Schedule →" : "Configure Schedule →"}
                             </span>
+                          </div>
+                        )}
+
+                        {activeSession.status === "Published" && card.examId && (
+                          <div className="pt-2 border-t dark:border-neutral-800 border-border-subtle flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+                            <span className="text-xs text-text-muted dark:text-neutral-500 font-mono">Exam Status:</span>
+                            {card.examStatus === "Scheduled" || !card.examStatus ? (
+                              <button
+                                onClick={() => handleTransitionExamStatus(card.examId!, "Ongoing")}
+                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition flex items-center gap-1.5 shadow shadow-emerald-600/10"
+                              >
+                                <Play size={13} />
+                                <span>Start Exam</span>
+                              </button>
+                            ) : card.examStatus === "Ongoing" ? (
+                              <button
+                                onClick={() => handleTransitionExamStatus(card.examId!, "Completed")}
+                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white cursor-pointer transition flex items-center gap-1.5 shadow shadow-blue-600/10"
+                              >
+                                <CheckCircle2 size={13} />
+                                <span>Complete Exam</span>
+                              </button>
+                            ) : card.examStatus === "Completed" ? (
+                              <button
+                                onClick={() => handleTransitionExamStatus(card.examId!, "Scripts Distributed")}
+                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-600 hover:bg-purple-500 text-white cursor-pointer transition flex items-center gap-1.5 shadow shadow-purple-600/10"
+                              >
+                                <FileCheck size={13} />
+                                <span>Enable Marks Entry</span>
+                              </button>
+                            ) : card.examStatus === "Scripts Distributed" ? (
+                              <span className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-teal-500/10 text-teal-400 border border-teal-500/20 flex items-center gap-1.5 font-mono">
+                                <CheckSquare size={13} />
+                                <span>Marks Entry Enabled</span>
+                              </span>
+                            ) : (
+                              <span className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-neutral-500/10 text-neutral-400 border border-neutral-500/20 font-mono">
+                                {card.examStatus}
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
 import { 
@@ -70,19 +71,16 @@ interface GroupedSession {
 
 export default function FacultyAttendance() {
   const { accessToken } = useAuth();
+  const queryClient = useQueryClient();
 
-  // Loading states
-  const [loadingAssignments, setLoadingAssignments] = useState(true);
-  const [loadingRoster, setLoadingRoster] = useState(false);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  // Loading/submitting states
   const [submitting, setSubmitting] = useState(false);
 
   // Error/Success feedback states
   const [error, setError] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState("");
 
-  // Data states
-  const [assignments, setAssignments] = useState<AssignmentDetail[]>([]);
+  // Filter & Selection states
   const [selectedSubjId, setSelectedSubjId] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -90,7 +88,6 @@ export default function FacultyAttendance() {
   });
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [previousSessions, setPreviousSessions] = useState<GroupedSession[]>([]);
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
@@ -100,33 +97,28 @@ export default function FacultyAttendance() {
   const todayStr = new Date().toLocaleDateString("en-CA");
   const isTodaySelected = selectedDate === todayStr;
 
-  // 1. Fetch faculty subject assignments
-  useEffect(() => {
-    const fetchAssignments = async () => {
-      setLoadingAssignments(true);
-      setError(null);
-      try {
-        const res = await apiFetch("/attendance/my-assignments", {}, accessToken);
-        if (res.success && res.data?.assignments) {
-          const activeAssignments = res.data.assignments.filter((a: AssignmentDetail) => a.isActive);
-          setAssignments(activeAssignments);
-          
-          if (activeAssignments.length > 0) {
-            // Auto select the first assigned subject and section
-            const first = activeAssignments[0];
-            setSelectedSubjId(first.subjectId);
-            setSelectedSection(first.section);
-          }
-        }
-      } catch (err: any) {
-        setError(err.message || "Failed to load subject assignments");
-      } finally {
-        setLoadingAssignments(false);
-      }
-    };
+  // 1. Fetch faculty subject assignments Query
+  const assignmentsQuery = useQuery<AssignmentDetail[]>({
+    queryKey: ["teaching-assignments", "my"],
+    queryFn: async () => {
+      const res = await apiFetch("/teaching-assignments/my", {}, accessToken);
+      return res.success && res.data?.teachingAssignments
+        ? res.data.teachingAssignments.map((a: any) => ({ ...a, isActive: a.status === "active" }))
+        : [];
+    },
+    enabled: !!accessToken
+  });
+  const assignments = assignmentsQuery.data || [];
+  const loadingAssignments = assignmentsQuery.isLoading;
 
-    fetchAssignments();
-  }, [accessToken]);
+  // Auto select assignments side-effect
+  useEffect(() => {
+    if (assignments.length > 0 && (!selectedSubjId || !selectedSection)) {
+      const first = assignments[0];
+      setSelectedSubjId(first.subjectId);
+      setSelectedSection(first.section);
+    }
+  }, [assignments, selectedSubjId, selectedSection]);
 
   // Derive unique subjects for the Subject dropdown
   const uniqueSubjects = Array.from(
@@ -151,12 +143,10 @@ export default function FacultyAttendance() {
     return () => clearTimeout(timer);
   }, [selectedSubjId, assignments, selectedSection]);
 
-  // 2. Fetch roster for selected subject, section, and date
-  const fetchRoster = useCallback(async () => {
-    if (!selectedSubjId || !selectedSection || !selectedDate) return;
-    setLoadingRoster(true);
-    setError(null);
-    try {
+  // 2. Fetch roster for selected subject, section, and date Query
+  const rosterQuery = useQuery<RosterEntry[]>({
+    queryKey: ["attendance", "roster", selectedSubjId, selectedSection, selectedDate],
+    queryFn: async () => {
       const queryParams = new URLSearchParams({
         subjectId: selectedSubjId,
         section: selectedSection,
@@ -164,49 +154,39 @@ export default function FacultyAttendance() {
       });
       const res = await apiFetch(`/attendance/roster?${queryParams.toString()}`, {}, accessToken);
       if (res.success && res.data) {
-        // Map backend present/absent to roster structure
         const fetchedRoster = (res.data.roster || []).map((r: any) => ({
           studentId: r.studentId,
           rollNumber: r.rollNumber,
           fullName: r.fullName,
           section: r.section,
           attendanceId: r.attendanceId,
-          status: r.status // "present" | "absent" | null
+          status: r.status
         }));
         
-        // If not marked yet and it is today, default to "present"
-        const finalRoster = fetchedRoster.map((r: RosterEntry) => ({
+        return fetchedRoster.map((r: RosterEntry) => ({
           ...r,
           status: r.status === null && isTodaySelected ? ("present" as const) : r.status
         }));
-
-        setRoster(finalRoster);
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch student roster");
-      setRoster([]);
-    } finally {
-      setLoadingRoster(false);
-    }
-  }, [selectedSubjId, selectedSection, selectedDate, isTodaySelected, accessToken]);
+      return [];
+    },
+    enabled: !!accessToken && !!selectedSubjId && !!selectedSection && !!selectedDate
+  });
+  const loadingRoster = rosterQuery.isLoading;
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchRoster();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [fetchRoster]);
+    if (rosterQuery.data) {
+      setRoster(rosterQuery.data);
+    }
+  }, [rosterQuery.data]);
 
-  // 3. Fetch past sessions marked by this faculty to display history
-  const fetchHistory = useCallback(async () => {
-    setLoadingHistory(true);
-    try {
-      // Fetch recent records marked by faculty (limit 100 for grouping)
+  // 3. Fetch past sessions Query
+  const historyQuery = useQuery<GroupedSession[]>({
+    queryKey: ["attendance", "history"],
+    queryFn: async () => {
       const res = await apiFetch("/attendance?limit=100", {}, accessToken);
       if (res.success && res.data?.records) {
         const records: AttendanceRecord[] = res.data.records;
-        
-        // Group individual student records into unique sessions (Date + Subject + Section)
         const groups: Record<string, GroupedSession> = {};
         
         records.forEach((rec) => {
@@ -232,23 +212,23 @@ export default function FacultyAttendance() {
           }
         });
 
-        // Convert object to array sorted by date descending
-        const sortedSessions = Object.values(groups).sort((a, b) => b.date.localeCompare(a.date));
-        setPreviousSessions(sortedSessions);
+        return Object.values(groups).sort((a, b) => b.date.localeCompare(a.date));
       }
-    } catch (err) {
-      console.error("Failed to load attendance history", err);
-    } finally {
-      setLoadingHistory(false);
-    }
-  }, [accessToken]);
+      return [];
+    },
+    enabled: !!accessToken
+  });
+  const previousSessions = historyQuery.data || [];
+  const loadingHistory = historyQuery.isLoading;
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchHistory();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [fetchHistory]);
+  // Compatibility dummy functions
+  const fetchRoster = useCallback(async () => {
+    rosterQuery.refetch();
+  }, [rosterQuery]);
+
+  const fetchHistory = useCallback(async () => {
+    historyQuery.refetch();
+  }, [historyQuery]);
 
   const handleStatusChange = (studId: string, newStatus: "present" | "absent") => {
     if (!isTodaySelected) return; // Prevent modifying previous days
@@ -300,8 +280,7 @@ export default function FacultyAttendance() {
 
       if (res.success) {
         triggerToast("Daily attendance register saved successfully!");
-        fetchRoster();
-        fetchHistory();
+        queryClient.invalidateQueries({ queryKey: ["attendance"] });
       }
     } catch (err: any) {
       setError(err.message || "Failed to submit attendance roll register");

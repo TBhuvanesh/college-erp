@@ -111,6 +111,40 @@ const ACTION_HANDLERS: Record<WorkflowActionType, ActionHandler> = {
     /* intentional no-op — used when the triggering service already performs
        its own notification/calendar sync inline (see teachingPlan.service.ts) */
   },
+
+  // Result Workflow: "Exam Completed → Result Entry Task Created → Faculty
+  // Dashboard → Notifications". Creates the row (see migration 042) and
+  // notifies the responsible faculty directly, since the notification
+  // content (which task/exam) is only known right after creating it —
+  // avoids a separate notify_faculty action type for a single call site.
+  create_result_entry_task: async (payload, actorId) => {
+    if (!payload.examId || !payload.teachingAssignmentId || !payload.facultyId) {
+      throw new Error('create_result_entry_task requires examId, teachingAssignmentId and facultyId in the event payload');
+    }
+
+    const { rows: existing } = await query<{ id: string }>(
+      `SELECT id FROM result_entry_tasks WHERE exam_id = $1 AND teaching_assignment_id = $2 AND deleted_at IS NULL`,
+      [payload.examId, payload.teachingAssignmentId]
+    );
+    if (!existing[0]) {
+      await query(
+        `INSERT INTO result_entry_tasks (exam_id, teaching_assignment_id, faculty_id, window_closes_at)
+         VALUES ($1, $2, $3, $4)`,
+        [payload.examId, payload.teachingAssignmentId, payload.facultyId, payload.windowClosesAt ?? null]
+      );
+    }
+
+    await notificationService.createNotification(actorId, 'faculty', {
+      title: payload.title,
+      message: payload.message,
+      type: payload.notificationType,
+      targetRole: 'faculty',
+      recipientUserId: payload.facultyUserId as string | undefined,
+      departmentId: payload.departmentId,
+      semester: payload.semester,
+      isImportant: true,
+    });
+  },
 };
 
 // ── Logging ────────────────────────────────────────────────────────────────────

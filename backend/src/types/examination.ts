@@ -15,25 +15,47 @@ export const EXAM_TYPES = [
 ] as const;
 export type ExamType = (typeof EXAM_TYPES)[number];
 
-export const EXAM_STATUSES = ['Scheduled', 'Ongoing', 'Completed', 'Cancelled'] as const;
+// 'Scripts Distributed' and 'Archived' extend the exam-level lifecycle
+// (migration 045) — everything from "Draft Marks" through "Verified" in the
+// full lifecycle spec is per-teaching-assignment granularity, modeled by
+// result_entry_tasks.status instead (see resultEntryTask.service.ts), not
+// duplicated here.
+export const EXAM_STATUSES = ['Scheduled', 'Ongoing', 'Completed', 'Scripts Distributed', 'Archived', 'Cancelled'] as const;
 export type ExamStatus = (typeof EXAM_STATUSES)[number];
 
-/** Terminal statuses — no further transitions allowed */
-export const TERMINAL_STATUSES: ReadonlySet<ExamStatus> = new Set(['Completed', 'Cancelled']);
+/** Terminal statuses — no further status transitions allowed */
+export const TERMINAL_STATUSES: ReadonlySet<ExamStatus> = new Set(['Archived', 'Cancelled']);
+
+/**
+ * Statuses at/after which exam field edits (maximumMarks, exam_date, etc.)
+ * are blocked — broader than TERMINAL_STATUSES, since Completed is no longer
+ * a dead end for status transitions (it can advance to Scripts Distributed)
+ * but its recorded details still shouldn't change once the exam has happened.
+ */
+export const NON_EDITABLE_STATUSES: ReadonlySet<ExamStatus> = new Set([
+  'Completed',
+  'Scripts Distributed',
+  'Archived',
+  'Cancelled',
+]);
 
 /** Valid next statuses for each status (admin-level transitions) */
 export const VALID_TRANSITIONS: Record<ExamStatus, ExamStatus[]> = {
   Scheduled: ['Ongoing', 'Cancelled'],
   Ongoing: ['Completed', 'Cancelled'],
-  Completed: [],
+  Completed: ['Scripts Distributed'],
+  'Scripts Distributed': ['Archived'],
+  Archived: [],
   Cancelled: [],
 };
 
-/** Faculty may only advance their own exam forward — not cancel */
+/** Faculty may only advance their own exam forward — not cancel or archive */
 export const FACULTY_ALLOWED_TRANSITIONS: Record<ExamStatus, ExamStatus[]> = {
   Scheduled: ['Ongoing'],
   Ongoing: ['Completed'],
-  Completed: [],
+  Completed: ['Scripts Distributed'],
+  'Scripts Distributed': [],
+  Archived: [],
   Cancelled: [],
 };
 
@@ -181,6 +203,7 @@ export interface SubjectScheduleCard {
   maximumMarks?: number;
   venue?: string;
   instructions?: string;
+  examStatus?: ExamStatus;
   sectionSchedules?: Array<{
     section: string;
     examId: string;
@@ -190,6 +213,7 @@ export interface SubjectScheduleCard {
     maximumMarks: number;
     venue?: string;
     instructions?: string;
+    examStatus?: ExamStatus;
   }>;
 }
 

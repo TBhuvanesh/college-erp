@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { TodayTaskCenter } from "@/components/Dashboard/TodayTaskCenter";
+import { MyTeachingAssignmentsCard } from "@/components/Dashboard/MyTeachingAssignmentsCard";
 import { TeachingProgressCard, SubjectProgress } from "@/components/Dashboard/TeachingProgressCard";
 import { WeeklyWorkloadChart, AssignmentReviewChart, LessonCompletionDoughnut } from "@/components/Dashboard/WorkloadCharts";
 
@@ -57,7 +58,7 @@ export default function FacultyDashboard() {
     setError(null);
     try {
       const [workRes, examRes, calRes, notifRes, lmsRes, subRes, mentorRes] = await Promise.all([
-        apiFetch("/attendance/my-assignments", {}, accessToken),
+        apiFetch("/teaching-assignments/my", {}, accessToken),
         apiFetch("/examinations/my-schedule", {}, accessToken),
         apiFetch("/calendar?limit=50", {}, accessToken),
         apiFetch("/notifications?limit=20", {}, accessToken),
@@ -66,7 +67,7 @@ export default function FacultyDashboard() {
         apiFetch("/mentorship/my-mentees", {}, accessToken).catch(() => ({ success: true, data: [] }))
       ]);
 
-      if (workRes.success && workRes.data?.assignments) setWorkload(workRes.data.assignments.filter((a: any) => a.isActive));
+      if (workRes.success && workRes.data?.teachingAssignments) setWorkload(workRes.data.teachingAssignments);
       if (examRes.success && examRes.data?.exams) setExams(examRes.data.exams);
       if (calRes.success && calRes.data?.events) setEvents(calRes.data.events);
       if (notifRes.success && notifRes.data?.notifications) setNotifications(notifRes.data.notifications);
@@ -83,6 +84,13 @@ export default function FacultyDashboard() {
 
   useEffect(() => {
     loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    window.addEventListener('realtimeDashboardUpdate', loadData);
+    return () => {
+      window.removeEventListener('realtimeDashboardUpdate', loadData);
+    };
   }, [loadData]);
 
   // Derived Metrics
@@ -289,6 +297,8 @@ export default function FacultyDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left Span (8 cols) */}
         <div className="lg:col-span-8 space-y-4">
+          <MyTeachingAssignmentsCard />
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TodayTaskCenter />
             <TeachingProgressCard progressList={subjectProgressList} />

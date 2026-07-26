@@ -124,22 +124,17 @@ export default function HODFacultyPage() {
         if (res.success && res.data?.faculty) {
           setSelectedFacultyDetail(res.data.faculty);
           
-          // Get workload from active subjects assignments endpoint
-          const workloadRes = await apiFetch(`/attendance/my-assignments`, {}, accessToken);
-          // Scope workloads specifically for the selected faculty member
-          // Since there is no workload-listing endpoint for specific ID, we can fetch HOD schedule or general assignments if returned.
-          // Fallback: simulate or query subjects that has assigned faculty matching
-          const subRes = await apiFetch(`/subjects?limit=100`, {}, accessToken);
-          if (subRes.success && subRes.data?.subjects) {
-            // mock map faculty workloads
-            const facultyNum = res.data.faculty.employeeNumber;
-            const seed = parseInt(facultyNum.replace(/\D/g, "") || "1", 10);
-            const list: WorkloadItem[] = subRes.data.subjects.slice(seed % 3, (seed % 3) + 2).map((s: any, idx: number) => ({
-              id: s.id,
-              subjectCode: s.code,
-              subjectName: s.name,
-              section: idx === 0 ? "A" : "B",
-              semester: s.semester || 4,
+          // Real Teaching Assignments scoped to this faculty member — the
+          // admin/HOD-facing list endpoint supports a facultyId filter, so
+          // no more faking workload data from an unrelated subjects query.
+          const workloadRes = await apiFetch(`/teaching-assignments?facultyId=${selectedFacultyId}&status=active`, {}, accessToken);
+          if (workloadRes.success && workloadRes.data?.teachingAssignments) {
+            const list: WorkloadItem[] = workloadRes.data.teachingAssignments.map((ta: any) => ({
+              id: ta.id,
+              subjectCode: ta.subjectCode,
+              subjectName: ta.subjectName,
+              section: ta.section,
+              semester: ta.semester,
             }));
             setWorkloads(list);
           }

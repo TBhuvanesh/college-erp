@@ -1,21 +1,26 @@
 "use client";
 
 import React from "react";
-import { AllocationManager } from "@/components/SubjectAllocation/AllocationManager";
+import { TeachingAssignmentManager } from "@/components/TeachingAssignment/TeachingAssignmentManager";
 
-export default function AdminSubjectAllocations() {
+// Superseded "Subject Allocation" — Teaching Assignments are now the single
+// academic relationship every module (Attendance, Results, LMS, Teaching
+// Planner, Feedback, Exam Schedule) resolves through. Route path kept as
+// /admin/subject-allocations for backward-compatible bookmarks/sidebar links.
+export default function AdminTeachingAssignments() {
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-display font-bold text-2xl dark:text-white text-text-primary">
-          Subject Allocation Registry
+          Teaching Assignment Management
         </h2>
         <p className="text-xs dark:text-neutral-400 text-text-secondary mt-1">
-          Configure instructor-to-subject course maps, monitor active section coverage, and analyze faculty teaching loads.
+          Configure faculty-to-subject-to-section Teaching Assignments — the single relationship every academic
+          module (Attendance, Results, LMS, Teaching Planner, Feedback) resolves through.
         </p>
       </div>
 
-      <AllocationManager />
+      <TeachingAssignmentManager />
     </div>
   );
 }

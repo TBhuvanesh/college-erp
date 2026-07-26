@@ -5,6 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { AppError } from '../errors/AppError';
 import type {
   BulkSubmitResultsInput,
+  TaskSubmitResultsInput,
   UpdateResultInput,
   PublishResultsInput,
   ListResultsQuery,
@@ -67,6 +68,27 @@ export const bulkSubmitResults = asyncHandler(async (req: Request, res: Response
     res,
     result,
     `Results recorded — ${result.inserted} entries created, ${result.updated} updated`
+  );
+});
+
+// ── Faculty: task-scoped entry (Pending Result Entry Tasks) ───────────────────
+
+export const saveDraftForTask = asyncHandler(async (req: Request, res: Response) => {
+  const data = req.body as TaskSubmitResultsInput;
+  const result = await resultService.saveDraftForTask(req.params.taskId, data, req.user!.id);
+  sendCreated(
+    res,
+    result,
+    `Draft saved — ${result.inserted} entries created, ${result.updated} updated`
+  );
+});
+
+export const publishTask = asyncHandler(async (req: Request, res: Response) => {
+  const result = await resultService.publishTask(req.params.taskId, req.user!.id);
+  sendSuccess(
+    res,
+    result,
+    result.published > 0 ? `${result.published} result(s) published successfully` : 'No draft results found to publish'
   );
 });
 

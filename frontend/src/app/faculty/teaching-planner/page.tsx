@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
@@ -54,20 +55,67 @@ interface AssignmentDetail {
 export default function FacultyTeachingPlanner() {
   const { user, accessToken } = useAuth();
   const authFaculty = user?.facultyProfile;
+  const queryClient = useQueryClient();
 
-  // Active workload subjects
-  const [subjects, setSubjects] = useState<AssignmentDetail[]>([]);
-  const [loadingSubjects, setLoadingSubjects] = useState(false);
+  // Active workload subjects Query
+  const subjectsQuery = useQuery<AssignmentDetail[]>({
+    queryKey: ["teaching-assignments", "my"],
+    queryFn: async () => {
+      const res = await apiFetch("/teaching-assignments/my", {}, accessToken!);
+      return res.success && res.data?.teachingAssignments
+        ? res.data.teachingAssignments.map((a: any) => ({ ...a, isActive: a.status === "active" }))
+        : [];
+    },
+    enabled: !!accessToken
+  });
+  const subjects = subjectsQuery.data || [];
+  const loadingSubjects = subjectsQuery.isLoading;
 
-  // Teaching plans and stats
-  const [teachingPlans, setTeachingPlans] = useState<TeachingPlan[]>([]);
-  const [loadingPlans, setLoadingPlans] = useState(false);
-  const [progressStats, setProgressStats] = useState<CourseProgress | null>(null);
-  const [loadingProgress, setLoadingProgress] = useState(false);
+  // Teaching plans Query
+  const teachingPlansQuery = useQuery<TeachingPlan[]>({
+    queryKey: ["teaching-plans"],
+    queryFn: async () => {
+      const res = await listTeachingPlans({ limit: 100 }, accessToken!);
+      return res.teachingPlans || [];
+    },
+    enabled: !!accessToken
+  });
+  const teachingPlans = teachingPlansQuery.data || [];
+  const loadingPlans = teachingPlansQuery.isLoading;
 
-  // Subject-specific progress records (mapped for the course progress section)
-  const [subjectProgress, setSubjectProgress] = useState<Record<string, CourseProgress & { subjectName: string; subjectCode: string; section: string }>>({});
-  const [loadingSubjectProgress, setLoadingSubjectProgress] = useState(false);
+  // Overall progress statistics Query
+  const progressStatsQuery = useQuery({
+    queryKey: ["course-progress", "overall"],
+    queryFn: async () => {
+      return await getCourseProgress({}, accessToken!);
+    },
+    enabled: !!accessToken
+  });
+  const progressStats = progressStatsQuery.data || null;
+  const loadingProgress = progressStatsQuery.isLoading;
+
+  // Subject-specific progress records Query
+  const subjectProgressQuery = useQuery({
+    queryKey: ["course-progress", "subjects", subjects],
+    queryFn: async () => {
+      const progressMap: Record<string, any> = {};
+      await Promise.all(
+        subjects.map(async (sub) => {
+          const stats = await getCourseProgress({ subjectId: sub.subjectId, section: sub.section }, accessToken!);
+          progressMap[`${sub.subjectId}-${sub.section}`] = {
+            ...stats,
+            subjectName: sub.subjectName,
+            subjectCode: sub.subjectCode,
+            section: sub.section
+          };
+        })
+      );
+      return progressMap;
+    },
+    enabled: !!accessToken && subjects.length > 0
+  });
+  const subjectProgress = subjectProgressQuery.data || {};
+  const loadingSubjectProgress = subjectProgressQuery.isLoading;
 
   // LMS Attachments (dynamic when selecting subject in form)
   const [lmsMaterials, setLmsMaterials] = useState<CourseMaterial[]>([]);
@@ -122,84 +170,33 @@ export default function FacultyTeachingPlanner() {
     setTimeout(() => setNotification(""), 4000);
   };
 
-  // Fetch faculty assigned subjects workload
+  // Sync side effect for auto selecting first subject
+  useEffect(() => {
+    if (subjects.length > 0 && !formData.subjectId) {
+      setFormData(prev => ({
+        ...prev,
+        subjectId: subjects[0].subjectId,
+        section: subjects[0].section
+      }));
+    }
+  }, [subjects, formData.subjectId]);
+
+  // Query Invalidation callbacks to bridge with legacy actions
   const loadAssignedSubjects = useCallback(async () => {
-    if (!accessToken) return;
-    setLoadingSubjects(true);
-    try {
-      const res = await apiFetch("/attendance/my-assignments", {}, accessToken);
-      if (res.success && res.data?.assignments) {
-        const active = res.data.assignments.filter((a: AssignmentDetail) => a.isActive);
-        setSubjects(active);
-        
-        // Auto select first subject in form if empty
-        if (active.length > 0 && !formData.subjectId) {
-          setFormData(prev => ({
-            ...prev,
-            subjectId: active[0].subjectId,
-            section: active[0].section
-          }));
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch assigned subjects workload", err);
-    } finally {
-      setLoadingSubjects(false);
-    }
-  }, [accessToken, formData.subjectId]);
+    queryClient.invalidateQueries({ queryKey: ["teaching-assignments", "my"] });
+  }, [queryClient]);
 
-  // Fetch teaching plans
   const loadTeachingPlans = useCallback(async () => {
-    if (!accessToken) return;
-    setLoadingPlans(true);
-    try {
-      const res = await listTeachingPlans({ limit: 100 }, accessToken);
-      setTeachingPlans(res.teachingPlans || []);
-    } catch (err) {
-      console.error("Failed to load teaching plans", err);
-    } finally {
-      setLoadingPlans(false);
-    }
-  }, [accessToken]);
+    queryClient.invalidateQueries({ queryKey: ["teaching-plans"] });
+  }, [queryClient]);
 
-  // Fetch overall progress statistics
   const loadOverallProgress = useCallback(async () => {
-    if (!accessToken) return;
-    setLoadingProgress(true);
-    try {
-      const stats = await getCourseProgress({}, accessToken);
-      setProgressStats(stats);
-    } catch (err) {
-      console.error("Failed to load progress stats", err);
-    } finally {
-      setLoadingProgress(false);
-    }
-  }, [accessToken]);
+    queryClient.invalidateQueries({ queryKey: ["course-progress", "overall"] });
+  }, [queryClient]);
 
-  // Fetch individual progress for each subject in workload
   const loadAllSubjectsProgress = useCallback(async () => {
-    if (!accessToken || subjects.length === 0) return;
-    setLoadingSubjectProgress(true);
-    try {
-      const progressMap: typeof subjectProgress = {};
-      await Promise.all(
-        subjects.map(async (sub) => {
-          const stats = await getCourseProgress({ subjectId: sub.subjectId, section: sub.section }, accessToken);
-          progressMap[`${sub.subjectId}-${sub.section}`] = {
-            ...stats,
-            subjectName: sub.subjectName,
-            subjectCode: sub.subjectCode,
-            section: sub.section
-          };
-        })
-      );
-      setSubjectProgress(progressMap);
-    } catch (err) {
-      console.error("Failed to load subject progress states", err);
-    } finally {
-      setLoadingSubjectProgress(false);
-    }
-  }, [accessToken, subjects]);
+    queryClient.invalidateQueries({ queryKey: ["course-progress", "subjects"] });
+  }, [queryClient]);
 
   // Fetch LMS materials & assignments for the chosen form subject
   const loadLmsOptions = useCallback(async (subjId: string) => {

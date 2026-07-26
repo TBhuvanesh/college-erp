@@ -62,7 +62,7 @@ function toDetail(r: AssignmentRow): AssignmentDetail {
 
 export async function getAssignmentById(id: string): Promise<AssignmentDetail> {
   const { rows } = await query<AssignmentRow>(
-    `SELECT ${DETAIL_COLS} FROM faculty_subject_assignments fsa ${JOINS}
+    `SELECT ${DETAIL_COLS} FROM teaching_assignments fsa ${JOINS}
      WHERE fsa.id = $1 AND fsa.deleted_at IS NULL`,
     [id]
   );
@@ -86,7 +86,7 @@ export async function listAssignments(filters: ListAssignmentsQuery): Promise<As
   if (filters.isActive !== undefined) push('fsa.is_active =', filters.isActive);
 
   const { rows } = await query<AssignmentRow>(
-    `SELECT ${DETAIL_COLS} FROM faculty_subject_assignments fsa ${JOINS}
+    `SELECT ${DETAIL_COLS} FROM teaching_assignments fsa ${JOINS}
      WHERE ${conditions.join(' AND ')}
      ORDER BY fsa.academic_year DESC, f.full_name ASC, scm.semester ASC`,
     params
@@ -115,7 +115,7 @@ export async function getAssignmentsByFacultyId(
   }
 
   const { rows } = await query<AssignmentRow>(
-    `SELECT ${DETAIL_COLS} FROM faculty_subject_assignments fsa ${JOINS}
+    `SELECT ${DETAIL_COLS} FROM teaching_assignments fsa ${JOINS}
      WHERE ${conditions.join(' AND ')}
      ORDER BY scm.semester ASC, s.code ASC`,
     params
@@ -133,13 +133,58 @@ export async function isFacultyAssigned(
   section: string
 ): Promise<boolean> {
   const { rows } = await query<{ id: string }>(
-    `SELECT id FROM faculty_subject_assignments
+    `SELECT id FROM teaching_assignments
      WHERE faculty_id = $1 AND subject_id = $2 AND section = $3
        AND is_active = TRUE AND deleted_at IS NULL
      LIMIT 1`,
     [facultyId, subjectId, section]
   );
   return rows.length > 0;
+}
+
+/**
+ * Resolves the Teaching Assignment id backing a (faculty, subject, section)
+ * triple — the same check as isFacultyAssigned, but returning the id itself
+ * so callers (attendance/internal-marks/teaching-plan/LMS write paths) can
+ * stamp teaching_assignment_id instead of just gating on a boolean. Returns
+ * null rather than throwing so callers can decide whether a missing
+ * assignment is fatal for their operation.
+ */
+export async function resolveTeachingAssignmentId(
+  facultyId: string,
+  subjectId: string,
+  section: string
+): Promise<string | null> {
+  const { rows } = await query<{ id: string }>(
+    `SELECT id FROM teaching_assignments
+     WHERE faculty_id = $1 AND subject_id = $2 AND section = $3
+       AND is_active = TRUE AND deleted_at IS NULL
+     LIMIT 1`,
+    [facultyId, subjectId, section]
+  );
+  return rows[0]?.id ?? null;
+}
+
+/**
+ * Resolves a Teaching Assignment id for a faculty+subject, ignoring section.
+ * Used only for LMS materials/assignments, which are shared across every
+ * section of a subject (a Course Workspace, not a per-section resource) —
+ * so unlike resolveTeachingAssignmentId, this cannot uniquely identify
+ * "the" assignment when a faculty teaches the subject in more than one
+ * section. It exists purely to give the row a traceable lineage back to one
+ * of the faculty's active assignments for audit purposes; it must never be
+ * used to authorize access (isFacultyAssigned/assertFacultyAssignedToSubject
+ * remain the access-control check).
+ */
+export async function resolveAnyTeachingAssignmentId(facultyId: string, subjectId: string): Promise<string | null> {
+  const { rows } = await query<{ id: string }>(
+    `SELECT id FROM teaching_assignments
+     WHERE faculty_id = $1 AND subject_id = $2 AND is_active = TRUE AND deleted_at IS NULL
+     ORDER BY created_at ASC
+     LIMIT 1`,
+    [facultyId, subjectId]
+  );
+  return rows[0]?.id ?? null;
 }
 
 // ── Write operations ──────────────────────────────────────────────────────────
@@ -177,7 +222,7 @@ export async function createAssignment(
   const scmId = scm[0].id;
 
   const { rows } = await query<{ id: string }>(
-    `INSERT INTO faculty_subject_assignments (faculty_id, subject_id, subject_curriculum_mapping_id, academic_year, section)
+    `INSERT INTO teaching_assignments (faculty_id, subject_id, subject_curriculum_mapping_id, academic_year, section)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING id`,
     [data.facultyId, data.subjectId, scmId, data.academicYear, data.section]
@@ -202,7 +247,7 @@ export async function createAssignment(
 
 export async function deleteAssignment(id: string, actorId: string): Promise<void> {
   const { rowCount } = await query(
-    `UPDATE faculty_subject_assignments
+    `UPDATE teaching_assignments
      SET deleted_at = NOW(), is_active = FALSE
      WHERE id = $1 AND deleted_at IS NULL`,
     [id]

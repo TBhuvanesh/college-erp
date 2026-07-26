@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useSimulation } from "@/context/SimulationContext";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
 import { 
@@ -57,9 +56,15 @@ interface StudentDetail {
   createdAt: string;
 }
 
+interface StudentMetrics {
+  attendancePct: string;
+  grades: { id: string; subjectName: string; type: string; marks: number; maxMarks: number; grade: string }[];
+  invoices: { id: string; type: string; dueDate: string; amount: number; status: string }[];
+  outstandingFees: number;
+}
+
 export default function AdminStudents() {
   const { accessToken } = useAuth();
-  const { attendanceLogs, grades, invoices } = useSimulation();
 
   // Filter & List state
   const [studentsList, setStudentsList] = useState<StudentSummary[]>([]);
@@ -237,35 +242,66 @@ export default function AdminStudents() {
     return () => clearTimeout(timer);
   }, [selectedStudentId, accessToken]);
 
-  // Map backend student detail to frontend simulation metrics
-  const getStudentMetrics = (studId: string, fullName: string) => {
-    const logs = attendanceLogs.filter(
-      (log) => log.studentId === studId || log.studentName.toLowerCase() === fullName.toLowerCase()
-    );
-    const totalHeld = logs.length;
-    const present = logs.filter((log) => log.status === "Present" || log.status === "Late").length;
-    const attPct = totalHeld > 0 ? ((present / totalHeld) * 100).toFixed(0) : "85";
-    const finalAttPct = Math.min(Number(attPct), 100).toString();
+  // Live academic metrics for the selected student — fetched from the real
+  // attendance / internal-marks / fees APIs (not a simulated data store).
+  const [metrics, setMetrics] = useState<StudentMetrics | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(false);
 
-    const studGrades = grades.filter(
-      (g) => g.studentId === studId || g.studentId === fullName // or match any other fields if needed
-    );
-    const studInvoices = invoices.filter(
-      (inv) => inv.studentId === studId || inv.studentName.toLowerCase() === fullName.toLowerCase()
-    );
-    const outstanding = studInvoices
-      .filter((inv) => inv.status !== "Paid")
-      .reduce((acc, curr) => acc + curr.amount, 0);
+  useEffect(() => {
+    if (!selectedStudent) {
+      setMetrics(null);
+      return;
+    }
+    const studId = selectedStudent.id;
+    const fetchMetrics = async () => {
+      setMetricsLoading(true);
+      try {
+        const [attRes, marksRes, feeRes] = await Promise.all([
+          apiFetch(`/attendance?studentId=${studId}&limit=1000`, {}, accessToken),
+          apiFetch(`/internal-marks?studentId=${studId}&limit=100`, {}, accessToken),
+          apiFetch(`/fees?studentId=${studId}&limit=100`, {}, accessToken),
+        ]);
 
-    return {
-      attendancePct: finalAttPct,
-      grades: studGrades,
-      invoices: studInvoices,
-      outstandingFees: outstanding,
+        const records = (attRes.success && attRes.data?.records) || [];
+        const totalHeld = records.length;
+        const present = records.filter((r: any) => r.status === "Present" || r.status === "Late").length;
+        const attendancePct = totalHeld > 0 ? Math.min(Math.round((present / totalHeld) * 100), 100).toString() : "0";
+
+        const marksRecords = (marksRes.success && marksRes.data?.records) || [];
+        const studGrades = marksRecords.map((m: any) => ({
+          id: m.id,
+          subjectName: m.subjectName,
+          type: m.assessmentType,
+          marks: m.obtainedMarks,
+          maxMarks: m.maximumMarks,
+          grade: m.maximumMarks > 0 ? `${Math.round((m.obtainedMarks / m.maximumMarks) * 100)}%` : "N/A",
+        }));
+
+        const fees = (feeRes.success && feeRes.data?.fees) || [];
+        const studInvoices = fees.map((f: any) => ({
+          id: f.id,
+          type: f.feeType,
+          dueDate: f.dueDate,
+          amount: f.totalAmount,
+          status: f.paymentStatus,
+        }));
+        const outstanding = fees.reduce((acc: number, f: any) => acc + (f.pendingAmount || 0), 0);
+
+        setMetrics({
+          attendancePct,
+          grades: studGrades,
+          invoices: studInvoices,
+          outstandingFees: outstanding,
+        });
+      } catch (err) {
+        console.error("Failed to load student metrics", err);
+        setMetrics(null);
+      } finally {
+        setMetricsLoading(false);
+      }
     };
-  };
-
-  const metrics = selectedStudent ? getStudentMetrics(selectedStudent.id, selectedStudent.fullName) : null;
+    fetchMetrics();
+  }, [selectedStudent, accessToken]);
 
   return (
     <div className="relative">
@@ -645,7 +681,7 @@ export default function AdminStudents() {
         {/* Right Side Slide-out Details Drawer (renders if student selected) */}
         {selectedStudentId && (
           <div className="w-full lg:w-96 glass-card dark:border-neutral-800 border-border-subtle bg-surface rounded-xl p-5 shadow-2xl relative animate-scale-up shrink-0">
-            {loadingDetail ? (
+            {loadingDetail || (selectedStudent && metricsLoading && !metrics) ? (
               <div className="py-20 flex flex-col items-center justify-center dark:text-neutral-500 text-text-muted">
                 <Loader2 className="animate-spin text-blue-500 mb-2" size={20} />
                 <span className="font-mono text-[9px]">Fetching record...</span>

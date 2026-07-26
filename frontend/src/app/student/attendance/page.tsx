@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Calendar, 
   CheckCircle, 
@@ -53,47 +54,26 @@ interface AttendanceHistoryEntry {
 export default function StudentAttendance() {
   const { accessToken } = useAuth();
 
-  // Loaders
-  const [loadingSummary, setLoadingSummary] = useState(true);
-  const [loadingHistory, setLoadingHistory] = useState(true);
-  
-  // Feedback
-  const [error, setError] = useState<string | null>(null);
-
-  // Data
-  const [summary, setSummary] = useState<StudentAttendanceSummary | null>(null);
-  const [historyRecords, setHistoryRecords] = useState<AttendanceHistoryEntry[]>([]);
   const [selectedSubjFilter, setSelectedSubjFilter] = useState("ALL");
-  
-  // Pagination
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalRecords, setTotalRecords] = useState(0);
 
-  // Fetch summary metrics
-  useEffect(() => {
-    const fetchSummary = async () => {
-      setLoadingSummary(true);
-      setError(null);
-      try {
-        const res = await apiFetch("/attendance/summary", {}, accessToken);
-        if (res.success && res.data) {
-          setSummary(res.data);
-        }
-      } catch (err: any) {
-        setError(err.message || "Failed to load attendance summary");
-      } finally {
-        setLoadingSummary(false);
-      }
-    };
-    fetchSummary();
-  }, [accessToken]);
+  // Fetch summary Query
+  const summaryQuery = useQuery({
+    queryKey: ["attendance", "summary"],
+    queryFn: async () => {
+      const res = await apiFetch("/attendance/summary", {}, accessToken);
+      return res.success && res.data ? (res.data as StudentAttendanceSummary) : null;
+    },
+    enabled: !!accessToken
+  });
+  const summary = summaryQuery.data || null;
+  const loadingSummary = summaryQuery.isLoading;
 
-  // Fetch chronological history logs
-  const fetchHistory = useCallback(async () => {
-    setLoadingHistory(true);
-    try {
+  // Fetch history Query
+  const historyQuery = useQuery({
+    queryKey: ["attendance", "history", page, limit, selectedSubjFilter],
+    queryFn: async () => {
       const queryParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString()
@@ -105,27 +85,22 @@ export default function StudentAttendance() {
 
       const res = await apiFetch(`/attendance/history?${queryParams.toString()}`, {}, accessToken);
       if (res.success && res.data) {
-        setHistoryRecords(res.data.records || []);
-        if (res.data.pagination) {
-          setTotalPages(res.data.pagination.totalPages || 1);
-          setTotalRecords(res.data.pagination.total || 0);
-        }
+        return {
+          records: (res.data.records || []) as AttendanceHistoryEntry[],
+          totalPages: res.data.pagination?.totalPages || 1,
+          totalRecords: res.data.pagination?.total || 0
+        };
       }
-    } catch (err: any) {
-      console.error("Failed to load attendance history logs", err);
-    } finally {
-      setLoadingHistory(false);
-    }
-  }, [page, limit, selectedSubjFilter, accessToken]);
+      return { records: [], totalPages: 1, totalRecords: 0 };
+    },
+    enabled: !!accessToken
+  });
+  const historyRecords = historyQuery.data?.records || [];
+  const loadingHistory = historyQuery.isLoading;
+  const totalPages = historyQuery.data?.totalPages || 1;
+  const totalRecords = historyQuery.data?.totalRecords || 0;
+  const error = (summaryQuery.error as any)?.message || (historyQuery.error as any)?.message || null;
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchHistory();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [fetchHistory]);
-
-  // Reset to page 1 on filter changes
   const handleFilterChange = (val: string) => {
     setSelectedSubjFilter(val);
     setPage(1);

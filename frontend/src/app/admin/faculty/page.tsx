@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useSimulation } from "@/context/SimulationContext";
 import { useAuth } from "@/context/AuthContext";
+import { useSimulation } from "@/context/SimulationContext";
 import { apiFetch } from "@/lib/api";
 import { 
   Search, 
@@ -76,9 +76,14 @@ function getFacultySpecialization(departmentName: string, employeeNumber: string
   return "Advanced Engineering Research";
 }
 
+interface WorkloadSubject {
+  subjectName: string;
+  semester: number | string;
+}
+
 export default function AdminFaculty() {
   const { accessToken } = useAuth();
-  const { faculty: simFaculty } = useSimulation();
+  const { faculty: simFaculty = [] } = useSimulation();
 
   // Lists & configs state
   const [facultyList, setFacultyList] = useState<FacultySummary[]>([]);
@@ -220,7 +225,7 @@ export default function AdminFaculty() {
 
   // Match backend faculty member to simulation workloads in context
   const getSimulatedWorkload = (fullName: string) => {
-    const matched = simFaculty.find(
+    const matched = (simFaculty || []).find(
       (f) => f.name.toLowerCase() === fullName.toLowerCase()
     );
     return matched ? matched.assignedSubjects : [];
@@ -553,6 +558,38 @@ export default function AdminFaculty() {
               </div>
             )}
           </div>
+
+          {/* Pagination Bar */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t dark:border-neutral-800 border-border-subtle bg-neutral-900/20 text-xs font-mono">
+              <span className="dark:text-neutral-400 text-text-secondary text-[11px]">
+                Showing <strong className="dark:text-white text-text-primary">{Math.min((page - 1) * limit + 1, totalFaculty)}</strong> to{" "}
+                <strong className="dark:text-white text-text-primary">{Math.min(page * limit, totalFaculty)}</strong> of{" "}
+                <strong className="dark:text-white text-text-primary">{totalFaculty}</strong> faculty members
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                  className="px-2.5 py-1 rounded border dark:border-neutral-800 border-border-subtle dark:bg-neutral-850 bg-background dark:text-neutral-300 text-text-secondary hover:dark:bg-neutral-800 hover:bg-neutral-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 transition"
+                >
+                  <ChevronLeft size={14} />
+                  <span>Previous</span>
+                </button>
+                <span className="dark:text-neutral-300 text-text-primary px-2 font-semibold text-[11px]">
+                  {page} / {totalPages}
+                </span>
+                <button
+                  disabled={page >= totalPages || loading}
+                  onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+                  className="px-2.5 py-1 rounded border dark:border-neutral-800 border-border-subtle dark:bg-neutral-850 bg-background dark:text-neutral-300 text-text-secondary hover:dark:bg-neutral-800 hover:bg-neutral-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 transition"
+                >
+                  <span>Next</span>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right side Details Drawer */}
@@ -584,7 +621,7 @@ export default function AdminFaculty() {
                   <div className="min-w-0 flex-1">
                     <h4 className="text-sm font-bold dark:text-white text-text-primary truncate">{selectedFaculty.fullName}</h4>
                     <p className="text-[10px] dark:text-neutral-500 text-text-secondary font-mono mt-0.5">
-                      {selectedFaculty.employeeNumber} / {selectedFaculty.department.code}
+                      {selectedFaculty.employeeNumber} / {selectedFaculty.department?.code || "N/A"}
                     </p>
                     <span className="text-[9px] dark:text-neutral-605 text-text-muted font-mono mt-0.5 block">
                       Onboarded: {new Date(selectedFaculty.createdAt).toLocaleDateString()}
@@ -615,7 +652,7 @@ export default function AdminFaculty() {
                     <div className="flex justify-between text-xs">
                       <span className="dark:text-neutral-500 text-text-secondary">Specialization:</span>
                       <strong className="dark:text-white text-text-primary text-right">
-                        {getFacultySpecialization(selectedFaculty.department.name, selectedFaculty.employeeNumber)}
+                        {getFacultySpecialization(selectedFaculty.department?.name || "", selectedFaculty.employeeNumber)}
                       </strong>
                     </div>
                     <div className="flex justify-between text-xs">

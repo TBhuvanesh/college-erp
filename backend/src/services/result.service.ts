@@ -11,6 +11,7 @@ import type {
   RosterResultEntry,
   StudentResultEntry,
   BulkSubmitResultsInput,
+  TaskSubmitResultsInput,
   UpdateResultInput,
   PublishResultsInput,
   ListResultsQuery,
@@ -18,6 +19,8 @@ import type {
   ResultStatus,
 } from '../types/result';
 import type { Role } from '../types/roles';
+import { assertTaskOpenForFaculty, markTaskStatus } from './resultEntryTask.service';
+import { getTeachingLoadSettings } from './teachingLoadSettings.service';
 
 // ── Row types (snake_case from PostgreSQL) ─────────────────────────────────────
 
@@ -654,6 +657,61 @@ export async function publishResults(
 /**
  * Soft-deletes a result. Admin only — enforced at the route level.
  */
+// ── Task-scoped entry (Results Workflow) ───────────────────────────────────────
+// The Faculty Results page no longer lets faculty pick an arbitrary subject —
+// it drives entry through a result_entry_tasks row, which only exists because
+// the Workflow Engine resolved a Teaching Assignment for a Completed exam
+// (see examination.service.ts's openResultEntryTaskForCompletedExam). These
+// wrappers enforce the three-part Exam Validation rule before delegating to
+// the existing bulkSubmitResults/publishResults logic, and stamp
+// teaching_assignment_id on the written rows.
+
+export async function saveDraftForTask(
+  taskId: string,
+  data: TaskSubmitResultsInput,
+  userId: string
+): Promise<{ inserted: number; updated: number }> {
+  const task = await assertTaskOpenForFaculty(taskId, userId);
+
+  const outcome = await bulkSubmitResults(
+    {
+      subjectId: task.subjectId,
+      section: task.section,
+      examId: task.examId,
+      internalMaxMarks: data.internalMaxMarks,
+      externalMaxMarks: data.externalMaxMarks,
+      records: data.records,
+    },
+    userId
+  );
+
+  const studentIds = data.records.map((r) => r.studentId);
+  await query(
+    `UPDATE results SET teaching_assignment_id = $1
+     WHERE subject_id = $2 AND section = $3 AND student_id = ANY($4::uuid[]) AND deleted_at IS NULL`,
+    [task.teachingAssignmentId, task.subjectId, task.section, studentIds]
+  );
+
+  await markTaskStatus(taskId, 'draft_saved');
+  return outcome;
+}
+
+export async function publishTask(taskId: string, userId: string): Promise<{ published: number }> {
+  const task = await assertTaskOpenForFaculty(taskId, userId);
+
+  const settings = await getTeachingLoadSettings();
+  if (settings.requireResultVerification && task.status !== 'verified') {
+    throw AppError.badRequest(
+      'This institution requires HOD/admin verification before results can be published. Submit for approval first.',
+      'VERIFICATION_REQUIRED'
+    );
+  }
+
+  const outcome = await publishResults({ subjectId: task.subjectId, section: task.section }, userId);
+  await markTaskStatus(taskId, 'published');
+  return outcome;
+}
+
 export async function deleteResult(id: string, userId: string): Promise<void> {
   const { rows } = await query<{ id: string }>(
     'SELECT id FROM results WHERE id = $1 AND deleted_at IS NULL',

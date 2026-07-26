@@ -6,6 +6,7 @@ import { requireRole } from '../middleware/authorize';
 import { validate } from '../middleware/validate';
 import {
   bulkSubmitResultsSchema,
+  taskSubmitResultsSchema,
   updateResultSchema,
   publishResultsSchema,
   listResultsQuerySchema,
@@ -14,6 +15,7 @@ import {
 const router = Router();
 
 const uuidParam = { params: z.object({ id: z.string().uuid('Invalid result ID') }) };
+const taskIdParam = { params: z.object({ taskId: z.string().uuid('Invalid task ID') }) };
 
 // ── Static paths before /:id ───────────────────────────────────────────────────
 
@@ -32,6 +34,24 @@ router.post(
   requireRole('faculty'),
   validate({ body: bulkSubmitResultsSchema }),
   resultController.bulkSubmitResults
+);
+
+// Faculty: task-scoped entry — replaces manual subject selection with a
+// Pending Result Entry Task resolved through the faculty's Teaching Assignment.
+router.post(
+  '/tasks/:taskId/draft',
+  authenticate,
+  requireRole('faculty'),
+  validate({ ...taskIdParam, body: taskSubmitResultsSchema }),
+  resultController.saveDraftForTask
+);
+
+router.post(
+  '/tasks/:taskId/publish',
+  authenticate,
+  requireRole('faculty'),
+  validate(taskIdParam),
+  resultController.publishTask
 );
 
 // Admin: publish all Draft results for a subject+section

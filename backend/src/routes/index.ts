@@ -41,6 +41,10 @@ import seatingPatternRouter from './seatingPattern.routes';
 import examSessionRouter from './examSession.routes';
 import mentorshipSettingsRouter from './mentorshipSettings.routes';
 import subjectAllocationRouter from './subjectAllocation.routes';
+import teachingAssignmentRouter from './teachingAssignment.routes';
+import resultEntryTaskRouter from './resultEntryTask.routes';
+import teachingLoadSettingsRouter from './teachingLoadSettings.routes';
+import academicImportRouter from './academicImport.routes';
 
 const router = Router();
 
@@ -83,7 +87,13 @@ router.use('/exam-invigilation', examInvigilationRouter);
 router.use('/seating-patterns', seatingPatternRouter);
 router.use('/exam-sessions', examSessionRouter);
 router.use('/mentorship-settings', mentorshipSettingsRouter);
+// Deprecated: superseded by /teaching-assignments (kept for back-compat,
+// delegates to the same service — see subjectAllocation.service.ts)
 router.use('/subject-allocations', subjectAllocationRouter);
+router.use('/teaching-assignments', teachingAssignmentRouter);
+router.use('/result-entry-tasks', resultEntryTaskRouter);
+router.use('/teaching-load-settings', teachingLoadSettingsRouter);
+router.use('/academic-import', academicImportRouter);
 
 // Reference implementation for auth middleware patterns
 router.use('/example', protectedRouter);

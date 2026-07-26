@@ -50,9 +50,12 @@ export default function FacultyGrades() {
       setLoadingAssignments(true);
       setError(null);
       try {
-        const res = await apiFetch("/attendance/my-assignments", {}, accessToken);
-        const activeAssignments: AssignmentDetail[] = res.success && res.data?.assignments
-          ? res.data.assignments.filter((a: AssignmentDetail) => a.isActive)
+        // Internal Marks references the Teaching Assignment instead of a
+        // Faculty + Subject + Section triple — same resolver used across
+        // Attendance, Teaching Planner, and the Faculty Dashboard.
+        const res = await apiFetch("/teaching-assignments/my", {}, accessToken);
+        const activeAssignments: AssignmentDetail[] = res.success && res.data?.teachingAssignments
+          ? res.data.teachingAssignments.map((a: any) => ({ ...a, isActive: a.status === "active" }))
           : [];
         setAssignments(activeAssignments);
         if (activeAssignments.length > 0) {

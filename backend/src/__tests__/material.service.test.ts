@@ -67,10 +67,14 @@ describe('createMaterial', () => {
     mockQuery.mockResolvedValueOnce({ rows: [{ id: FACULTY_ID }], rowCount: 1 } as never);
     // assertFacultyAssignedToSubject
     mockQuery.mockResolvedValueOnce({ rows: [{ id: 'fsa-id' }], rowCount: 1 } as never);
+    // resolveAnyTeachingAssignmentId
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'ta-id' }], rowCount: 1 } as never);
     // INSERT → returning id
     mockQuery.mockResolvedValueOnce({ rows: [{ id: MATERIAL_ID }], rowCount: 1 } as never);
     // fetchMaterialRow (re-fetch after insert)
     mockQuery.mockResolvedValueOnce({ rows: [mockMaterialRow], rowCount: 1 } as never);
+    // workflow mapping lookup (material.created event)
+    mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
 
     const result = await materialService.createMaterial(
       FACULTY_USER_ID,
@@ -83,7 +87,7 @@ describe('createMaterial', () => {
     expect(result.fileType).toBe('pdf');
     expect(result.downloadUrl).toBe(`/api/lms/materials/${MATERIAL_ID}/download`);
 
-    const insertCall = mockQuery.mock.calls[2];
+    const insertCall = mockQuery.mock.calls[3];
     expect(insertCall[0]).toMatch(/INSERT INTO course_materials/);
     expect(insertCall[1]).toContain(SUBJECT_ID);
     expect(insertCall[1]).toContain(FACULTY_ID);
@@ -131,7 +135,7 @@ describe('listMaterials', () => {
     expect(sql).not.toMatch(/program_id/);
   });
 
-  it('faculty query includes faculty_subject_assignments EXISTS filter', async () => {
+  it('faculty query includes teaching_assignments EXISTS filter', async () => {
     // resolveFacultyId
     mockQuery.mockResolvedValueOnce({ rows: [{ id: FACULTY_ID }], rowCount: 1 } as never);
     // list query
@@ -140,7 +144,7 @@ describe('listMaterials', () => {
     await materialService.listMaterials(FACULTY_USER_ID, 'faculty', { page: 1, limit: 20 });
 
     const listSql = mockQuery.mock.calls[1][0] as string;
-    expect(listSql).toMatch(/faculty_subject_assignments/);
+    expect(listSql).toMatch(/teaching_assignments/);
   });
 
   it('student query filters by program_id and semester', async () => {

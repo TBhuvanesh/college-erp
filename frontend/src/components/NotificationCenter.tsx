@@ -168,6 +168,16 @@ export const NotificationCenter: React.FC = () => {
     return () => clearTimeout(timer);
   }, [fetchNotifications]);
 
+  useEffect(() => {
+    const handleNewRealtimeNotification = () => {
+      fetchNotifications();
+    };
+    window.addEventListener('newRealtimeNotification', handleNewRealtimeNotification);
+    return () => {
+      window.removeEventListener('newRealtimeNotification', handleNewRealtimeNotification);
+    };
+  }, [fetchNotifications]);
+
   // Handle Mark Read / Unread
   const toggleReadStatus = async (id: string, currentlyRead: boolean) => {
     if (!accessToken) return;

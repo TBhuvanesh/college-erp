@@ -1,7 +1,168 @@
 "use client";
 
-import React, { useState } from "react";
-import { Shield, Settings, Database, Activity, Save, RefreshCw, CheckCircle } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Shield, Settings, Database, Activity, Save, RefreshCw, CheckCircle, SlidersHorizontal, AlertCircle } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { apiFetch } from "@/lib/api";
+
+// Part 2 / Part 10: Teaching Load Settings — Theory/Lab/Tutorial weights,
+// min/max subjects per faculty, weekly load bounds, and the marks-entry
+// window policy. Backed by the real /teaching-load-settings endpoint
+// (a singleton row every workload calculation and validation reads from).
+interface TeachingLoadSettings {
+  theoryWeight: number;
+  labWeight: number;
+  tutorialWeight: number;
+  minWeeklyLoad: number | null;
+  maxWeeklyLoad: number;
+  minSubjectsPerFaculty: number;
+  maxSubjectsPerFaculty: number;
+  autoMarksWindowDays: number | null;
+  autoCloseMarksWindowDays: number | null;
+  requireResultVerification: boolean;
+}
+
+function TeachingLoadSettingsCard() {
+  const { accessToken } = useAuth();
+  const [settings, setSettings] = useState<TeachingLoadSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchSettings = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch("/teaching-load-settings", {}, accessToken);
+      if (res.success && res.data?.settings) setSettings(res.data.settings);
+    } catch (err: any) {
+      setError(err?.message || "Failed to load teaching load settings");
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!settings) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await apiFetch("/teaching-load-settings", {
+        method: "PUT",
+        body: JSON.stringify(settings),
+      }, accessToken);
+      if (res.success) {
+        setSettings(res.data.settings);
+        setMessage("Teaching load settings updated successfully");
+        setTimeout(() => setMessage(null), 4000);
+      } else {
+        setError(res.message || "Failed to update settings");
+      }
+    } catch (err: any) {
+      setError(err?.message || "Failed to update settings");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const numField = (key: keyof TeachingLoadSettings, label: string, opts?: { step?: string; nullable?: boolean }) => (
+    <div>
+      <label className="text-[10px] uppercase font-bold text-text-muted block mb-1">{label}</label>
+      <input
+        type="number"
+        step={opts?.step ?? "1"}
+        value={settings ? (settings[key] as number | null) ?? "" : ""}
+        onChange={(e) => {
+          if (!settings) return;
+          const raw = e.target.value;
+          const val = raw === "" ? (opts?.nullable ? null : 0) : Number(raw);
+          setSettings({ ...settings, [key]: val });
+        }}
+        className="w-full px-3 py-2 text-xs dark:bg-neutral-900 bg-background border border-border-subtle rounded-lg dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
+      />
+    </div>
+  );
+
+  return (
+    <div className="bg-surface border border-border-subtle rounded-xl p-6 shadow-sm">
+      <h3 className="font-display font-bold text-text-primary text-base flex items-center gap-2 mb-4 border-b border-border-subtle/60 pb-3">
+        <SlidersHorizontal size={18} className="text-indigo-500" />
+        <span>Teaching Load & Academic Policy Settings</span>
+      </h3>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-8 text-text-muted">
+          <RefreshCw size={16} className="animate-spin" />
+        </div>
+      ) : settings ? (
+        <form onSubmit={handleSave} className="space-y-4">
+          {error && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[11px] rounded-lg flex items-start gap-2">
+              <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+          {message && (
+            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-[11px] rounded-lg flex items-center gap-2">
+              <CheckCircle size={14} />
+              <span>{message}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {numField("theoryWeight", "Theory Weight", { step: "0.1" })}
+            {numField("labWeight", "Lab Weight", { step: "0.1" })}
+            {numField("tutorialWeight", "Tutorial Weight", { step: "0.1" })}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {numField("minWeeklyLoad", "Minimum Weekly Load (optional)", { nullable: true })}
+            {numField("maxWeeklyLoad", "Maximum Weekly Load")}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {numField("minSubjectsPerFaculty", "Minimum Subjects Per Faculty")}
+            {numField("maxSubjectsPerFaculty", "Maximum Subjects Per Faculty")}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {numField("autoMarksWindowDays", "Auto Marks Window (days, optional)", { nullable: true })}
+            {numField("autoCloseMarksWindowDays", "Auto Close Marks Window (days, optional)", { nullable: true })}
+          </div>
+
+          <div className="flex items-center gap-2 py-1">
+            <input
+              type="checkbox"
+              id="requireResultVerification"
+              checked={settings.requireResultVerification}
+              onChange={(e) => setSettings({ ...settings, requireResultVerification: e.target.checked })}
+              className="w-4 h-4 rounded border-border-subtle"
+            />
+            <label htmlFor="requireResultVerification" className="text-xs font-semibold text-text-primary cursor-pointer select-none">
+              Require HOD/Admin verification before results can be published
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition cursor-pointer"
+          >
+            {saving ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
+            Save Teaching Load Settings
+          </button>
+        </form>
+      ) : (
+        <div className="text-xs text-text-muted">Unable to load settings.</div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminSettingsPage() {
   const [term, setTerm] = useState("2026-27");
@@ -101,6 +262,8 @@ export default function AdminSettingsPage() {
               </button>
             </form>
           </div>
+
+          <TeachingLoadSettingsCard />
 
           {/* User Roles & Permissions Map */}
           <div className="bg-surface border border-border-subtle rounded-xl p-6 shadow-sm">

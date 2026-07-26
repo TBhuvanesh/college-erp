@@ -46,6 +46,14 @@ const MIGRATION_FILES = [
   '038_subjects_curriculum_mappings.sql',
   '039_examination_updates.sql',
   '040_examination_sessions_redesign.sql',
+  '041_teaching_assignments.sql',
+  '042_result_entry_tasks.sql',
+  '043_dependent_tables_teaching_assignment.sql',
+  '044_teaching_load_settings.sql',
+  '045_exam_lifecycle_and_verification.sql',
+  '046_academic_import_engine.sql',
+  '047_student_import_profile_fields.sql',
+  '048_import_jobs_mode.sql',
 ];
 
 async function runMigrations(): Promise<void> {
@@ -180,6 +188,107 @@ async function runMigrations(): Promise<void> {
           "ALTER TYPE exam_type ADD VALUE 'Viva'",
           "ALTER TYPE exam_type ADD VALUE 'Improvement Exam'",
           "ALTER TYPE exam_type ADD VALUE 'Supplementary Exam'",
+        ];
+        for (const stmt of enumAdditions) {
+          try {
+            await client.query(stmt);
+            console.log(`  ${stmt}`);
+          } catch (err: any) {
+            if (err.message && err.message.includes('already exists')) {
+              console.log('  Enum value already exists, skipping.');
+            } else {
+              throw err;
+            }
+          }
+        }
+
+        await client.query('BEGIN');
+        await client.query(sql);
+        await client.query(
+          'INSERT INTO schema_migrations (version) VALUES ($1)',
+          [file]
+        );
+        await client.query('COMMIT');
+      } else if (file === '042_result_entry_tasks.sql') {
+        const enumAdditions = [
+          "ALTER TYPE workflow_trigger_event ADD VALUE IF NOT EXISTS 'exam.completed'",
+          "ALTER TYPE workflow_trigger_event ADD VALUE IF NOT EXISTS 'teaching_assignment.created'",
+          "ALTER TYPE workflow_action_type ADD VALUE IF NOT EXISTS 'create_result_entry_task'",
+        ];
+        for (const stmt of enumAdditions) {
+          try {
+            await client.query(stmt);
+            console.log(`  ${stmt}`);
+          } catch (err: any) {
+            if (err.message && err.message.includes('already exists')) {
+              console.log('  Enum value already exists, skipping.');
+            } else {
+              throw err;
+            }
+          }
+        }
+
+        await client.query('BEGIN');
+        await client.query(sql);
+        await client.query(
+          'INSERT INTO schema_migrations (version) VALUES ($1)',
+          [file]
+        );
+        await client.query('COMMIT');
+      } else if (file === '044_teaching_load_settings.sql') {
+        const enumAdditions = [
+          "ALTER TYPE subject_type ADD VALUE IF NOT EXISTS 'project'",
+          "ALTER TYPE subject_type ADD VALUE IF NOT EXISTS 'seminar'",
+        ];
+        for (const stmt of enumAdditions) {
+          try {
+            await client.query(stmt);
+            console.log(`  ${stmt}`);
+          } catch (err: any) {
+            if (err.message && err.message.includes('already exists')) {
+              console.log('  Enum value already exists, skipping.');
+            } else {
+              throw err;
+            }
+          }
+        }
+
+        await client.query('BEGIN');
+        await client.query(sql);
+        await client.query(
+          'INSERT INTO schema_migrations (version) VALUES ($1)',
+          [file]
+        );
+        await client.query('COMMIT');
+      } else if (file === '045_exam_lifecycle_and_verification.sql') {
+        const enumAdditions = [
+          "ALTER TYPE exam_status ADD VALUE IF NOT EXISTS 'Scripts Distributed'",
+          "ALTER TYPE exam_status ADD VALUE IF NOT EXISTS 'Archived'",
+          "ALTER TYPE result_entry_task_status ADD VALUE IF NOT EXISTS 'verified' AFTER 'submitted_for_approval'",
+        ];
+        for (const stmt of enumAdditions) {
+          try {
+            await client.query(stmt);
+            console.log(`  ${stmt}`);
+          } catch (err: any) {
+            if (err.message && err.message.includes('already exists')) {
+              console.log('  Enum value already exists, skipping.');
+            } else {
+              throw err;
+            }
+          }
+        }
+
+        await client.query('BEGIN');
+        await client.query(sql);
+        await client.query(
+          'INSERT INTO schema_migrations (version) VALUES ($1)',
+          [file]
+        );
+        await client.query('COMMIT');
+      } else if (file === '046_academic_import_engine.sql') {
+        const enumAdditions = [
+          "ALTER TYPE workflow_trigger_event ADD VALUE IF NOT EXISTS 'student_import.completed'",
         ];
         for (const stmt of enumAdditions) {
           try {

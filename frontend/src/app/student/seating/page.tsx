@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2, MapPin, Armchair, BookOpen } from "lucide-react";
 import { departmentColorClasses } from "@/lib/seating";
@@ -9,23 +9,18 @@ import type { SeatAllocation } from "@/lib/seating";
 
 export default function StudentSeatingPage() {
   const { accessToken } = useAuth();
-  const [seats, setSeats] = useState<SeatAllocation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!accessToken) return;
-    (async () => {
-      setLoading(true);
-      try {
-        setSeats(await seating.getMySeating(accessToken));
-      } catch (err: any) {
-        setError(err.message || "Failed to load your seating assignments.");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [accessToken]);
+  const seatingQuery = useQuery({
+    queryKey: ["exam-seating", "my"],
+    queryFn: async () => {
+      return await seating.getMySeating(accessToken!);
+    },
+    enabled: !!accessToken
+  });
+
+  const seats = seatingQuery.data || [];
+  const loading = seatingQuery.isLoading;
+  const error = (seatingQuery.error as any)?.message || null;
 
   if (loading) {
     return (

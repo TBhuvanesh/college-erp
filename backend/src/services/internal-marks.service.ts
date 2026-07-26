@@ -1,7 +1,7 @@
 import { query, withTransaction } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
-import { isFacultyAssigned } from './assignment.service';
+import { isFacultyAssigned, resolveTeachingAssignmentId } from './assignment.service';
 import type {
   InternalMarksRecord,
   PaginatedInternalMarks,
@@ -384,6 +384,10 @@ export async function bulkEnterMarks(
   );
   if (!sub[0]) throw AppError.notFound('Subject not found');
 
+  // Internal Marks now references the Teaching Assignment instead of a bare
+  // (faculty, subject, section) triple.
+  const teachingAssignmentId = await resolveTeachingAssignmentId(facultyId, data.subjectId, data.section);
+
   let inserted = 0;
   let updated = 0;
 
@@ -391,14 +395,15 @@ export async function bulkEnterMarks(
     for (const record of data.records) {
       const result = await client.query<{ created_at: Date; updated_at: Date }>(
         `INSERT INTO internal_marks
-           (student_id, faculty_id, subject_id, section, assessment_type, maximum_marks, obtained_marks, remarks)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           (student_id, faculty_id, subject_id, section, assessment_type, maximum_marks, obtained_marks, remarks, teaching_assignment_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          ON CONFLICT (student_id, subject_id, assessment_type)
          DO UPDATE SET
            obtained_marks = EXCLUDED.obtained_marks,
            maximum_marks  = EXCLUDED.maximum_marks,
            remarks        = EXCLUDED.remarks,
            faculty_id     = EXCLUDED.faculty_id,
+           teaching_assignment_id = EXCLUDED.teaching_assignment_id,
            updated_at     = NOW()
          RETURNING created_at, updated_at`,
         [
@@ -410,6 +415,7 @@ export async function bulkEnterMarks(
           data.maximumMarks,
           record.obtainedMarks,
           record.remarks || null,
+          teachingAssignmentId,
         ]
       );
 

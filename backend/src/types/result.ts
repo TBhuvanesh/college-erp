@@ -143,6 +143,41 @@ export const bulkSubmitResultsSchema = z
 export type BulkSubmitResultsInput = z.infer<typeof bulkSubmitResultsSchema>;
 
 /**
+ * Used for POST /api/results/tasks/:taskId/draft and .../publish.
+ * Unlike bulkSubmitResultsSchema, subjectId/section/examId are NOT accepted
+ * from the client — they are resolved server-side from the result entry
+ * task (see resultEntryTask.service.ts), which is itself resolved from the
+ * faculty's Teaching Assignment. This is what removes the "arbitrary marks
+ * entry" / manual subject dropdown from the Faculty Results page.
+ */
+export const taskSubmitResultsSchema = z
+  .object({
+    internalMaxMarks: z.coerce.number().min(1, 'Internal max marks must be at least 1').max(200),
+    externalMaxMarks: z.coerce.number().min(1, 'External max marks must be at least 1').max(200),
+    records: z
+      .array(
+        z.object({
+          studentId: z.string().uuid('Invalid student ID'),
+          internalMarks: z.coerce.number().min(0, 'Internal marks cannot be negative'),
+          externalMarks: z.coerce.number().min(0, 'External marks cannot be negative'),
+          isAbsent: z.boolean().default(false),
+          remarks: z.string().trim().max(500).optional(),
+        })
+      )
+      .min(1, 'At least one student record is required'),
+  })
+  .refine(
+    (d) => d.records.every((r) => r.internalMarks <= d.internalMaxMarks),
+    { message: 'Internal marks cannot exceed internal max marks for any student', path: ['records'] }
+  )
+  .refine(
+    (d) => d.records.every((r) => r.isAbsent || r.externalMarks <= d.externalMaxMarks),
+    { message: 'External marks cannot exceed external max marks for any student', path: ['records'] }
+  );
+
+export type TaskSubmitResultsInput = z.infer<typeof taskSubmitResultsSchema>;
+
+/**
  * PATCH /api/results/:id.
  * Recomputes grade and result_status when marks change.
  */

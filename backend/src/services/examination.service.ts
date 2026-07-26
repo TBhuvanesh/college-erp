@@ -4,6 +4,7 @@ import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
 import { isFacultyAssigned } from './assignment.service';
 import { createNotification } from './notification.service';
+import { emitWorkflowEvent } from './workflowEngine.service';
 import type {
   ExamDetail,
   ExamSummary,
@@ -23,6 +24,7 @@ import {
   VALID_TRANSITIONS,
   FACULTY_ALLOWED_TRANSITIONS,
   TERMINAL_STATUSES,
+  NON_EDITABLE_STATUSES,
 } from '../types/examination';
 import type { Role } from '../types/roles';
 
@@ -434,7 +436,7 @@ export async function updateExam(
 
   const current = rows[0];
 
-  if (TERMINAL_STATUSES.has(current.status)) {
+  if (NON_EDITABLE_STATUSES.has(current.status)) {
     throw AppError.badRequest(
       `Cannot modify a ${current.status.toLowerCase()} examination`,
       'EXAM_TERMINAL_STATUS'
@@ -555,7 +557,84 @@ export async function updateExamStatus(
     changes: { from: currentStatus, to: newStatus },
   });
 
+  if (newStatus === 'Scripts Distributed') {
+    await openResultEntryTaskForCompletedExam(id, userId);
+  }
+
   return updated;
+}
+
+async function openResultEntryTaskForCompletedExam(examId: string, actorId: string): Promise<void> {
+  const { rows } = await query<{
+    id: string;
+    subject_id: string;
+    section: string;
+    subject_name: string;
+    semester: number;
+  }>(
+    `SELECT e.id, e.subject_id, e.section, s.name AS subject_name, e.semester
+     FROM exams e
+     JOIN subjects s ON s.id = e.subject_id
+     WHERE e.id = $1`,
+    [examId]
+  );
+  const exam = rows[0];
+  if (!exam) return;
+
+  const sections = exam.section
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (sections.length === 0) return;
+
+  const { rows: assignments } = await query<{
+    teaching_assignment_id: string;
+    faculty_id: string;
+    section: string;
+    faculty_user_id: string;
+    department_id: string;
+  }>(
+    `SELECT ta.id AS teaching_assignment_id, ta.faculty_id, ta.section,
+            f.user_id AS faculty_user_id, f.department_id
+     FROM teaching_assignments ta
+     JOIN faculty f ON f.id = ta.faculty_id
+     WHERE ta.subject_id = $1
+       AND ta.section = ANY($2::varchar[])
+       AND ta.deleted_at IS NULL`,
+    [exam.subject_id, sections]
+  );
+
+  if (assignments.length === 0) {
+    // No resolvable Teaching Assignment — cannot safely identify the
+    // responsible faculty automatically; skip rather than guess.
+    return;
+  }
+
+  // Update exams row if there's exactly one resolved assignment (for single-section exams)
+  if (assignments.length === 1) {
+    await query(
+      `UPDATE exams
+       SET teaching_assignment_id = $1, faculty_id = $2, updated_at = NOW()
+       WHERE id = $3`,
+      [assignments[0].teaching_assignment_id, assignments[0].faculty_id, examId]
+    );
+  }
+
+  for (const ta of assignments) {
+    await emitWorkflowEvent('exam.completed', actorId, {
+      departmentId: ta.department_id,
+      semester: exam.semester,
+      title: 'Result Entry Window Open',
+      message: `Marks entry is now open for ${exam.subject_name} (Section ${ta.section}).`,
+      notificationType: 'Academic Alert',
+      sourceId: examId,
+      examId,
+      teachingAssignmentId: ta.teaching_assignment_id,
+      facultyId: ta.faculty_id,
+      facultyUserId: ta.faculty_user_id,
+    });
+  }
 }
 
 /**

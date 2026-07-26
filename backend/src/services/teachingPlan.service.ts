@@ -1,7 +1,8 @@
 import { query, withTransaction } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
-import { isFacultyAssigned } from './assignment.service';
+import { eventBus } from './eventBus.service';
+import { isFacultyAssigned, resolveTeachingAssignmentId } from './assignment.service';
 import * as notificationService from './notification.service';
 import { emitWorkflowEvent } from './workflowEngine.service';
 import type { Role } from '../types/roles';
@@ -383,12 +384,16 @@ export async function createTeachingPlan(userId: string, data: CreateTeachingPla
   const year = Math.ceil(subject.semester / 2);
   const sequence = data.lessonSequence ?? (await resolveNextSequence(data.subjectId, data.section, subject.semester));
 
+  // Teaching Planner attaches to the Teaching Assignment rather than an
+  // independent subject mapping.
+  const teachingAssignmentId = await resolveTeachingAssignmentId(facultyId, data.subjectId, data.section);
+
   const { rows } = await query<{ id: string }>(
     `INSERT INTO teaching_plans
        (faculty_id, subject_id, department_id, year, semester, section, lesson_sequence, week_number, lesson_date,
         topic_title, topic_description, learning_objectives, estimated_duration,
-        material_id, assignment_id, homework, quiz_planned, auto_shift_enabled)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+        material_id, assignment_id, homework, quiz_planned, auto_shift_enabled, teaching_assignment_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
      RETURNING id`,
     [
       facultyId,
@@ -409,6 +414,7 @@ export async function createTeachingPlan(userId: string, data: CreateTeachingPla
       data.homework ?? null,
       data.quizPlanned,
       data.autoShiftEnabled,
+      teachingAssignmentId,
     ]
   );
   const id = rows[0].id;
@@ -457,7 +463,12 @@ export async function createTeachingPlan(userId: string, data: CreateTeachingPla
   }
 
   const row = await fetchTeachingPlanRow(id);
-  return toTeachingPlan(row!);
+  const result = toTeachingPlan(row!);
+  eventBus.publish('TEACHING_PLAN_CHANGED', {
+    facultyId: result.facultyId,
+    subjectId: result.subjectId,
+  });
+  return result;
 }
 
 export async function listTeachingPlans(
@@ -641,7 +652,12 @@ export async function updateTeachingPlan(
   }
 
   const updated = await fetchTeachingPlanRow(id);
-  return toTeachingPlan(updated!);
+  const result = toTeachingPlan(updated!);
+  eventBus.publish('TEACHING_PLAN_CHANGED', {
+    facultyId: result.facultyId,
+    subjectId: result.subjectId,
+  });
+  return result;
 }
 
 export async function deleteTeachingPlan(userId: string, id: string): Promise<void> {
@@ -654,6 +670,11 @@ export async function deleteTeachingPlan(userId: string, id: string): Promise<vo
   await deleteCalendarSyncEntry(id);
 
   await auditLog({ actorId: userId, action: 'DELETE', resource: 'teaching_plan', resourceId: id });
+
+  eventBus.publish('TEACHING_PLAN_CHANGED', {
+    facultyId: existing.faculty_id,
+    subjectId: existing.subject_id,
+  });
 }
 
 // ── Lesson Progress Engine ───────────────────────────────────────────────────────
@@ -752,7 +773,12 @@ export async function updateLessonStatus(
   }
 
   const updated = await fetchTeachingPlanRow(id);
-  return { teachingPlan: toTeachingPlan(updated!), continuationLesson };
+  const result = toTeachingPlan(updated!);
+  eventBus.publish('TEACHING_PLAN_CHANGED', {
+    facultyId: result.facultyId,
+    subjectId: result.subjectId,
+  });
+  return { teachingPlan: result, continuationLesson };
 }
 
 // ── Auto Shift Engine ─────────────────────────────────────────────────────────────
@@ -787,6 +813,7 @@ export async function createContinuationLesson(
   const lessonDate = overrides.lessonDate ?? new Date(parent.lesson_date.getTime() + 7 * 24 * 60 * 60 * 1000);
   const estimatedDuration = overrides.estimatedDuration ?? parent.estimated_duration;
   const continuationTitle = `${parent.topic_title} (Continued)`;
+  const teachingAssignmentId = await resolveTeachingAssignmentId(parent.faculty_id, parent.subject_id, parent.section);
 
   const newId = await withTransaction(async (client) => {
     const { rows: toShift } = await client.query<{ id: string }>(
@@ -805,8 +832,8 @@ export async function createContinuationLesson(
       `INSERT INTO teaching_plans
          (faculty_id, subject_id, department_id, year, semester, section, lesson_sequence, week_number, lesson_date,
           topic_title, topic_description, learning_objectives, estimated_duration,
-          homework, quiz_planned, auto_shift_enabled, is_continuation, parent_lesson_id, lesson_status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'Planned')
+          homework, quiz_planned, auto_shift_enabled, is_continuation, parent_lesson_id, lesson_status, teaching_assignment_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'Planned',$19)
        RETURNING id`,
       [
         parent.faculty_id,
@@ -827,6 +854,7 @@ export async function createContinuationLesson(
         parent.auto_shift_enabled,
         true,
         parentId,
+        teachingAssignmentId,
       ]
     );
     return inserted[0].id;
@@ -854,7 +882,12 @@ export async function createContinuationLesson(
   );
 
   const created = await fetchTeachingPlanRow(newId);
-  return toTeachingPlan(created!);
+  const result = toTeachingPlan(created!);
+  eventBus.publish('TEACHING_PLAN_CHANGED', {
+    facultyId: result.facultyId,
+    subjectId: result.subjectId,
+  });
+  return result;
 }
 
 // ── Reschedule ─────────────────────────────────────────────────────────────────
@@ -941,5 +974,10 @@ export async function rescheduleLesson(
   });
 
   const updated = await fetchTeachingPlanRow(id);
-  return toTeachingPlan(updated!);
+  const result = toTeachingPlan(updated!);
+  eventBus.publish('TEACHING_PLAN_CHANGED', {
+    facultyId: result.facultyId,
+    subjectId: result.subjectId,
+  });
+  return result;
 }

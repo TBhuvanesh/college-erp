@@ -10,12 +10,20 @@ export const WORKFLOW_TRIGGER_EVENTS = [
   'lesson.rescheduled',
   'quiz.published',
   'exam_seating.published',
+  'exam.completed',
+  'teaching_assignment.created',
+  'student_import.completed',
 ] as const;
 export type WorkflowTriggerEvent = (typeof WORKFLOW_TRIGGER_EVENTS)[number];
 
 // Closed set of built-in, safe handlers — rules select WHICH of these run for a
 // trigger, they never carry arbitrary executable code.
-export const WORKFLOW_ACTION_TYPES = ['notify_students', 'create_calendar_event', 'log_only'] as const;
+export const WORKFLOW_ACTION_TYPES = [
+  'notify_students',
+  'create_calendar_event',
+  'log_only',
+  'create_result_entry_task',
+] as const;
 export type WorkflowActionType = (typeof WORKFLOW_ACTION_TYPES)[number];
 
 export const WORKFLOW_LOG_STATUSES = ['success', 'failed', 'retrying'] as const;

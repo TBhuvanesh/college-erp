@@ -91,6 +91,13 @@ export default function StudentDashboard() {
     loadDashboardData();
   }, [loadDashboardData]);
 
+  useEffect(() => {
+    window.addEventListener('realtimeDashboardUpdate', loadDashboardData);
+    return () => {
+      window.removeEventListener('realtimeDashboardUpdate', loadDashboardData);
+    };
+  }, [loadDashboardData]);
+
   // ─── Derived Metrics ───────────────────────────────────────────────────────
   const overallAttendancePct = apiAttendance ? Math.round(apiAttendance.overall?.percentage || 0) : 0;
   const unpaidTotalAmount = apiFees.reduce((acc, curr) => acc + (curr.pendingAmount || 0), 0);

@@ -1,0 +1,29 @@
+-- Migration 045: Examination Lifecycle extension + optional result verification
+--
+-- Design notes:
+--   • Exam-level lifecycle (Draft/Published/Conducted/Completed/Cancelled)
+--     already exists in spirit: examination_sessions.status carries
+--     Draft→Scheduling→Ready for Review→Published→Archived (040), and
+--     exams.status carries Scheduled→Ongoing→Completed→Cancelled (008).
+--     Rather than collapsing these two enums into one (which would rewrite
+--     every existing row's meaning and break every VALID_TRANSITIONS check
+--     in examination.service.ts), this migration adds exactly the two
+--     stages the spec introduces that don't exist anywhere yet:
+--       - 'Scripts Distributed' — a manual exams.status stage between
+--         Completed and marks entry, for institutions that log physical
+--         script handover to faculty before grading starts.
+--       - 'Archived' — terminal exams.status stage after results for that
+--         exam are Published and the exam should drop out of active views.
+--     Everything from "Draft Marks" through "Verified" in the spec is
+--     per-teaching-assignment granularity (one exam can resolve to several
+--     teaching assignments/tasks), which is exactly what
+--     result_entry_tasks.status (migration 042) already models — adding it
+--     to exams.status again would create two sources of truth. This
+--     migration instead adds the missing 'verified' stage to
+--     result_entry_task_status, sitting between submitted_for_approval and
+--     published, gated by teaching_load_settings.require_result_verification
+--     (044) so existing installs that don't opt in see no behavior change.
+--   • Both enum additions are handled specially in migrate.ts.
+
+-- (enum ADD VALUE statements for exam_status and result_entry_task_status
+--  are executed by migrate.ts outside this migration's transaction)

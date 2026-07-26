@@ -4,6 +4,7 @@ import { query } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
 import { emitWorkflowEvent } from './workflowEngine.service';
+import { resolveAnyTeachingAssignmentId } from './assignment.service';
 import type { Role } from '../types/roles';
 import type {
   CourseMaterial,
@@ -95,7 +96,7 @@ async function resolveFacultyId(userId: string): Promise<string> {
 
 async function assertFacultyAssignedToSubject(facultyId: string, subjectId: string): Promise<void> {
   const { rows } = await query<{ id: string }>(
-    `SELECT id FROM faculty_subject_assignments
+    `SELECT id FROM teaching_assignments
      WHERE faculty_id = $1 AND subject_id = $2 AND is_active = TRUE AND deleted_at IS NULL`,
     [facultyId, subjectId]
   );
@@ -117,7 +118,7 @@ async function assertMaterialAccess(row: MaterialRow, userId: string, role: Role
   if (role === 'faculty') {
     const facultyId = await resolveFacultyId(userId);
     const { rows } = await query<{ id: string }>(
-      `SELECT id FROM faculty_subject_assignments
+      `SELECT id FROM teaching_assignments
        WHERE faculty_id = $1 AND subject_id = $2 AND is_active = TRUE AND deleted_at IS NULL`,
       [facultyId, row.subject_id]
     );
@@ -152,14 +153,21 @@ export async function createMaterial(
 
   const ext = (path.extname(file.originalname).slice(1).toLowerCase() || 'pdf') as LmsFileType;
 
+  // Course Materials are shared across every section of a subject (a Course
+  // Workspace, not a per-section resource), so this traces the row back to
+  // one of the faculty's active Teaching Assignments for audit lineage only
+  // — it is NOT used to gate access, which stays subject-wide via
+  // assertFacultyAssignedToSubject above.
+  const teachingAssignmentId = await resolveAnyTeachingAssignmentId(facultyId, data.subjectId);
+
   const { rows } = await query<{ id: string }>(
     `INSERT INTO course_materials
-       (title, description, subject_id, faculty_id, file_name, file_path, file_type, file_size)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       (title, description, subject_id, faculty_id, file_name, file_path, file_type, file_size, teaching_assignment_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING id`,
     [
       data.title, data.description ?? null, data.subjectId, facultyId,
-      file.originalname, file.path, ext, file.size,
+      file.originalname, file.path, ext, file.size, teachingAssignmentId,
     ]
   );
 
@@ -207,7 +215,7 @@ export async function listMaterials(
     const facultyId = await resolveFacultyId(userId);
     params.push(facultyId);
     conditions.push(`EXISTS (
-      SELECT 1 FROM faculty_subject_assignments fsa
+      SELECT 1 FROM teaching_assignments fsa
       WHERE fsa.faculty_id = $${params.length}
         AND fsa.subject_id = cm.subject_id
         AND fsa.is_active  = TRUE

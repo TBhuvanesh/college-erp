@@ -65,11 +65,12 @@ export const LMSDashboard: React.FC = () => {
           );
         }
       } else if (role === "faculty") {
-        const res = await apiFetch("/attendance/my-assignments", {}, accessToken);
-        if (res.success && res.data?.assignments) {
+        // LMS resolves the faculty's Course Workspace through their Teaching
+        // Assignments — no manual section selection.
+        const res = await apiFetch("/teaching-assignments/my", {}, accessToken);
+        if (res.success && res.data?.teachingAssignments) {
           setSubjects(
-            res.data.assignments
-              .filter((a: any) => a.isActive)
+            res.data.teachingAssignments
               .map((a: any) => ({
                 id: a.subjectId,
                 name: a.subjectName,

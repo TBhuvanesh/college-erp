@@ -2,6 +2,7 @@ import { query } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
 import { emitWorkflowEvent } from './workflowEngine.service';
+import { resolveAnyTeachingAssignmentId } from './assignment.service';
 import type { Role } from '../types/roles';
 import type {
   Assignment,
@@ -86,7 +87,7 @@ async function resolveFacultyId(userId: string): Promise<string> {
 
 async function assertFacultyAssignedToSubject(facultyId: string, subjectId: string): Promise<void> {
   const { rows } = await query<{ id: string }>(
-    `SELECT id FROM faculty_subject_assignments
+    `SELECT id FROM teaching_assignments
      WHERE faculty_id = $1 AND subject_id = $2 AND is_active = TRUE AND deleted_at IS NULL`,
     [facultyId, subjectId]
   );
@@ -107,7 +108,7 @@ async function assertAssignmentAccess(row: AssignmentRow, userId: string, role: 
   if (role === 'faculty') {
     const facultyId = await resolveFacultyId(userId);
     const { rows } = await query<{ id: string }>(
-      `SELECT id FROM faculty_subject_assignments
+      `SELECT id FROM teaching_assignments
        WHERE faculty_id = $1 AND subject_id = $2 AND is_active = TRUE AND deleted_at IS NULL`,
       [facultyId, row.subject_id]
     );
@@ -139,11 +140,16 @@ export async function createAssignment(
   const facultyId = await resolveFacultyId(userId);
   await assertFacultyAssignedToSubject(facultyId, data.subjectId);
 
+  // Assignments are shared across every section of a subject, so this only
+  // traces lineage back to one of the faculty's active Teaching Assignments
+  // — access control stays subject-wide via assertFacultyAssignedToSubject.
+  const teachingAssignmentId = await resolveAnyTeachingAssignmentId(facultyId, data.subjectId);
+
   const { rows } = await query<{ id: string }>(
-    `INSERT INTO assignments (title, description, subject_id, faculty_id, due_date, max_marks)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO assignments (title, description, subject_id, faculty_id, due_date, max_marks, teaching_assignment_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING id`,
-    [data.title, data.description ?? null, data.subjectId, facultyId, data.dueDate, data.maxMarks]
+    [data.title, data.description ?? null, data.subjectId, facultyId, data.dueDate, data.maxMarks, teachingAssignmentId]
   );
 
   await auditLog({ actorId: userId, action: 'CREATE', resource: 'lms_assignment', resourceId: rows[0].id });
@@ -192,7 +198,7 @@ export async function listAssignments(
     const facultyId = await resolveFacultyId(userId);
     params.push(facultyId);
     conditions.push(`EXISTS (
-      SELECT 1 FROM faculty_subject_assignments fsa
+      SELECT 1 FROM teaching_assignments fsa
       WHERE fsa.faculty_id = $${params.length}
         AND fsa.subject_id = a.subject_id
         AND fsa.is_active  = TRUE

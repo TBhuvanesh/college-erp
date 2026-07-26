@@ -1,6 +1,13 @@
 import { Pool, PoolClient } from 'pg';
 import type { QueryResultRow } from 'pg';
+import { AsyncLocalStorage } from 'async_hooks';
 import { env } from './env';
+
+export interface TransactionContext {
+  events: any[];
+}
+
+export const transactionStorage = new AsyncLocalStorage<TransactionContext>();
 
 export const pool = new Pool({
   connectionString: env.DATABASE_URL,
@@ -34,10 +41,29 @@ export async function withTransaction<T>(
   fn: (client: PoolClient) => Promise<T>
 ): Promise<T> {
   const client = await pool.connect();
+  const context: TransactionContext = { events: [] };
+  
   try {
-    await client.query('BEGIN');
-    const result = await fn(client);
-    await client.query('COMMIT');
+    const result = await transactionStorage.run(context, async () => {
+      await client.query('BEGIN');
+      const res = await fn(client);
+      await client.query('COMMIT');
+      return res;
+    });
+
+    // Emit accumulated events after successful commit
+    if (context.events.length > 0) {
+      // Lazy load eventBus to avoid circular dependencies
+      const { eventBus } = require('../services/eventBus.service');
+      for (const event of context.events) {
+        try {
+          eventBus.emitEvent(event);
+        } catch (emitErr) {
+          console.error('Failed to emit transaction event:', emitErr);
+        }
+      }
+    }
+
     return result;
   } catch (err) {
     await client.query('ROLLBACK');
@@ -46,3 +72,4 @@ export async function withTransaction<T>(
     client.release();
   }
 }
+

@@ -48,10 +48,12 @@ describe('createAssignment', () => {
   beforeEach(resetMocks);
 
   it('creates assignment and returns detail', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [{ id: FACULTY_ID }], rowCount: 1 } as never);
-    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'fsa-id' }], rowCount: 1 } as never);
-    mockQuery.mockResolvedValueOnce({ rows: [{ id: ASSIGNMENT_ID }], rowCount: 1 } as never);
-    mockQuery.mockResolvedValueOnce({ rows: [mockAssignmentRow], rowCount: 1 } as never);
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: FACULTY_ID }], rowCount: 1 } as never); // resolveFacultyId
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'fsa-id' }], rowCount: 1 } as never); // assertFacultyAssignedToSubject
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'ta-id' }], rowCount: 1 } as never); // resolveAnyTeachingAssignmentId
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: ASSIGNMENT_ID }], rowCount: 1 } as never); // INSERT
+    mockQuery.mockResolvedValueOnce({ rows: [mockAssignmentRow], rowCount: 1 } as never); // fetchAssignmentRow
+    mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never); // workflow mapping lookup
 
     const result = await assignmentService.createAssignment(FACULTY_USER_ID, {
       title:     'Week 1 Problem Set',
@@ -64,7 +66,7 @@ describe('createAssignment', () => {
     expect(result.maxMarks).toBe(20);
     expect(result.facultyId).toBe(FACULTY_ID);
 
-    const insertSql = mockQuery.mock.calls[2][0] as string;
+    const insertSql = mockQuery.mock.calls[3][0] as string;
     expect(insertSql).toMatch(/INSERT INTO assignments/);
   });
 
@@ -109,14 +111,14 @@ describe('listAssignments', () => {
     expect(sql).not.toMatch(/faculty_subject_assignments/);
   });
 
-  it('faculty query includes EXISTS filter on faculty_subject_assignments', async () => {
+  it('faculty query includes EXISTS filter on teaching_assignments', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [{ id: FACULTY_ID }], rowCount: 1 } as never);
     mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
 
     await assignmentService.listAssignments(FACULTY_USER_ID, 'faculty', { page: 1, limit: 20 });
 
     const listSql = mockQuery.mock.calls[1][0] as string;
-    expect(listSql).toMatch(/faculty_subject_assignments/);
+    expect(listSql).toMatch(/teaching_assignments/);
   });
 
   it('student query filters by program_id and semester', async () => {

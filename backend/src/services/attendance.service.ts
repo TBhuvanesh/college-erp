@@ -1,7 +1,8 @@
 import { query, withTransaction } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
-import { isFacultyAssigned } from './assignment.service';
+import { eventBus } from './eventBus.service';
+import { isFacultyAssigned, resolveTeachingAssignmentId } from './assignment.service';
 import type {
   MarkAttendanceInput,
   UpdateAttendanceInput,
@@ -436,6 +437,13 @@ export async function markAttendance(
   );
   if (!sub[0]) throw AppError.notFound('Subject not found');
 
+  // Attendance Register resolves the Teaching Assignment automatically —
+  // no manual subject/section pick beyond selecting which of the faculty's
+  // active assignments this session belongs to (already enforced above by
+  // isFacultyAssigned). Stamped on every row so downstream consumers never
+  // need to re-derive faculty+subject+section.
+  const teachingAssignmentId = await resolveTeachingAssignmentId(facultyId, data.subjectId, data.section);
+
   let inserted = 0;
   let updated = 0;
 
@@ -443,15 +451,16 @@ export async function markAttendance(
     for (const record of data.records) {
       const result = await client.query<{ created_at: Date; updated_at: Date }>(
         `INSERT INTO attendance
-           (student_id, faculty_id, subject_id, section, attendance_date, status)
-         VALUES ($1, $2, $3, $4, $5::date, $6)
+           (student_id, faculty_id, subject_id, section, attendance_date, status, teaching_assignment_id)
+         VALUES ($1, $2, $3, $4, $5::date, $6, $7)
          ON CONFLICT (student_id, subject_id, attendance_date)
          DO UPDATE SET
            status     = EXCLUDED.status,
            faculty_id = EXCLUDED.faculty_id,
+           teaching_assignment_id = EXCLUDED.teaching_assignment_id,
            updated_at = NOW()
          RETURNING created_at, updated_at`,
-        [record.studentId, facultyId, data.subjectId, data.section, data.date, record.status]
+        [record.studentId, facultyId, data.subjectId, data.section, data.date, record.status, teachingAssignmentId]
       );
 
       // If created_at ≈ updated_at the row was just inserted; otherwise it was updated
@@ -477,6 +486,11 @@ export async function markAttendance(
         inserted,
         updated,
       },
+    });
+
+    eventBus.publish('ATTENDANCE_UPDATED', {
+      subjectId: data.subjectId,
+      date: data.date,
     });
   });
 
@@ -535,5 +549,12 @@ export async function updateAttendance(
     changes: { status: data.status },
   });
 
-  return getAttendanceById(id);
+  const updatedRecord = await getAttendanceById(id);
+  eventBus.publish('ATTENDANCE_UPDATED', {
+    studentId: updatedRecord.studentId,
+    subjectId: updatedRecord.subjectId,
+    date: updatedRecord.attendanceDate,
+  });
+
+  return updatedRecord;
 }

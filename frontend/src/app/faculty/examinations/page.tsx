@@ -121,12 +121,12 @@ export default function FacultyExaminations() {
       setError(null);
       try {
         const [assignmentsRes, profileRes] = await Promise.all([
-          apiFetch("/attendance/my-assignments", {}, accessToken),
+          apiFetch("/teaching-assignments/my", {}, accessToken),
           apiFetch("/faculty/me", {}, accessToken)
         ]);
 
-        if (assignmentsRes.success && assignmentsRes.data?.assignments) {
-          const activeAssignments = assignmentsRes.data.assignments.filter((a: AssignmentDetail) => a.isActive);
+        if (assignmentsRes.success && assignmentsRes.data?.teachingAssignments) {
+          const activeAssignments = assignmentsRes.data.teachingAssignments.map((a: any) => ({ ...a, isActive: a.status === "active" }));
           setAssignments(activeAssignments);
         }
         if (profileRes.success && profileRes.data?.profile) {

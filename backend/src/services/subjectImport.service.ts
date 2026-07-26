@@ -48,7 +48,10 @@ function getCellValueString(cell: ExcelJS.Cell): string {
   return String(cell.value).trim();
 }
 
-function findDepartmentByAlias(allDepts: { id: string; name: string; code: string }[], deptStr: string) {
+// Exported for reuse by other import strategies (e.g. studentImport.strategy.ts)
+// that also need to resolve a free-text "Department" spreadsheet cell against
+// the departments table — avoids re-implementing the same alias table twice.
+export function findDepartmentByAlias(allDepts: { id: string; name: string; code: string }[], deptStr: string) {
   const s = deptStr.trim().toLowerCase();
   
   // 1. Direct matches on name or code

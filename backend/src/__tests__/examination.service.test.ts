@@ -392,14 +392,14 @@ describe('updateExamStatus', () => {
     expect(result.status).toBe('Cancelled');
   });
 
-  it('throws 400 when transitioning from Completed (terminal)', async () => {
+  it('throws 400 when transitioning from Completed to an invalid status (Completed can only advance to Scripts Distributed)', async () => {
     mockQuery.mockResolvedValueOnce({
       rows: [{ faculty_id: 'fac-uuid-1', status: 'Completed' }],
     });
 
     await expect(
       updateExamStatus('exam-uuid-1', 'Scheduled', 'admin-uuid', 'admin')
-    ).rejects.toMatchObject({ statusCode: 400, code: 'EXAM_TERMINAL_STATUS' });
+    ).rejects.toMatchObject({ statusCode: 400, code: 'INVALID_TRANSITION' });
   });
 
   it('throws 400 when transitioning from Cancelled (terminal)', async () => {

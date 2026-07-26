@@ -1,6 +1,7 @@
 import { query, withTransaction } from '../config/database';
 import { AppError } from '../errors/AppError';
 import { auditLog } from '../utils/audit';
+import { eventBus } from './eventBus.service';
 import { createNotification } from './notification.service';
 import { getSeatingPatternById, applySeatingPattern, type PatternableStudent } from './seatingPattern.service';
 import { listRoomsWithAvailability } from './resourceAvailability.service';
@@ -396,6 +397,10 @@ export async function generateSeatingPlan(
     }
   });
 
+  for (const examId of data.examIds) {
+    eventBus.publish('EXAM_SEATING_CHANGED', { examId });
+  }
+
   await auditLog({
     actorId: userId,
     action: data.examSessionId ? 'GENERATE' : 'CREATE',
@@ -698,6 +703,9 @@ export async function swapSeats(userId: string, role: Role, data: SwapSeatsInput
       swappedWith: { allocationId: b.id, roomId: b.roomId, seatNumber: b.seatNumber },
     },
   });
+
+  eventBus.publish('EXAM_SEATING_CHANGED', { examId: a.examId, roomId: a.roomId, studentId: a.studentId });
+  eventBus.publish('EXAM_SEATING_CHANGED', { examId: b.examId, roomId: b.roomId, studentId: b.studentId });
 }
 
 export async function moveSeat(userId: string, role: Role, data: MoveSeatInput): Promise<SeatAllocation> {
@@ -749,7 +757,15 @@ export async function moveSeat(userId: string, role: Role, data: MoveSeatInput):
     `SELECT ${SEAT_COLS} FROM exam_seat_allocations esa ${SEAT_JOINS} WHERE esa.id = $1`,
     [allocation.id]
   );
-  return toSeatAllocation(rows[0]);
+  const result = toSeatAllocation(rows[0]);
+
+  eventBus.publish('EXAM_SEATING_CHANGED', {
+    examId: result.examId,
+    roomId: result.roomId,
+    studentId: result.studentId,
+  });
+
+  return result;
 }
 
 export async function lockSeat(userId: string, role: Role, allocationId: string, data: LockSeatInput): Promise<SeatAllocation> {
@@ -774,7 +790,15 @@ export async function lockSeat(userId: string, role: Role, allocationId: string,
     `SELECT ${SEAT_COLS} FROM exam_seat_allocations esa ${SEAT_JOINS} WHERE esa.id = $1`,
     [allocationId]
   );
-  return toSeatAllocation(rows[0]);
+  const result = toSeatAllocation(rows[0]);
+
+  eventBus.publish('EXAM_SEATING_CHANGED', {
+    examId: result.examId,
+    roomId: result.roomId,
+    studentId: result.studentId,
+  });
+
+  return result;
 }
 
 // ── Search ────────────────────────────────────────────────────────────────────

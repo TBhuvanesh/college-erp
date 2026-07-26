@@ -136,24 +136,28 @@ export async function resolveCampaignEligibility(
   const facultyFilter = campaign.targetFacultyIds.length > 0;
 
   if (campaign.templateType && SUBJECT_SCOPED_TYPES.includes(campaign.templateType)) {
+    // Feedback identifies faculty/subjects/students through Teaching
+    // Assignments (renamed from faculty_subject_assignments in migration
+    // 041) rather than an independent subject mapping — this is the same
+    // relationship Attendance, Results, and Internal Marks resolve through.
     const params: unknown[] = [];
-    const conditions: string[] = ['fsa.is_active = TRUE', 'fsa.deleted_at IS NULL', "st.status = 'active'", 'st.deleted_at IS NULL', 's.deleted_at IS NULL'];
+    const conditions: string[] = ['ta.is_active = TRUE', 'ta.deleted_at IS NULL', "st.status = 'active'", 'st.deleted_at IS NULL', 's.deleted_at IS NULL'];
     const push = (val: unknown) => {
       params.push(val);
       return `$${params.length}`;
     };
     if (deptFilter) conditions.push(`s.department_id = ANY(${push(campaign.targetDepartmentIds)}::uuid[])`);
     if (semFilter) conditions.push(`s.semester = ANY(${push(campaign.targetSemesters)}::smallint[])`);
-    if (sectionFilter) conditions.push(`fsa.section = ANY(${push(campaign.targetSections)}::varchar[])`);
-    if (subjectFilter) conditions.push(`fsa.subject_id = ANY(${push(campaign.targetSubjectIds)}::uuid[])`);
-    if (facultyFilter) conditions.push(`fsa.faculty_id = ANY(${push(campaign.targetFacultyIds)}::uuid[])`);
+    if (sectionFilter) conditions.push(`ta.section = ANY(${push(campaign.targetSections)}::varchar[])`);
+    if (subjectFilter) conditions.push(`ta.subject_id = ANY(${push(campaign.targetSubjectIds)}::uuid[])`);
+    if (facultyFilter) conditions.push(`ta.faculty_id = ANY(${push(campaign.targetFacultyIds)}::uuid[])`);
     if (options.studentId) conditions.push(`st.id = ${push(options.studentId)}`);
 
     const { rows } = await query<{ student_id: string; subject_id: string; faculty_id: string }>(
-      `SELECT DISTINCT st.id AS student_id, fsa.subject_id, fsa.faculty_id
-       FROM faculty_subject_assignments fsa
-       JOIN subjects s ON s.id = fsa.subject_id
-       JOIN students st ON st.program_id = s.program_id AND st.semester = s.semester AND st.section = fsa.section
+      `SELECT DISTINCT st.id AS student_id, ta.subject_id, ta.faculty_id
+       FROM teaching_assignments ta
+       JOIN subjects s ON s.id = ta.subject_id
+       JOIN students st ON st.program_id = s.program_id AND st.semester = s.semester AND st.section = ta.section
        WHERE ${conditions.join(' AND ')}`,
       params
     );

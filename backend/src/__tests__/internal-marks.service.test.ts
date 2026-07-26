@@ -4,6 +4,7 @@ const mockQuery = jest.fn();
 const mockWithTransaction = jest.fn();
 const mockAuditLog = jest.fn().mockResolvedValue(undefined);
 const mockIsFacultyAssigned = jest.fn();
+const mockResolveTeachingAssignmentId = jest.fn().mockResolvedValue('ta-id');
 
 jest.mock('../config/database', () => ({
   query: (...args: unknown[]) => mockQuery(...args),
@@ -16,6 +17,7 @@ jest.mock('../utils/audit', () => ({
 
 jest.mock('../services/assignment.service', () => ({
   isFacultyAssigned: (...args: unknown[]) => mockIsFacultyAssigned(...args),
+  resolveTeachingAssignmentId: (...args: unknown[]) => mockResolveTeachingAssignmentId(...args),
 }));
 
 import * as marksService from '../services/internal-marks.service';

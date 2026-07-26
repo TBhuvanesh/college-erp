@@ -33,9 +33,9 @@ export default function FacultySubjects() {
     if (!accessToken) return;
     setLoading(true);
     try {
-      const assignmentRes = await apiFetch("/attendance/my-assignments", {}, accessToken);
-      const activeAssignments: AssignmentDetail[] = assignmentRes.success && assignmentRes.data?.assignments
-        ? assignmentRes.data.assignments.filter((a: AssignmentDetail) => a.isActive)
+      const assignmentRes = await apiFetch("/teaching-assignments/my", {}, accessToken);
+      const activeAssignments: AssignmentDetail[] = assignmentRes.success && assignmentRes.data?.teachingAssignments
+        ? assignmentRes.data.teachingAssignments.map((a: any) => ({ ...a, isActive: a.status === "active" }))
         : [];
       setAssignments(activeAssignments);
 

@@ -59,6 +59,7 @@ export default function HODDashboard() {
   const [data, setData] = useState<HODDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -81,7 +82,17 @@ export default function HODDashboard() {
     };
 
     fetchHODStats();
-  }, [accessToken]);
+  }, [accessToken, refetchTrigger]);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setRefetchTrigger((prev) => prev + 1);
+    };
+    window.addEventListener('realtimeDashboardUpdate', handleUpdate);
+    return () => {
+      window.removeEventListener('realtimeDashboardUpdate', handleUpdate);
+    };
+  }, []);
 
   // Mock department specific comparison
   const workloadData = [

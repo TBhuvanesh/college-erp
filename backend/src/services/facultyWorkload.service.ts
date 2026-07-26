@@ -45,7 +45,7 @@ export async function calculateFacultyWorkload(userId: string, facultyId: string
   ] = await Promise.all([
     query<{ full_name: string }>('SELECT full_name FROM faculty WHERE id = $1', [facultyId]),
     query<{ count: string }>(
-      `SELECT COUNT(DISTINCT subject_id)::text AS count FROM faculty_subject_assignments
+      `SELECT COUNT(DISTINCT subject_id)::text AS count FROM teaching_assignments
        WHERE faculty_id = $1 AND is_active = TRUE AND deleted_at IS NULL`,
       [facultyId]
     ),
@@ -92,7 +92,7 @@ export async function calculateFacultyWorkload(userId: string, facultyId: string
       [facultyId]
     ),
     query<{ count: string }>(
-      `SELECT COUNT(*)::text AS count FROM faculty_subject_assignments fsa
+      `SELECT COUNT(*)::text AS count FROM teaching_assignments fsa
        WHERE fsa.faculty_id = $1 AND fsa.is_active = TRUE AND fsa.deleted_at IS NULL
          AND NOT EXISTS (
            SELECT 1 FROM attendance a
@@ -101,15 +101,12 @@ export async function calculateFacultyWorkload(userId: string, facultyId: string
          )`,
       [facultyId]
     ),
+    // Sourced from result_entry_tasks (Teaching Assignment resolved,
+    // Scripts-Distributed-triggered) instead of an ad-hoc internal_marks
+    // heuristic — the single source of truth for "pending result entry".
     query<{ count: string }>(
-      `SELECT COUNT(*)::text AS count FROM exams e
-       WHERE e.faculty_id = $1 AND e.status = 'Completed' AND e.exam_type IN ('Mid-1', 'Mid-2', 'Internal')
-         AND e.exam_date >= CURRENT_DATE - INTERVAL '30 days' AND e.deleted_at IS NULL
-         AND NOT EXISTS (
-           SELECT 1 FROM internal_marks im
-           WHERE im.subject_id = e.subject_id AND im.section = e.section
-             AND im.assessment_type::text = e.exam_type::text
-         )`,
+      `SELECT COUNT(*)::text AS count FROM result_entry_tasks
+       WHERE faculty_id = $1 AND deleted_at IS NULL AND status NOT IN ('published', 'closed')`,
       [facultyId]
     ),
     query<{ count: string }>(

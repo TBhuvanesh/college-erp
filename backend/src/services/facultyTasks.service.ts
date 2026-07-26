@@ -11,7 +11,7 @@ export async function generateTodayTasks(facultyId: string): Promise<FacultyTask
   const [pendingAttendance, todayLessons, todayQuizzes, pendingEvaluations, todayMeetings, marksPending, todayInvigilation] = await Promise.all([
     query<{ subject_id: string; subject_code: string; subject_name: string; section: string }>(
       `SELECT fsa.subject_id, s.code AS subject_code, s.name AS subject_name, fsa.section
-       FROM faculty_subject_assignments fsa
+       FROM teaching_assignments fsa
        JOIN subjects s ON s.id = fsa.subject_id
        WHERE fsa.faculty_id = $1 AND fsa.is_active = TRUE AND fsa.deleted_at IS NULL AND s.deleted_at IS NULL
          AND NOT EXISTS (
@@ -50,15 +50,19 @@ export async function generateTodayTasks(facultyId: string): Promise<FacultyTask
        WHERE mn.mentor_id = $1 AND mn.deleted_at IS NULL AND mn.follow_up_date = CURRENT_DATE`,
       [facultyId]
     ),
+    // Result entry tasks are the single source of truth for "marks pending" —
+    // created automatically when an exam reaches Scripts Distributed and
+    // resolved through the faculty's Teaching Assignment (see
+    // examination.service.ts / resultEntryTask.service.ts), not an ad-hoc
+    // internal_marks NOT EXISTS heuristic.
     query<{ exam_id: string; subject_code: string; exam_type: string; section: string }>(
-      `SELECT e.id AS exam_id, s.code AS subject_code, e.exam_type::text AS exam_type, e.section
-       FROM exams e JOIN subjects s ON s.id = e.subject_id
-       WHERE e.faculty_id = $1 AND e.status = 'Completed' AND e.exam_type IN ('Mid-1', 'Mid-2', 'Internal')
-         AND e.exam_date >= CURRENT_DATE - INTERVAL '30 days' AND e.deleted_at IS NULL
-         AND NOT EXISTS (
-           SELECT 1 FROM internal_marks im WHERE im.subject_id = e.subject_id AND im.section = e.section
-             AND im.assessment_type::text = e.exam_type::text
-         )`,
+      `SELECT ret.exam_id, s.code AS subject_code, e.exam_type::text AS exam_type, ta.section
+       FROM result_entry_tasks ret
+       JOIN teaching_assignments ta ON ta.id = ret.teaching_assignment_id
+       JOIN subjects s ON s.id = ta.subject_id
+       JOIN exams e ON e.id = ret.exam_id
+       WHERE ret.faculty_id = $1 AND ret.deleted_at IS NULL
+         AND ret.status NOT IN ('published', 'closed')`,
       [facultyId]
     ),
     query<{ id: string; room_name: string; start_time: string; end_time: string }>(
@@ -126,9 +130,9 @@ export async function generateTodayTasks(facultyId: string): Promise<FacultyTask
 
   for (const r of marksPending.rows) {
     tasks.push({
-      id: `internal-marks-${r.exam_id}`,
+      id: `result-entry-${r.exam_id}`,
       type: 'internal_marks',
-      title: `Submit internal marks for ${r.subject_code} - ${r.exam_type} (Section ${r.section})`,
+      title: `Enter results for ${r.subject_code} - ${r.exam_type} (Section ${r.section})`,
       context: null,
       priority: 'high',
       dueDate: null,

@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
-import { SimulationProvider } from "@/context/SimulationContext";
-import { AuthProvider } from "@/context/AuthContext";
-import { PermissionProvider } from "@/context/PermissionContext";
+import { AppProviders } from "@/providers/AppProviders";
 import "./globals.css";
 
 const inter = Inter({
@@ -34,11 +32,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full bg-slate-50 dark:bg-neutral-950 text-slate-900 dark:text-neutral-100 antialiased flex flex-col font-sans">
-        <SimulationProvider>
-          <AuthProvider>
-            <PermissionProvider>{children}</PermissionProvider>
-          </AuthProvider>
-        </SimulationProvider>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );
