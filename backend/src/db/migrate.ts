@@ -54,6 +54,7 @@ const MIGRATION_FILES = [
   '046_academic_import_engine.sql',
   '047_student_import_profile_fields.sql',
   '048_import_jobs_mode.sql',
+  '049_workflow_event_coverage.sql',
 ];
 
 async function runMigrations(): Promise<void> {
@@ -289,6 +290,34 @@ async function runMigrations(): Promise<void> {
       } else if (file === '046_academic_import_engine.sql') {
         const enumAdditions = [
           "ALTER TYPE workflow_trigger_event ADD VALUE IF NOT EXISTS 'student_import.completed'",
+        ];
+        for (const stmt of enumAdditions) {
+          try {
+            await client.query(stmt);
+            console.log(`  ${stmt}`);
+          } catch (err: any) {
+            if (err.message && err.message.includes('already exists')) {
+              console.log('  Enum value already exists, skipping.');
+            } else {
+              throw err;
+            }
+          }
+        }
+
+        await client.query('BEGIN');
+        await client.query(sql);
+        await client.query(
+          'INSERT INTO schema_migrations (version) VALUES ($1)',
+          [file]
+        );
+        await client.query('COMMIT');
+      } else if (file === '049_workflow_event_coverage.sql') {
+        const enumAdditions = [
+          "ALTER TYPE workflow_trigger_event ADD VALUE IF NOT EXISTS 'attendance.marked'",
+          "ALTER TYPE workflow_trigger_event ADD VALUE IF NOT EXISTS 'marks.published'",
+          "ALTER TYPE workflow_trigger_event ADD VALUE IF NOT EXISTS 'feedback.published'",
+          "ALTER TYPE workflow_trigger_event ADD VALUE IF NOT EXISTS 'mentor.assigned'",
+          "ALTER TYPE workflow_trigger_event ADD VALUE IF NOT EXISTS 'fee.paid'",
         ];
         for (const stmt of enumAdditions) {
           try {

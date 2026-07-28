@@ -33,6 +33,13 @@ const withRows = (rows: unknown[]) => ({ rows });
 
 beforeEach(() => {
   mockQuery.mockReset();
+  // Default fallback for any query beyond what a given test explicitly
+  // queues via mockResolvedValueOnce — covers the additional
+  // departments/teachingAssignments/results/notifications/rooms categories
+  // added to search.service.ts without requiring every existing test to
+  // pad out its mock sequence by hand. Explicit mockResolvedValueOnce calls
+  // still take priority and are consumed first, in order.
+  mockQuery.mockResolvedValue(EMPTY);
 });
 
 // ── Admin search ───────────────────────────────────────────────────────────────
@@ -215,12 +222,12 @@ describe('search — faculty role', () => {
     await search('fac-user-id', 'faculty', 'test');
 
     const studentSql = mockQuery.mock.calls[1][0] as string;
-    expect(studentSql).toContain('faculty_subject_assignments');
+    expect(studentSql).toContain('teaching_assignments');
     // Scoping can be implemented via JOIN or EXISTS; both produce correct results
-    expect(studentSql).toMatch(/fsa\.faculty_id\s*=\s*\$1/);
+    expect(studentSql).toMatch(/ta\.faculty_id\s*=\s*\$1/);
   });
 
-  it('subject query uses faculty_subject_assignments JOIN', async () => {
+  it('subject query uses teaching_assignments JOIN', async () => {
     mockQuery
       .mockResolvedValueOnce(withRows([{ id: 'fac-uuid', department_id: 'dept-uuid' }]))
       .mockResolvedValueOnce(EMPTY).mockResolvedValueOnce(EMPTY)
@@ -230,7 +237,7 @@ describe('search — faculty role', () => {
     await search('fac-user-id', 'faculty', 'test');
 
     const subjectSql = mockQuery.mock.calls[2][0] as string;
-    expect(subjectSql).toContain('faculty_subject_assignments');
+    expect(subjectSql).toContain('teaching_assignments');
     expect(subjectSql).toContain('department_name');
   });
 
@@ -272,7 +279,7 @@ describe('search — faculty role', () => {
     await search('fac-user-id', 'faculty', 'test');
 
     const examSql = mockQuery.mock.calls[5][0] as string;
-    expect(examSql).toContain('faculty_subject_assignments');
+    expect(examSql).toContain('teaching_assignments');
     expect(examSql).toContain('exam_type');
   });
 

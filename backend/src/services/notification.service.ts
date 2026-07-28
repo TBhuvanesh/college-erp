@@ -2,6 +2,8 @@ import { query } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
 import { eventBus } from './eventBus.service';
+import { getFacultyCoreByUserId } from '../registries/facultyRegistry.service';
+import { getStudentCoreByUserId } from '../registries/studentRegistry.service';
 import type { Role } from '../types/roles';
 import type {
   Notification,
@@ -145,11 +147,12 @@ async function enrichSource(
 // ── Role context helpers ─────────────────────────────────────────────────────────
 
 async function resolveFacultyDept(userId: string): Promise<string | null> {
-  const { rows } = await query<{ department_id: string }>(
-    'SELECT department_id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-    [userId]
-  );
-  return rows[0]?.department_id ?? null;
+  try {
+    const faculty = await getFacultyCoreByUserId(userId);
+    return faculty.departmentId;
+  } catch {
+    return null;
+  }
 }
 
 interface StudentCtx {
@@ -158,12 +161,12 @@ interface StudentCtx {
 }
 
 async function resolveStudentCtx(userId: string): Promise<StudentCtx | null> {
-  const { rows } = await query<{ department_id: string; semester: number }>(
-    'SELECT department_id, semester FROM students WHERE user_id = $1 AND deleted_at IS NULL',
-    [userId]
-  );
-  if (!rows[0]) return null;
-  return { departmentId: rows[0].department_id, semester: rows[0].semester };
+  try {
+    const student = await getStudentCoreByUserId(userId);
+    return { departmentId: student.departmentId, semester: student.semester };
+  } catch {
+    return null;
+  }
 }
 
 // ── Role-scoped WHERE conditions ─────────────────────────────────────────────────

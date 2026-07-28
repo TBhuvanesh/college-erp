@@ -19,6 +19,11 @@ router.use(requireRole('admin'));
 router.get('/entity-types', controller.listEntityTypes);
 router.get('/jobs', controller.listJobs);
 router.get('/jobs/:jobId', controller.getJob);
+
+// ── Student Placement Sync routes (Nominal Rolls workbook sync) ──
+router.post('/student-sync/preview', upload.single('file'), controller.previewStudentSync);
+router.post('/student-sync/commit', controller.commitStudentSync);
+
 router.get('/:entityType/replace-impact', controller.replaceImpact);
 
 router.post('/:entityType/preview', upload.single('file'), controller.preview);

@@ -1,45 +1,26 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { useStudents, useDepartments } from "@/hooks/useRegistry";
 import { apiFetch } from "@/lib/api";
 import { 
-  Search, 
-  Filter, 
-  Eye, 
-  ChevronRight, 
-  ChevronLeft,
-  X, 
-  BookOpen, 
-  CreditCard, 
   Sparkles,
   Plus,
   Edit,
   Trash2,
-  Loader2,
-  CheckCircle
+  Eye,
+  X,
+  BookOpen,
+  CreditCard
 } from "lucide-react";
 import { StudentFormDrawer } from "@/components/StudentFormDrawer";
-import { DeleteConfirmationModal } from "@/components/DeleteConfirmationModal";
-
-interface Department {
-  id: string;
-  name: string;
-  code: string;
-}
-
-interface StudentSummary {
-  id: string;
-  rollNumber: string;
-  fullName: string;
-  email: string;
-  departmentName: string;
-  programName: string;
-  semester: number;
-  section?: string;
-  academicYear: string;
-  status: string;
-}
+import { SkeletonTable } from "@/components/UX/SkeletonLoaders";
+import { EmptyState } from "@/components/UX/EmptyState";
+import { UnifiedPagination } from "@/components/UX/UnifiedPagination";
+import { UnifiedSearchBar } from "@/components/UX/UnifiedSearchBar";
+import { ConfirmationDialog } from "@/components/UX/ConfirmationDialog";
 
 interface StudentDetail {
   id: string;
@@ -65,27 +46,44 @@ interface StudentMetrics {
 
 export default function AdminStudents() {
   const { accessToken } = useAuth();
+  const queryClient = useQueryClient();
 
-  // Filter & List state
-  const [studentsList, setStudentsList] = useState<StudentSummary[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  
+  // Filter persistence using localStorage
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [deptFilter, setDeptFilter] = useState("ALL");
-  const [semFilter, setSemFilter] = useState("ALL");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [deptFilter, setDeptFilter] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("erp_students_deptFilter") || "ALL";
+    }
+    return "ALL";
+  });
+  const [semFilter, setSemFilter] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("erp_students_semFilter") || "ALL";
+    }
+    return "ALL";
+  });
+  const [statusFilter, setStatusFilter] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("erp_students_statusFilter") || "ALL";
+    }
+    return "ALL";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("erp_students_deptFilter", deptFilter);
+  }, [deptFilter]);
+
+  useEffect(() => {
+    localStorage.setItem("erp_students_semFilter", semFilter);
+  }, [semFilter]);
+
+  useEffect(() => {
+    localStorage.setItem("erp_students_statusFilter", statusFilter);
+  }, [statusFilter]);
 
   // Pagination state
   const [page, setPage] = useState(1);
-  const [limit] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalStudents, setTotalStudents] = useState(0);
-
-  // Loading & error states
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [toastMsg, setToastMsg] = useState("");
+  const limit = 10;
 
   // Drawer / Modal states
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
@@ -97,153 +95,74 @@ export default function AdminStudents() {
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
 
   // Batch operations state
   const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
 
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      const allIds = new Set(studentsList.map((s) => s.id));
-      setSelectedStudentIds(allIds);
-    } else {
-      setSelectedStudentIds(new Set());
-    }
-  };
-
-  const handleSelectOne = (id: string, checked: boolean) => {
-    const newSet = new Set(selectedStudentIds);
-    if (checked) newSet.add(id);
-    else newSet.delete(id);
-    setSelectedStudentIds(newSet);
-  };
-
-  const handleBulkDeactivate = async () => {
-    if (!confirm(`Are you sure you want to deactivate ${selectedStudentIds.size} selected students?`)) return;
-    setBulkProcessing(true);
-    let successCount = 0;
-    try {
-      for (const id of Array.from(selectedStudentIds)) {
-        await apiFetch(`/students/${id}`, { method: "DELETE" }, accessToken);
-        successCount++;
-      }
-      triggerToast(`Successfully deactivated ${successCount} students.`);
-      setSelectedStudentIds(new Set());
-      fetchStudents();
-    } catch (err: any) {
-      triggerToast(`Error during bulk action: ${err.message}`);
-    } finally {
-      setBulkProcessing(false);
-    }
-  };
+  const [toastMsg, setToastMsg] = useState("");
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(""), 3000);
+    setTimeout(() => setToastMsg(""), 3500);
   };
 
-  // Fetch departments list for filter
+  // Queries
+  const { data: departmentsData = [] } = useDepartments();
+
+  const studentsQueryFilters = useMemo(() => ({
+    page,
+    limit,
+    search: searchTerm,
+    departmentId: deptFilter,
+    semester: semFilter,
+    status: statusFilter,
+  }), [page, limit, searchTerm, deptFilter, semFilter, statusFilter]);
+
+  const {
+    data: studentsResult,
+    isLoading: loadingStudents,
+    error: studentsError,
+  } = useStudents(studentsQueryFilters);
+
+  const studentsList = studentsResult?.students || [];
+  const totalPages = studentsResult?.pagination?.totalPages || 1;
+  const totalStudents = studentsResult?.pagination?.total || 0;
+
+  // Reset page when filters change
   useEffect(() => {
-    const fetchDepartments = async () => {
+    setPage(1);
+    setSelectedStudentIds(new Set());
+  }, [searchTerm, deptFilter, semFilter, statusFilter]);
+
+  // Fetch student detail when selectedStudentId changes
+  useEffect(() => {
+    if (!selectedStudentId) {
+      setSelectedStudent(null);
+      return;
+    }
+
+    const fetchStudentDetail = async () => {
+      setLoadingDetail(true);
       try {
-        const res = await apiFetch("/departments", {}, accessToken);
-        if (res.success && res.data?.departments) {
-          setDepartments(res.data.departments);
+        const res = await apiFetch(`/students/${selectedStudentId}`, {}, accessToken);
+        if (res.success && res.data?.student) {
+          setSelectedStudent(res.data.student);
         }
       } catch (err: any) {
-        console.error("Failed to load departments for filters", err);
+        triggerToast(err.message || "Failed to load student details");
+        setSelectedStudentId(null);
+      } finally {
+        setLoadingDetail(false);
       }
     };
-    fetchDepartments();
-  }, [accessToken]);
 
-  // Debounce search term
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-      setPage(1); // Reset to page 1 on search change
-      setSelectedStudentIds(new Set()); // Reset selection on filter change
-    }, 350);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
-
-  // Fetch students list
-  const fetchStudents = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const queryParams = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-      });
-
-      if (debouncedSearch.trim()) {
-        queryParams.append("search", debouncedSearch.trim());
-      }
-      if (deptFilter !== "ALL") {
-        queryParams.append("departmentId", deptFilter);
-      }
-      if (semFilter !== "ALL") {
-        queryParams.append("semester", semFilter);
-      }
-      if (statusFilter !== "ALL") {
-        queryParams.append("status", statusFilter.toLowerCase());
-      }
-
-      const res = await apiFetch(`/students?${queryParams.toString()}`, {}, accessToken);
-      
-      if (res.success && res.data) {
-        setStudentsList(res.data.students || []);
-        if (res.data.pagination) {
-          setTotalPages(res.data.pagination.totalPages || 1);
-          setTotalStudents(res.data.pagination.total || 0);
-        }
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to load students registry");
-    } finally {
-      setLoading(false);
-    }
-  }, [page, limit, debouncedSearch, deptFilter, semFilter, statusFilter, accessToken]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchStudents();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [fetchStudents]);
-
-  // Fetch single student detail
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!selectedStudentId) {
-        setSelectedStudent(null);
-        return;
-      }
-
-      const fetchStudentDetail = async () => {
-        setLoadingDetail(true);
-        try {
-          const res = await apiFetch(`/students/${selectedStudentId}`, {}, accessToken);
-          if (res.success && res.data?.student) {
-            setSelectedStudent(res.data.student);
-          }
-        } catch (err: any) {
-          triggerToast(err.message || "Failed to load student details");
-          setSelectedStudentId(null);
-        } finally {
-          setLoadingDetail(false);
-        }
-      };
-
-      fetchStudentDetail();
-    }, 0);
-
-    return () => clearTimeout(timer);
+    fetchStudentDetail();
   }, [selectedStudentId, accessToken]);
 
-  // Live academic metrics for the selected student — fetched from the real
-  // attendance / internal-marks / fees APIs (not a simulated data store).
+  // Fetch metrics for selected student
   const [metrics, setMetrics] = useState<StudentMetrics | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
 
@@ -303,6 +222,69 @@ export default function AdminStudents() {
     fetchMetrics();
   }, [selectedStudent, accessToken]);
 
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const allIds = new Set<string>(studentsList.map((s: any) => s.id as string));
+      setSelectedStudentIds(allIds);
+    } else {
+      setSelectedStudentIds(new Set<string>());
+    }
+  };
+
+  const handleSelectOne = (id: string, checked: boolean) => {
+    const newSet = new Set(selectedStudentIds);
+    if (checked) newSet.add(id);
+    else newSet.delete(id);
+    setSelectedStudentIds(newSet);
+  };
+
+  const handleBulkDeactivate = async () => {
+    setBulkProcessing(true);
+    let successCount = 0;
+    try {
+      for (const id of Array.from(selectedStudentIds)) {
+        await apiFetch(`/students/${id}`, { method: "DELETE" }, accessToken);
+        successCount++;
+      }
+      triggerToast(`Successfully deactivated ${successCount} students.`);
+      setSelectedStudentIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+    } catch (err: any) {
+      triggerToast(`Error during bulk action: ${err.message}`);
+    } finally {
+      setBulkProcessing(false);
+      setBulkConfirmOpen(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!studentToDelete) return;
+    setDeactivating(true);
+    try {
+      const res = await apiFetch(`/students/${studentToDelete.id}`, { method: "DELETE" }, accessToken);
+      if (res.success) {
+        triggerToast("Student profile deactivated successfully");
+        queryClient.invalidateQueries({ queryKey: ["students"] });
+        if (studentToDelete.id === selectedStudentId) {
+          setSelectedStudentId(null);
+        }
+      }
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to deactivate student profile");
+    } finally {
+      setDeactivating(false);
+      setDeleteConfirmOpen(false);
+      setStudentToDelete(null);
+    }
+  };
+
+  const handleResetFilters = () => {
+    setSearchTerm("");
+    setDeptFilter("ALL");
+    setSemFilter("ALL");
+    setStatusFilter("ALL");
+  };
+
   return (
     <div className="relative">
       {/* Toast Alert */}
@@ -336,31 +318,23 @@ export default function AdminStudents() {
       {/* Directory Filter controls */}
       <div className="bg-surface border border-border-subtle rounded-xl p-4 mb-6 flex flex-col md:flex-row gap-3">
         {/* Search */}
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-text-muted" />
-          <input
-            type="text"
-            placeholder="Search by name, email, or roll number..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs bg-background border border-border-subtle rounded text-text-primary focus:outline-none focus:border-neutral-700"
-          />
-        </div>
+        <UnifiedSearchBar
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Search by name, email, or roll number..."
+          className="flex-1"
+        />
 
         {/* Dept Filter */}
         <div className="w-full md:w-48 flex items-center gap-2 bg-background border border-border-subtle rounded px-2 text-xs text-text-primary">
-          <Filter size={12} className="text-text-muted" />
           <span className="text-text-muted">Dept:</span>
           <select
             value={deptFilter}
-            onChange={(e) => {
-              setDeptFilter(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => setDeptFilter(e.target.value)}
             className="bg-transparent text-text-primary cursor-pointer py-2 flex-1 focus:outline-none"
           >
             <option value="ALL">All Departments</option>
-            {departments.map((dept) => (
+            {departmentsData.map((dept: any) => (
               <option key={dept.id} value={dept.id}>
                 {dept.code}
               </option>
@@ -370,14 +344,10 @@ export default function AdminStudents() {
 
         {/* Semester Filter */}
         <div className="w-full md:w-48 flex items-center gap-2 bg-background border border-border-subtle rounded px-2 text-xs text-text-primary">
-          <Filter size={12} className="text-text-muted" />
           <span className="text-text-muted">Sem:</span>
           <select
             value={semFilter}
-            onChange={(e) => {
-              setSemFilter(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => setSemFilter(e.target.value)}
             className="bg-transparent text-text-primary cursor-pointer py-2 flex-1 focus:outline-none"
           >
             <option value="ALL">All Semesters</option>
@@ -391,14 +361,10 @@ export default function AdminStudents() {
 
         {/* Status Filter */}
         <div className="w-full md:w-48 flex items-center gap-2 bg-background border border-border-subtle rounded px-2 text-xs text-text-primary">
-          <Filter size={12} className="text-text-muted" />
           <span className="text-text-muted">Status:</span>
           <select
             value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => setStatusFilter(e.target.value)}
             className="bg-transparent text-text-primary cursor-pointer py-2 flex-1 focus:outline-none"
           >
             <option value="ALL">All Statuses</option>
@@ -414,9 +380,9 @@ export default function AdminStudents() {
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* Data List Table */}
         <div className="flex-1 w-full bg-surface border border-border-subtle rounded-xl overflow-hidden">
-          {error && (
+          {studentsError && (
             <div className="p-4 bg-rose-500/10 border-b border-border-subtle text-rose-400 text-xs font-semibold font-mono">
-              Error: {error}
+              Error loading registry. Please retry.
             </div>
           )}
 
@@ -426,22 +392,19 @@ export default function AdminStudents() {
             {selectedStudentIds.size > 0 && (
               <div className="sticky top-0 left-0 right-0 z-20 bg-blue-600/90 backdrop-blur border-b border-blue-500/50 p-2.5 flex items-center justify-between animate-fade-in shadow-xl">
                 <span className="text-xs font-bold text-white ml-2 flex items-center gap-2">
-                  <CheckCircle size={14} />
                   {selectedStudentIds.size} student{selectedStudentIds.size > 1 ? "s" : ""} selected
                 </span>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setSelectedStudentIds(new Set())}
-                    className="px-3 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-[10px] font-semibold transition"
+                    className="px-3 py-1.5 rounded bg-blue-700 hover:bg-blue-800 text-white text-[10px] font-semibold transition cursor-pointer"
                   >
                     Clear
                   </button>
                   <button
-                    onClick={handleBulkDeactivate}
-                    disabled={bulkProcessing}
-                    className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-[10px] font-bold transition flex items-center gap-1.5 shadow-lg"
+                    onClick={() => setBulkConfirmOpen(true)}
+                    className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-bold transition flex items-center gap-1.5 shadow-lg cursor-pointer"
                   >
-                    {bulkProcessing ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
                     Bulk Deactivate
                   </button>
                 </div>
@@ -471,15 +434,14 @@ export default function AdminStudents() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-subtle text-text-secondary">
-                {loading ? (
+                {loadingStudents ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-12 text-text-muted">
-                      <Loader2 className="animate-spin text-blue-500 mx-auto mb-2" size={20} />
-                      <span className="font-mono text-[10px]">Accessing student registry...</span>
+                    <td colSpan={10} className="p-0">
+                      <SkeletonTable cols={9} rows={8} />
                     </td>
                   </tr>
                 ) : studentsList.length > 0 ? (
-                  studentsList.map((student) => (
+                  studentsList.map((student: any) => (
                     <tr
                       key={student.id}
                       tabIndex={0}
@@ -564,8 +526,19 @@ export default function AdminStudents() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={10} className="text-center py-12 text-text-muted font-mono">
-                      No matching student profiles found in registry.
+                    <td colSpan={10} className="p-6">
+                      <EmptyState
+                        title="No Students Found"
+                        description="No student registers match the current query filters or search criteria."
+                        actionButton={
+                          <button
+                            onClick={handleResetFilters}
+                            className="px-3 py-1.5 text-xs font-semibold rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-750 dark:text-neutral-300 text-text-primary cursor-pointer transition"
+                          >
+                            Reset Filter Options
+                          </button>
+                        }
+                      />
                     </td>
                   </tr>
                 )}
@@ -575,13 +548,13 @@ export default function AdminStudents() {
 
           {/* Mobile Card View */}
           <div className="block md:hidden divide-y divide-border-subtle">
-            {loading ? (
-              <div className="text-center py-12 text-text-muted">
-                <Loader2 className="animate-spin text-blue-500 mx-auto mb-2" size={20} />
-                <span className="font-mono text-[10px]">Accessing student registry...</span>
+            {loadingStudents ? (
+              <div className="p-4 space-y-4">
+                <div className="h-20 bg-neutral-100 dark:bg-neutral-800 rounded animate-pulse" />
+                <div className="h-20 bg-neutral-100 dark:bg-neutral-800 rounded animate-pulse" />
               </div>
             ) : studentsList.length > 0 ? (
-              studentsList.map((student) => (
+              studentsList.map((student: any) => (
                 <div
                   key={student.id}
                   className={`p-4 hover:bg-surface/10 transition cursor-pointer flex flex-col gap-2.5 ${
@@ -642,7 +615,7 @@ export default function AdminStudents() {
                   <div className="flex justify-end gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => setSelectedStudentId(student.id)}
-                      className="p-1.5 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 border dark:border-neutral-800 border-border-subtle dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary transition flex items-center gap-1 text-[10px]"
+                      className="p-1.5 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 border dark:border-neutral-800 border-border-subtle dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary transition flex items-center gap-1 text-[10px] cursor-pointer"
                     >
                       <Eye size={12} />
                       <span>View</span>
@@ -652,7 +625,7 @@ export default function AdminStudents() {
                         setEditingStudentId(student.id);
                         setFormDrawerOpen(true);
                       }}
-                      className="p-1.5 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 border dark:border-neutral-800 border-border-subtle dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary transition flex items-center gap-1 text-[10px]"
+                      className="p-1.5 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 border dark:border-neutral-800 border-border-subtle dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary transition flex items-center gap-1 text-[10px] cursor-pointer"
                     >
                       <Edit size={12} />
                       <span>Edit</span>
@@ -662,7 +635,7 @@ export default function AdminStudents() {
                         setStudentToDelete({ id: student.id, name: student.fullName });
                         setDeleteConfirmOpen(true);
                       }}
-                      className="p-1.5 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 border dark:border-neutral-800 border-border-subtle text-rose-500 hover:text-rose-600 transition flex items-center gap-1 text-[10px]"
+                      className="p-1.5 rounded dark:bg-neutral-850 bg-neutral-100 dark:hover:bg-neutral-800 hover:bg-neutral-200 border dark:border-neutral-800 border-border-subtle text-rose-500 hover:text-rose-600 transition flex items-center gap-1 text-[10px] cursor-pointer"
                     >
                       <Trash2 size={12} />
                       <span>Deactivate</span>
@@ -671,20 +644,39 @@ export default function AdminStudents() {
                 </div>
               ))
             ) : (
-              <div className="text-center py-12 dark:text-neutral-500 text-text-muted font-mono text-xs">
-                No matching student profiles found in registry.
-              </div>
+              <EmptyState
+                title="No Students Found"
+                description="No student registers match the current query filters."
+                actionButton={
+                  <button
+                    onClick={handleResetFilters}
+                    className="px-3 py-1.5 text-xs font-semibold rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-750 dark:text-neutral-300 text-text-primary cursor-pointer transition"
+                  >
+                    Reset Filter Options
+                  </button>
+                }
+              />
             )}
           </div>
+
+          {/* Unified Pagination */}
+          {!loadingStudents && studentsList.length > 0 && (
+            <UnifiedPagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              totalItems={totalStudents}
+              itemsPerPage={limit}
+            />
+          )}
         </div>
 
         {/* Right Side Slide-out Details Drawer (renders if student selected) */}
         {selectedStudentId && (
           <div className="w-full lg:w-96 glass-card dark:border-neutral-800 border-border-subtle bg-surface rounded-xl p-5 shadow-2xl relative animate-scale-up shrink-0">
             {loadingDetail || (selectedStudent && metricsLoading && !metrics) ? (
-              <div className="py-20 flex flex-col items-center justify-center dark:text-neutral-500 text-text-muted">
-                <Loader2 className="animate-spin text-blue-500 mb-2" size={20} />
-                <span className="font-mono text-[9px]">Fetching record...</span>
+              <div className="py-20 flex flex-col items-center justify-center dark:text-neutral-500 text-text-muted animate-pulse">
+                <span className="text-xs font-mono">Fetching record...</span>
               </div>
             ) : selectedStudent && metrics ? (
               <>
@@ -707,7 +699,7 @@ export default function AdminStudents() {
                   <div className="min-w-0 flex-1">
                     <h4 className="text-sm font-bold dark:text-white text-text-primary truncate">{selectedStudent.fullName}</h4>
                     <p className="text-[10px] dark:text-neutral-500 text-text-secondary font-mono mt-0.5">
-                      {selectedStudent.rollNumber} / {selectedStudent.department.code}
+                      {selectedStudent.rollNumber} / {selectedStudent.department?.code || ""}
                     </p>
                     <p className="text-[10px] dark:text-neutral-500 text-text-secondary font-mono truncate">{selectedStudent.email}</p>
                     <span className="text-[9px] dark:text-neutral-605 text-text-muted font-mono mt-0.5 block">
@@ -726,8 +718,8 @@ export default function AdminStudents() {
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="dark:text-neutral-500 text-text-secondary">Program:</span>
-                    <strong className="dark:text-white text-text-primary text-right truncate max-w-[180px]" title={selectedStudent.program.name}>
-                      {selectedStudent.program.name} ({selectedStudent.program.code})
+                    <strong className="dark:text-white text-text-primary text-right truncate max-w-[180px]" title={selectedStudent.program?.name || ""}>
+                      {selectedStudent.program?.name || ""} ({selectedStudent.program?.code || ""})
                     </strong>
                   </div>
                   <div className="flex justify-between text-xs">
@@ -791,7 +783,7 @@ export default function AdminStudents() {
                         metrics.grades.map((g) => (
                           <div
                             key={g.id}
-                            className="p-2 rounded dark:bg-neutral-950/20 bg-background border dark:border-neutral-900 border-border-subtle flex items-center justify-between text-xs"
+                            className="p-2 rounded dark:bg-neutral-955/20 bg-background border dark:border-neutral-900 border-border-subtle flex items-center justify-between text-xs"
                           >
                             <div>
                               <p className="font-semibold dark:text-white text-text-primary leading-none">{g.subjectName}</p>
@@ -828,7 +820,7 @@ export default function AdminStudents() {
                         metrics.invoices.map((inv) => (
                           <div
                             key={inv.id}
-                            className="p-2 rounded dark:bg-neutral-950/20 bg-background border dark:border-neutral-900 border-border-subtle flex items-center justify-between text-xs"
+                            className="p-2 rounded dark:bg-neutral-955/20 bg-background border dark:border-neutral-900 border-border-subtle flex items-center justify-between text-xs"
                           >
                             <div>
                               <p className="font-semibold dark:text-white text-text-primary leading-none">{inv.type}</p>
@@ -879,8 +871,7 @@ export default function AdminStudents() {
         }}
         onSuccess={(msg) => {
           triggerToast(msg);
-          fetchStudents();
-          // If editing selected student, trigger refresh
+          queryClient.invalidateQueries({ queryKey: ["students"] });
           if (editingStudentId === selectedStudentId) {
             setSelectedStudentId(null);
             setTimeout(() => setSelectedStudentId(editingStudentId), 100);
@@ -889,22 +880,31 @@ export default function AdminStudents() {
         studentId={editingStudentId}
       />
 
-      {/* Delete Confirmation Modal */}
-      <DeleteConfirmationModal
+      {/* Deactivate Single Confirmation Dialog */}
+      <ConfirmationDialog
         isOpen={deleteConfirmOpen}
         onClose={() => {
           setDeleteConfirmOpen(false);
           setStudentToDelete(null);
         }}
-        onSuccess={(msg) => {
-          triggerToast(msg);
-          fetchStudents();
-          if (studentToDelete?.id === selectedStudentId) {
-            setSelectedStudentId(null);
-          }
-        }}
-        studentId={studentToDelete?.id || null}
-        studentName={studentToDelete?.name || null}
+        onConfirm={handleDeleteConfirm}
+        title="Deactivate Student Profile"
+        message={`Are you sure you want to deactivate ${studentToDelete?.name || "this student"}? This will suspend their portal access immediately.`}
+        confirmText="Deactivate"
+        isDestructive={true}
+        isLoading={deactivating}
+      />
+
+      {/* Bulk Deactivate Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={bulkConfirmOpen}
+        onClose={() => setBulkConfirmOpen(false)}
+        onConfirm={handleBulkDeactivate}
+        title="Bulk Deactivate Student Profiles"
+        message={`Are you sure you want to deactivate the ${selectedStudentIds.size} selected student profiles? This will block their access immediately.`}
+        confirmText="Deactivate All"
+        isDestructive={true}
+        isLoading={bulkProcessing}
       />
     </div>
   );

@@ -785,7 +785,8 @@ export async function getStudentReport(userId: string, role: Role, filters: Repo
      assign AS (
        SELECT st2.id AS student_id, COUNT(a.id) AS total, COUNT(asub.id) AS submitted
        FROM students st2
-       JOIN subjects s2 ON s2.program_id = st2.program_id AND s2.semester = st2.semester AND s2.deleted_at IS NULL
+       JOIN subject_curriculum_mappings scm2 ON scm2.program_id = st2.program_id AND scm2.semester = st2.semester AND scm2.deleted_at IS NULL
+       JOIN subjects s2 ON s2.id = scm2.subject_id AND s2.deleted_at IS NULL
        JOIN assignments a ON a.subject_id = s2.id AND a.deleted_at IS NULL
        LEFT JOIN assignment_submissions asub
          ON asub.assignment_id = a.id AND asub.student_id = st2.id AND asub.deleted_at IS NULL

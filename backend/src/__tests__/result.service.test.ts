@@ -447,7 +447,11 @@ describe('updateResult', () => {
 
 describe('publishResults', () => {
   it('publishes all Draft results for a subject+section', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'r1' }, { id: 'r2' }, { id: 'r3' }] });
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ id: 'r1' }, { id: 'r2' }, { id: 'r3' }] })
+      .mockResolvedValueOnce({ rows: [{ department_id: 'dept-1', semester: 3 }] }) // curriculum lookup for marks.published event
+      .mockResolvedValueOnce({ rows: [] }) // emitWorkflowEvent: fetchActiveRules
+      .mockResolvedValueOnce({ rows: [] }); // emitWorkflowEvent: logExecution
 
     const result = await publishResults({ subjectId: 'sub-uuid-1', section: 'A' }, 'admin-user');
     expect(result.published).toBe(3);

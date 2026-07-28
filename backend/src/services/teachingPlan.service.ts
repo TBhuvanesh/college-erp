@@ -257,8 +257,8 @@ export async function assertTeachingPlanAccess(row: TeachingPlanRow, userId: str
     `SELECT s.id
      FROM subjects s
      JOIN subject_curriculum_mappings scm ON scm.subject_id = s.id
-     WHERE s.id = $1 AND scm.program_id = $2 AND scm.semester = $3 AND s.deleted_at IS NULL`,
-    [row.subject_id, ctx.programId, ctx.semester]
+     WHERE s.id = $1 AND scm.department_id = $2 AND scm.semester = $3 AND s.deleted_at IS NULL`,
+    [row.subject_id, ctx.departmentId, ctx.semester]
   );
   if (!rows[0]) throw AppError.forbidden('This teaching plan is not in your enrolled subjects');
   if (ctx.section && row.section !== ctx.section) {

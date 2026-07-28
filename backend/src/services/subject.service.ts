@@ -1,6 +1,7 @@
 import { query } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
+import { getDepartment } from '../registries/academicRegistry.service';
 import type {
   CreateSubjectInput,
   UpdateSubjectInput,
@@ -275,12 +276,8 @@ export async function createSubject(
   data: CreateSubjectInput,
   actorId: string
 ): Promise<SubjectDetail> {
-  // Validate department exists
-  const { rows: dept } = await query<{ id: string }>(
-    'SELECT id FROM departments WHERE id = $1 AND deleted_at IS NULL',
-    [data.departmentId]
-  );
-  if (!dept[0]) throw AppError.notFound('Department not found');
+  // Validate department exists (via AcademicRegistry — the single source of truth)
+  await getDepartment(data.departmentId);
 
   let calculatedSemester = data.semester || 1;
   if (data.year && data.semesterRaw) {
@@ -569,8 +566,7 @@ export async function createCurriculumMapping(
   const { rows: sub } = await query('SELECT id FROM subjects WHERE id = $1 AND deleted_at IS NULL', [subjectId]);
   if (!sub[0]) throw AppError.notFound('Subject not found');
 
-  const { rows: dept } = await query('SELECT id FROM departments WHERE id = $1 AND deleted_at IS NULL', [data.departmentId]);
-  if (!dept[0]) throw AppError.notFound('Department not found');
+  await getDepartment(data.departmentId);
 
   let calculatedSemester = data.semester || 1;
   if (data.year && data.semesterRaw) {

@@ -5,6 +5,7 @@ import { query } from '../../config/database';
 
 import { auditLog } from '../../utils/audit';
 import { findDepartmentByAlias } from '../../services/subjectImport.service';
+import { getAllCurriculumKeys } from '../../registries/curriculumRegistry.service';
 import { cell } from '../ExcelParser';
 import type { ParsedSheet } from '../ExcelParser';
 import type { ImportStrategy, ValidateRowsResult, CommitBatchResult, ActionedRow } from '../ImportStrategy';
@@ -154,14 +155,12 @@ async function validateRows(sheet: ParsedSheet, mode: ImportMode): Promise<Valid
 
   // ── Bulk-fetch everything needed to resolve/validate rows — one query
   // each, never per-row, however many rows are in the file (3,000-5,000+). ──
-  const [{ rows: departments }, { rows: programs }, { rows: curriculumKeys }, { rows: existingStudents }] = await Promise.all([
+  const [{ rows: departments }, { rows: programs }, curriculumSet, { rows: existingStudents }] = await Promise.all([
     query<{ id: string; name: string; code: string }>('SELECT id, name, code FROM departments WHERE deleted_at IS NULL'),
     query<{ id: string; name: string; code: string; department_id: string; total_semesters: number }>(
       'SELECT id, name, code, department_id, total_semesters FROM programs WHERE is_active = TRUE AND deleted_at IS NULL'
     ),
-    query<{ department_id: string; regulation: string; semester: number }>(
-      `SELECT DISTINCT department_id, regulation, semester FROM subject_curriculum_mappings WHERE deleted_at IS NULL`
-    ),
+    getAllCurriculumKeys(),
     query<{ id: string; user_id: string; roll_number: string; email: string }>(
       `SELECT s.id, s.user_id, s.roll_number, u.email
        FROM students s JOIN users u ON u.id = s.user_id
@@ -169,7 +168,6 @@ async function validateRows(sheet: ParsedSheet, mode: ImportMode): Promise<Valid
     ),
   ]);
 
-  const curriculumSet = new Set(curriculumKeys.map((c) => `${c.department_id}::${c.regulation}::${c.semester}`));
   const dbStudentByRoll = new Map(existingStudents.map((s) => [s.roll_number.toUpperCase(), s]));
   const dbRollByEmail = new Map(existingStudents.map((s) => [s.email.toLowerCase(), s.roll_number.toUpperCase()]));
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { apiFetch } from "@/lib/api";
 import {
   listCampaigns,
@@ -13,34 +13,53 @@ import {
   getTemplates,
 } from "@/lib/feedback";
 import { CampaignForm } from "./CampaignForm";
+import { useDepartments, useFaculty, useSubjects } from "@/hooks/useRegistry";
 import { Plus, Loader2, Send, Lock, Archive, Pencil, Users, Calendar } from "lucide-react";
 
 export function CampaignManager({ accessToken }: { accessToken: string }) {
   const [campaigns, setCampaigns] = useState<FeedbackCampaign[]>([]);
   const [templates, setTemplates] = useState<FeedbackTemplate[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [faculties, setFaculties] = useState<any[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<FeedbackCampaign | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // Central registry query hooks
+  const { data: departmentsData = [] } = useDepartments();
+  const { data: facultyRes } = useFaculty({ limit: 200, status: "ACTIVE" });
+  const { data: subjectsRes } = useSubjects({ limit: 200, status: "ACTIVE" });
+
+  const departments = useMemo(() => {
+    return departmentsData.map((d: any) => ({ id: d.id, name: d.name }));
+  }, [departmentsData]);
+
+  const faculties = useMemo(() => {
+    return (facultyRes?.faculty || []).map((f: any) => ({
+      id: f.id,
+      full_name: f.fullName,
+      department_id: f.departmentId,
+    }));
+  }, [facultyRes]);
+
+  const subjects = useMemo(() => {
+    return (subjectsRes?.subjects || []).map((s: any) => ({
+      id: s.id,
+      code: s.code,
+      name: s.name,
+      semester: s.semester,
+      departmentId: s.departmentId,
+    }));
+  }, [subjectsRes]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [campaignsData, templatesData, deptRes, facRes, subRes] = await Promise.all([
+      const [campaignsData, templatesData] = await Promise.all([
         listCampaigns({}, accessToken),
         getTemplates(accessToken),
-        apiFetch("/departments", {}, accessToken),
-        apiFetch("/faculty?limit=200", {}, accessToken),
-        apiFetch("/subjects?limit=200", {}, accessToken),
       ]);
       setCampaigns(campaignsData);
       setTemplates(templatesData);
-      if (deptRes.success) setDepartments(deptRes.data?.departments || []);
-      if (facRes.success) setFaculties(facRes.data?.faculty || []);
-      if (subRes.success) setSubjects(subRes.data?.subjects || []);
     } catch (err) {
       console.error("Failed to load campaigns", err);
     } finally {

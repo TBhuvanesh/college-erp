@@ -1,6 +1,8 @@
 import { query, withTransaction } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
+import { emitWorkflowEvent } from './workflowEngine.service';
+import { getProgram } from '../registries/academicRegistry.service';
 import type {
   FeeDetail,
   FeeSummary,
@@ -392,12 +394,8 @@ export async function bulkCreateFees(
   let created = 0;
 
   if (data.programId) {
-    // Validate program exists
-    const { rows: prog } = await query<{ id: string }>(
-      'SELECT id FROM programs WHERE id = $1',
-      [data.programId]
-    );
-    if (!prog[0]) throw AppError.notFound('Program not found');
+    // Validate program exists (via AcademicRegistry — the single source of truth)
+    await getProgram(data.programId);
 
     const { rows } = await query<{ id: string }>(
       `INSERT INTO fees
@@ -551,9 +549,11 @@ export async function recordPayment(
   data: RecordPaymentInput,
   userId: string
 ): Promise<FeeDetail> {
-  const { rows } = await query<CurrentFeeRow>(
-    `SELECT student_id, total_amount, paid_amount, pending_amount, due_date, payment_status
-     FROM fees WHERE id = $1 AND deleted_at IS NULL`,
+  const { rows } = await query<CurrentFeeRow & { semester: number; department_id: string; student_user_id: string }>(
+    `SELECT f.student_id, f.total_amount, f.paid_amount, f.pending_amount, f.due_date, f.payment_status,
+            f.semester, s.department_id, s.user_id AS student_user_id
+     FROM fees f JOIN students s ON s.id = f.student_id
+     WHERE f.id = $1 AND f.deleted_at IS NULL`,
     [feeId]
   );
   if (!rows[0]) throw AppError.notFound('Fee record not found');
@@ -615,6 +615,17 @@ export async function recordPayment(
         newStatus,
       },
     });
+  });
+
+  await emitWorkflowEvent('fee.paid', userId, {
+    departmentId: current.department_id,
+    semester: current.semester,
+    title: 'Fee Payment Recorded',
+    message: `A payment of ${data.amount} was recorded — new status: ${newStatus}.`,
+    notificationType: 'Announcement',
+    sourceId: feeId,
+    studentId: current.student_id,
+    amount: data.amount,
   });
 
   return getFeeById(feeId);

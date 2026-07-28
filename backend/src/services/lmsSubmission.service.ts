@@ -159,17 +159,21 @@ export async function submitAssignment(
   );
   if (!asgn[0]) throw AppError.notFound('Assignment not found');
 
-  // Verify student is enrolled in the subject
-  const { rows: ctx } = await query<{ program_id: string; semester: number }>(
-    'SELECT program_id, semester FROM students WHERE id = $1 AND deleted_at IS NULL',
+  // Verify student is enrolled in the subject. Curriculum mappings are keyed
+  // by department+regulation+semester — program_id on the mapping is often
+  // NULL (not every curriculum row is program-specific), so department_id is
+  // the reliable join key here, matching the model CurriculumRegistry uses.
+  const { rows: ctx } = await query<{ department_id: string; semester: number }>(
+    'SELECT department_id, semester FROM students WHERE id = $1 AND deleted_at IS NULL',
     [studentId]
   );
   if (!ctx[0]) throw AppError.notFound('Student profile not found');
 
   const { rows: sub } = await query<{ id: string }>(
-    `SELECT id FROM subjects
-     WHERE id = $1 AND program_id = $2 AND semester = $3 AND deleted_at IS NULL`,
-    [asgn[0].subject_id, ctx[0].program_id, ctx[0].semester]
+    `SELECT s.id FROM subjects s
+     JOIN subject_curriculum_mappings scm ON scm.subject_id = s.id
+     WHERE s.id = $1 AND scm.department_id = $2 AND scm.semester = $3 AND s.deleted_at IS NULL`,
+    [asgn[0].subject_id, ctx[0].department_id, ctx[0].semester]
   );
   if (!sub[0]) throw AppError.forbidden('This assignment is not in your enrolled subjects');
 

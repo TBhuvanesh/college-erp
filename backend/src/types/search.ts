@@ -45,6 +45,43 @@ export interface ExaminationResult {
   examDate: string;       // YYYY-MM-DD
 }
 
+export interface DepartmentResult {
+  id: string;
+  name: string;
+  code: string;
+}
+
+export interface TeachingAssignmentResult {
+  id: string;
+  facultyName: string;
+  subjectName: string;
+  subjectCode: string;
+  section: string;
+  academicYear: string;
+}
+
+export interface ResultRecordResult {
+  id: string;
+  studentName: string;
+  rollNumber: string;
+  subjectName: string;
+  grade: string;
+  publicationStatus: string;
+}
+
+export interface NotificationResult {
+  id: string;
+  title: string;
+  createdAt: string;      // YYYY-MM-DD
+}
+
+export interface RoomResult {
+  id: string;
+  name: string;
+  building: string | null;
+  capacity: number;
+}
+
 // ── Envelope returned by all three role-scoped search functions ───────────────
 
 /**
@@ -52,12 +89,17 @@ export interface ExaminationResult {
  * Categories with zero results are omitted from the API response.
  */
 export interface SearchResult {
-  students?:      StudentResult[];
-  faculty?:       FacultyResult[];
-  subjects?:      SubjectResult[];
-  announcements?: AnnouncementResult[];
-  events?:        EventResult[];
-  examinations?:  ExaminationResult[];
+  students?:           StudentResult[];
+  faculty?:            FacultyResult[];
+  subjects?:           SubjectResult[];
+  announcements?:      AnnouncementResult[];
+  events?:             EventResult[];
+  examinations?:       ExaminationResult[];
+  departments?:        DepartmentResult[];
+  teachingAssignments?: TeachingAssignmentResult[];
+  results?:            ResultRecordResult[];
+  notifications?:      NotificationResult[];
+  rooms?:              RoomResult[];
 }
 
 // ── Zod Validation Schema ─────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { X, Sparkles, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useDepartments } from "@/hooks/useRegistry";
 
 interface Department {
   id: string;
@@ -37,7 +38,6 @@ export const StudentFormDrawer: React.FC<StudentFormDrawerProps> = ({
   const { accessToken } = useAuth();
   
   const [loading, setLoading] = useState(false);
-  const [fetchingData, setFetchingData] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,29 +53,8 @@ export const StudentFormDrawer: React.FC<StudentFormDrawerProps> = ({
   const [academicYear, setAcademicYear] = useState("");
 
   // Dropdown Options
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const { data: departments = [], isLoading: isLoadingDepts } = useDepartments();
   const [programs, setPrograms] = useState<Program[]>([]);
-
-  // Fetch departments
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const fetchDepts = async () => {
-      try {
-        setFetchingData(true);
-        const res = await apiFetch("/departments", {}, accessToken);
-        if (res.success && res.data?.departments) {
-          setDepartments(res.data.departments);
-        }
-      } catch (err: any) {
-        setError(err.message || "Failed to load departments");
-      } finally {
-        setFetchingData(false);
-      }
-    };
-
-    fetchDepts();
-  }, [isOpen, accessToken]);
 
   // Fetch programs when departmentId changes
   useEffect(() => {
@@ -267,7 +246,7 @@ export const StudentFormDrawer: React.FC<StudentFormDrawerProps> = ({
           </div>
         )}
 
-        {loading || fetchingData ? (
+        {loading || isLoadingDepts ? (
           <div className="flex-1 flex flex-col items-center justify-center dark:text-neutral-400 text-text-secondary text-xs font-mono">
             <Loader2 className="animate-spin text-blue-500 mb-2" size={24} />
             <span>Loading form dependencies...</span>
@@ -348,7 +327,7 @@ export const StudentFormDrawer: React.FC<StudentFormDrawerProps> = ({
                   className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-800 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition cursor-pointer"
                 >
                   <option value="">Select Department</option>
-                  {departments.map((dept) => (
+                  {departments.map((dept: any) => (
                     <option key={dept.id} value={dept.id}>
                       {dept.name} ({dept.code})
                     </option>

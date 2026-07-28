@@ -3,6 +3,8 @@ import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
 import { eventBus } from './eventBus.service';
 import { isFacultyAssigned, resolveTeachingAssignmentId } from './assignment.service';
+import { emitWorkflowEvent } from './workflowEngine.service';
+import { createNotification } from './notification.service';
 import type {
   MarkAttendanceInput,
   UpdateAttendanceInput,
@@ -17,6 +19,12 @@ import type {
   AttendanceStatus,
 } from '../types/attendance';
 import type { Role } from '../types/roles';
+
+// Minimum acceptable overall attendance percentage for a subject — the
+// standard academic eligibility threshold. Named constant (not a buried
+// magic number), matching the convention already used for the Faculty
+// Workload Light/Balanced/Heavy/Overloaded thresholds.
+const ATTENDANCE_ALERT_THRESHOLD_PERCENT = 75;
 
 // ── Row types (snake_case from PostgreSQL) ─────────────────────────────────────
 
@@ -494,7 +502,114 @@ export async function markAttendance(
     });
   });
 
+  // Workflow Engine signal (distinct from the eventBus realtime push above —
+  // this one lets an admin attach configurable rule-based actions later,
+  // e.g. a notification, without another code change).
+  const { rows: ctxRows } = await query<{ department_id: string; semester: number }>(
+    `SELECT ta.department_id, scm.semester
+     FROM teaching_assignments ta
+     LEFT JOIN subject_curriculum_mappings scm ON scm.id = ta.subject_curriculum_mapping_id
+     WHERE ta.id = $1`,
+    [teachingAssignmentId]
+  );
+  await emitWorkflowEvent('attendance.marked', userId, {
+    departmentId: ctxRows[0]?.department_id ?? '',
+    semester: ctxRows[0]?.semester ?? 0,
+    title: 'Attendance Marked',
+    message: `Attendance recorded for ${data.section} on ${data.date}.`,
+    notificationType: 'Reminder',
+    sourceId: data.subjectId,
+    section: data.section,
+    date: data.date,
+  });
+
+  // Never let a notification-side-effect failure undo or fail an already-
+  // successful attendance submission (same "silent catch" convention used
+  // for the exam-publish notifications in examination.service.ts).
+  try {
+    await notifyStudentsBelowAttendanceThreshold(
+      data.subjectId,
+      data.records.map((r) => r.studentId),
+      userId
+    );
+  } catch (err) {
+    console.error('[attendance] below-threshold notification failed', err);
+  }
+
   return { inserted, updated };
+}
+
+/**
+ * After marking a session, checks each affected student's overall
+ * attendance percentage for this subject and notifies the student — and
+ * their assigned mentor, if any — the first time (and every time
+ * thereafter) it sits below the eligibility threshold. One batched query
+ * for the whole session's students, not one per student.
+ */
+async function notifyStudentsBelowAttendanceThreshold(
+  subjectId: string,
+  studentIds: string[],
+  actorId: string
+): Promise<void> {
+  if (studentIds.length === 0) return;
+
+  const { rows } = await query<{
+    student_id: string;
+    student_user_id: string;
+    full_name: string;
+    total: string;
+    present: string;
+    department_id: string;
+    semester: number;
+    mentor_user_id: string | null;
+  }>(
+    `SELECT st.id AS student_id, st.user_id AS student_user_id, st.full_name,
+            st.department_id, st.semester,
+            COUNT(a.id)::text AS total,
+            COUNT(a.id) FILTER (WHERE a.status = 'present')::text AS present,
+            mf.user_id AS mentor_user_id
+     FROM students st
+     LEFT JOIN attendance a ON a.student_id = st.id AND a.subject_id = $2
+     LEFT JOIN mentor_assignments ma ON ma.student_id = st.id AND ma.status = 'active' AND ma.deleted_at IS NULL
+     LEFT JOIN faculty mf ON mf.id = ma.mentor_id AND mf.deleted_at IS NULL
+     WHERE st.id = ANY($1::uuid[]) AND st.deleted_at IS NULL
+     GROUP BY st.id, st.user_id, st.full_name, st.department_id, st.semester, mf.user_id`,
+    [studentIds, subjectId]
+  );
+
+  for (const r of rows) {
+    const total = Number(r.total);
+    const present = Number(r.present);
+    if (total === 0) continue;
+    const percentage = Math.round((present / total) * 10000) / 100;
+    if (percentage >= ATTENDANCE_ALERT_THRESHOLD_PERCENT) continue;
+
+    const message = `${r.full_name}'s attendance for this subject is ${percentage}%, below the required ${ATTENDANCE_ALERT_THRESHOLD_PERCENT}%.`;
+
+    await createNotification(actorId, 'admin', {
+      title: 'Attendance Below Threshold',
+      message,
+      type: 'Academic Alert',
+      targetRole: 'student',
+      recipientUserId: r.student_user_id,
+      departmentId: r.department_id,
+      semester: r.semester,
+      isImportant: true,
+    });
+
+    if (r.mentor_user_id) {
+      await createNotification(actorId, 'admin', {
+        title: 'Mentee Attendance Below Threshold',
+        message,
+        type: 'Academic Alert',
+        targetRole: 'faculty',
+        recipientUserId: r.mentor_user_id,
+        departmentId: r.department_id,
+        semester: r.semester,
+        isImportant: true,
+      });
+    }
+  }
 }
 
 /**

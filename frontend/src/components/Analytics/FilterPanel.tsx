@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { apiFetch } from "@/lib/api";
-import { Search, Filter, RotateCcw, ChevronDown, ChevronUp, Calendar } from "lucide-react";
+import { Search, Filter, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
+import { useDepartments, useFaculty, useSubjects, useAcademicSessions } from "@/hooks/useRegistry";
 
 export interface FilterState {
   search: string;
@@ -27,11 +27,6 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ onApplyFilters, role }
   // Toggle advanced filter panel
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Lists for dropdown options
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [facultyList, setFacultyList] = useState<any[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]);
-
   // Filter form states
   const [search, setSearch] = useState("");
   const [academicYear, setAcademicYear] = useState("");
@@ -42,34 +37,15 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ onApplyFilters, role }
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  // Load select options if user is Admin or HOD
-  useEffect(() => {
-    if (!accessToken || role === "student") return;
-
-    const fetchOptions = async () => {
-      try {
-        const [deptRes, facRes, subRes] = await Promise.all([
-          apiFetch("/departments?limit=100", {}, accessToken),
-          apiFetch("/faculty?limit=500", {}, accessToken),
-          apiFetch("/subjects?limit=500", {}, accessToken),
-        ]);
-
-        if (deptRes.success && deptRes.data?.departments) {
-          setDepartments(deptRes.data.departments);
-        }
-        if (facRes.success && facRes.data?.faculty) {
-          setFacultyList(facRes.data.faculty);
-        }
-        if (subRes.success && subRes.data?.subjects) {
-          setSubjects(subRes.data.subjects);
-        }
-      } catch (err) {
-        console.error("Failed to load filter options", err);
-      }
-    };
-
-    fetchOptions();
-  }, [accessToken, role]);
+  // Use dynamic query hooks for filter options
+  const { data: academicSessions = [] } = useAcademicSessions();
+  const { data: departments = [] } = useDepartments();
+  
+  const { data: facultyRes } = useFaculty({ limit: 500, status: "ACTIVE" });
+  const facultyList = facultyRes?.faculty || [];
+  
+  const { data: subjectsRes } = useSubjects({ limit: 500, status: "ACTIVE" });
+  const subjects = subjectsRes?.subjects || [];
 
   const handleApply = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -102,47 +78,45 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ onApplyFilters, role }
   };
 
   return (
-    <div className="bg-surface rounded-2xl border border-border-subtle p-4 shadow-sm space-y-4">
-      {/* Primary Search & Toggle Row */}
-      <form onSubmit={handleApply} className="flex flex-col md:flex-row items-center gap-3">
-        <div className="relative w-full flex-1">
-          <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
-            <Search size={15} />
-          </span>
+    <div className="glass-card dark:border-neutral-800 border-border-subtle bg-surface rounded-xl p-5 shadow-sm space-y-4">
+      {/* Search Bar & Primary Actions */}
+      <form onSubmit={handleApply} className="flex flex-col sm:flex-row gap-3">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-text-muted" />
           <input
             type="text"
-            placeholder="Search by Department, Faculty, Student or Subject..."
+            placeholder="Search query string..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded-xl focus:border-accent-blue focus:ring-1 focus:ring-accent-blue focus:outline-none transition-colors"
+            className="w-full pl-9 pr-4 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded-lg focus:border-accent-blue focus:outline-none placeholder:text-text-muted"
           />
         </div>
-
-        <div className="flex w-full md:w-auto items-center gap-2">
+        
+        <div className="flex gap-2">
           <button
-            type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-border-subtle bg-surface text-xs font-semibold text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer"
+            type="submit"
+            className="px-4 py-2 bg-accent-blue hover:bg-accent-blue-hover text-white text-xs font-semibold rounded-lg transition shadow-md shadow-accent-blue/10 cursor-pointer flex items-center gap-1.5"
           >
-            <Filter size={14} className="text-text-muted" />
-            <span>Filters</span>
-            {showAdvanced ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            <Filter size={14} />
+            <span>Apply</span>
           </button>
-
+          
           <button
             type="button"
             onClick={handleReset}
+            className="p-2 border border-border-subtle hover:bg-surface-hover text-text-secondary rounded-lg transition cursor-pointer flex items-center justify-center"
             title="Reset Filters"
-            className="p-2.5 rounded-xl border border-border-subtle bg-surface hover:bg-surface-hover hover:text-text-primary text-text-muted transition-colors cursor-pointer"
           >
             <RotateCcw size={14} />
           </button>
-
+          
           <button
-            type="submit"
-            className="flex-1 md:flex-none inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-accent-blue text-xs font-bold text-white hover:bg-accent-blue/95 transition-all shadow-md shadow-accent-blue/10 cursor-pointer"
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="px-3 py-2 border border-border-subtle hover:bg-surface-hover text-text-secondary text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1"
           >
-            Apply
+            <span>Filters</span>
+            {showAdvanced ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           </button>
         </div>
       </form>
@@ -159,9 +133,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ onApplyFilters, role }
               className="w-full px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded-lg focus:border-accent-blue focus:outline-none"
             >
               <option value="">All Batches</option>
-              <option value="2026-2027">2026-2027</option>
-              <option value="2025-2026">2025-2026</option>
-              <option value="2024-2025">2024-2025</option>
+              {academicSessions.map((session) => (
+                <option key={session} value={session}>{session}</option>
+              ))}
             </select>
           </div>
 
@@ -192,7 +166,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ onApplyFilters, role }
                 className="w-full px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded-lg focus:border-accent-blue focus:outline-none"
               >
                 <option value="">All Departments</option>
-                {departments.map((dept) => (
+                {departments.map((dept: any) => (
                   <option key={dept.id} value={dept.id}>
                     {dept.name} ({dept.code})
                   </option>
@@ -218,9 +192,9 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ onApplyFilters, role }
                 className="w-full px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded-lg focus:border-accent-blue focus:outline-none"
               >
                 <option value="">All Instructors</option>
-                {facultyList.map((fac) => (
+                {facultyList.map((fac: any) => (
                   <option key={fac.id} value={fac.id}>
-                    {fac.name}
+                    {fac.fullName || fac.name}
                   </option>
                 ))}
               </select>
@@ -244,7 +218,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({ onApplyFilters, role }
                 className="w-full px-3 py-2 text-xs bg-surface-elevated border border-border-subtle text-text-primary rounded-lg focus:border-accent-blue focus:outline-none"
               >
                 <option value="">All Subjects</option>
-                {subjects.map((sub) => (
+                {subjects.map((sub: any) => (
                   <option key={sub.id} value={sub.id}>
                     [{sub.code}] {sub.name}
                   </option>

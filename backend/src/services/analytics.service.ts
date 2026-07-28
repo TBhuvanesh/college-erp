@@ -8,6 +8,7 @@ import { getStudentDues } from './fee.service';
 import { getStudentSummary as getAttendanceSummary } from './attendance.service';
 import { getStudentSummary as getInternalMarksSummary } from './internal-marks.service';
 import { getInstitutionFeedbackAnalytics, getFacultyFeedbackAnalytics } from './feedback.service';
+import { withTtlCache } from '../utils/ttlCache';
 import type { CourseProgressQuery } from '../types/teachingPlan';
 import type {
   AdminAnalyticsQuery,
@@ -35,6 +36,12 @@ function pct(numerator: number, denominator: number): number {
 // ── Institution / department overview ────────────────────────────────────────────
 
 export async function getInstitutionOverview(departmentId: string | null): Promise<InstitutionOverview> {
+  return withTtlCache(`analytics:institutionOverview:${departmentId ?? 'all'}`, 30_000, () =>
+    computeInstitutionOverview(departmentId)
+  );
+}
+
+async function computeInstitutionOverview(departmentId: string | null): Promise<InstitutionOverview> {
   const deptParams = departmentId ? [departmentId] : [];
   const deptFilter = departmentId ? 'AND department_id = $1' : '';
 

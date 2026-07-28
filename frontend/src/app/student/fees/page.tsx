@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
+import { useAcademicSessions } from "@/hooks/useRegistry";
 import {
   CreditCard,
   Calendar,
@@ -52,6 +53,7 @@ interface FeeDetail extends FeeSummary {
 
 export default function StudentFees() {
   const { accessToken } = useAuth();
+  const { data: academicSessions = [] } = useAcademicSessions();
 
   // Filter States
   const [academicYearFilter, setAcademicYearFilter] = useState("ALL");
@@ -218,10 +220,9 @@ export default function StudentFees() {
             className="w-full dark:bg-neutral-950 bg-surface border border-border-subtle rounded px-2.5 py-1.5 text-xs dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
           >
             <option value="ALL">All Academic Years</option>
-            <option value="2023-2024">2023-2024</option>
-            <option value="2024-2025">2024-2025</option>
-            <option value="2025-2026">2025-2026</option>
-            <option value="2026-2027">2026-2027</option>
+            {academicSessions.map((session) => (
+              <option key={session} value={session}>{session}</option>
+            ))}
           </select>
         </div>
 

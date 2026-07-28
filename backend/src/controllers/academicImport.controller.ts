@@ -4,6 +4,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { sendSuccess, sendCreated } from '../utils/response';
 import { AppError } from '../errors/AppError';
 import * as importService from '../services/academicImport.service';
+import * as studentSyncService from '../services/studentSync.service';
 import { listSupportedImportEntityTypes } from '../import/strategyRegistry';
 import { IMPORT_ENTITY_TYPES, IMPORT_MODES, commitImportSchema, listImportJobsQuerySchema } from '../types/academicImport';
 import type { ImportEntityType, ImportMode } from '../types/academicImport';
@@ -85,4 +86,24 @@ export const listJobs = asyncHandler(async (req: Request, res: Response) => {
 export const getJob = asyncHandler(async (req: Request, res: Response) => {
   const job = await importService.getImportJob(req.params.jobId);
   sendSuccess(res, { job });
+});
+
+// ── Student Placement Sync (Nominal Rolls workbook sync) ──
+
+// ── POST /api/academic-import/student-sync/preview ───────────────────────────
+export const previewStudentSync = asyncHandler(async (req: Request, res: Response) => {
+  const file = req.file;
+  if (!file) throw AppError.badRequest('No file uploaded. Attach the spreadsheet as field "file".', 'NO_FILE');
+
+  const report = await studentSyncService.getSyncReport(file.buffer);
+  sendSuccess(res, report);
+});
+
+// ── POST /api/academic-import/student-sync/commit ────────────────────────────
+export const commitStudentSync = asyncHandler(async (req: Request, res: Response) => {
+  const file = req.file;
+  const buffer = file ? file.buffer : undefined;
+  
+  const result = await studentSyncService.runPlacementSync(req.user!.id, buffer);
+  sendSuccess(res, result, `${result.correctedCount} student placement(s) synchronized and corrected.`);
 });

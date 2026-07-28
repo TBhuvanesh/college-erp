@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { query } from '../config/database';
+import { query, withTransaction } from '../config/database';
 import { auditLog } from '../utils/audit';
 import type { SubjectType, SubjectStatus } from '../types/subject';
 import { mapYearSemToSemester } from './subject.service';
@@ -337,117 +337,123 @@ export async function commitImportedSubjects(
   let newCurriculumMappings = 0;
   let existingMappingsSkipped = 0;
 
-  for (const row of validRows) {
-    // 1. Search Subject Master by Code
-    const { rows: dbSubject } = await query<{ id: string; deleted_at: Date | null }>(
-      'SELECT id, deleted_at FROM subjects WHERE code = $1 LIMIT 1',
-      [row.code]
-    );
+  // Whole batch runs inside one transaction — previously each row was
+  // committed individually, so a failure partway through a multi-hundred-row
+  // sheet left the earlier rows permanently imported ("no partial imports"
+  // gap identified in the ERP integration audit, docs/erp-integration-audit.md).
+  await withTransaction(async (client) => {
+    for (const row of validRows) {
+      // 1. Search Subject Master by Code
+      const { rows: dbSubject } = await client.query<{ id: string; deleted_at: Date | null }>(
+        'SELECT id, deleted_at FROM subjects WHERE code = $1 LIMIT 1',
+        [row.code]
+      );
 
-    let subjectId: string;
+      let subjectId: string;
 
-    if (dbSubject[0]) {
-      subjectId = dbSubject[0].id;
-      if (dbSubject[0].deleted_at) {
-        // Restore the soft-deleted subject master and update its attributes
-        await query(
-          `UPDATE subjects 
-           SET deleted_at = NULL, name = $1, credits = $2, type = $3, status = $4,
-               lecture_hours = $5, tutorial_hours = $6, practical_hours = $7, updated_at = NOW()
-           WHERE id = $8`,
+      if (dbSubject[0]) {
+        subjectId = dbSubject[0].id;
+        if (dbSubject[0].deleted_at) {
+          // Restore the soft-deleted subject master and update its attributes
+          await client.query(
+            `UPDATE subjects
+             SET deleted_at = NULL, name = $1, credits = $2, type = $3, status = $4,
+                 lecture_hours = $5, tutorial_hours = $6, practical_hours = $7, updated_at = NOW()
+             WHERE id = $8`,
+            [
+              row.name,
+              row.credits,
+              row.type,
+              row.status,
+              row.lectureHours,
+              row.tutorialHours,
+              row.practicalHours,
+              subjectId
+            ]
+          );
+          newSubjectsCreated++;
+        } else {
+          existingSubjectsReused++;
+        }
+      } else {
+        // Create new Subject Master record
+        const { rows: insertSubRow } = await client.query<{ id: string }>(
+          `INSERT INTO subjects (
+            code, name, credits, type, status,
+            lecture_hours, tutorial_hours, practical_hours, description
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL) RETURNING id`,
           [
+            row.code,
             row.name,
             row.credits,
             row.type,
             row.status,
             row.lectureHours,
             row.tutorialHours,
-            row.practicalHours,
-            subjectId
+            row.practicalHours
           ]
         );
+        subjectId = insertSubRow[0].id;
         newSubjectsCreated++;
-      } else {
-        existingSubjectsReused++;
+
+        await auditLog({
+          actorId,
+          action: 'CREATE_SUBJECT',
+          resource: 'subjects',
+          resourceId: subjectId,
+          changes: { code: row.code, name: row.name }
+        });
       }
-    } else {
-      // Create new Subject Master record
-      const { rows: insertSubRow } = await query<{ id: string }>(
-        `INSERT INTO subjects (
-          code, name, credits, type, status,
-          lecture_hours, tutorial_hours, practical_hours, description
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL) RETURNING id`,
-        [
-          row.code,
-          row.name,
-          row.credits,
-          row.type,
-          row.status,
-          row.lectureHours,
-          row.tutorialHours,
-          row.practicalHours
-        ]
+
+      // 2. Check if the Curriculum Mapping already exists in DB
+      const { rows: dbMapping } = await client.query<{ id: string; deleted_at: Date | null }>(
+        `SELECT id, deleted_at FROM subject_curriculum_mappings
+         WHERE subject_id = $1 AND department_id = $2 AND COALESCE(program, '') = COALESCE($3, '')
+           AND regulation = $4 AND year = $5 AND semester = $6 LIMIT 1`,
+        [subjectId, row.departmentId, row.program || null, row.regulation, row.year, row.semester]
       );
-      subjectId = insertSubRow[0].id;
-      newSubjectsCreated++;
 
-      await auditLog({
-        actorId,
-        action: 'CREATE_SUBJECT',
-        resource: 'subjects',
-        resourceId: subjectId,
-        changes: { code: row.code, name: row.name }
-      });
-    }
-
-    // 2. Check if the Curriculum Mapping already exists in DB
-    const { rows: dbMapping } = await query<{ id: string; deleted_at: Date | null }>(
-      `SELECT id, deleted_at FROM subject_curriculum_mappings 
-       WHERE subject_id = $1 AND department_id = $2 AND COALESCE(program, '') = COALESCE($3, '') 
-         AND regulation = $4 AND year = $5 AND semester = $6 LIMIT 1`,
-      [subjectId, row.departmentId, row.program || null, row.regulation, row.year, row.semester]
-    );
-
-    if (dbMapping[0]) {
-      if (dbMapping[0].deleted_at) {
-        // Restore soft-deleted mapping
-        await query(
-          `UPDATE subject_curriculum_mappings 
-           SET deleted_at = NULL, updated_at = NOW()
-           WHERE id = $1`,
-          [dbMapping[0].id]
+      if (dbMapping[0]) {
+        if (dbMapping[0].deleted_at) {
+          // Restore soft-deleted mapping
+          await client.query(
+            `UPDATE subject_curriculum_mappings
+             SET deleted_at = NULL, updated_at = NOW()
+             WHERE id = $1`,
+            [dbMapping[0].id]
+          );
+          newCurriculumMappings++;
+        } else {
+          existingMappingsSkipped++;
+        }
+      } else {
+        // Create new curriculum mapping
+        const { rows: insertMappingRow } = await client.query<{ id: string }>(
+          `INSERT INTO subject_curriculum_mappings (
+            subject_id, department_id, program_id, program, regulation, year, semester, semester_raw
+          ) VALUES ($1, $2, NULL, $3, $4, $5, $6, $7) RETURNING id`,
+          [
+            subjectId,
+            row.departmentId,
+            row.program || null,
+            row.regulation,
+            row.year,
+            row.semester,
+            row.semesterRaw
+          ]
         );
         newCurriculumMappings++;
-      } else {
-        existingMappingsSkipped++;
-      }
-    } else {
-      // Create new curriculum mapping
-      const { rows: insertMappingRow } = await query<{ id: string }>(
-        `INSERT INTO subject_curriculum_mappings (
-          subject_id, department_id, program_id, program, regulation, year, semester, semester_raw
-        ) VALUES ($1, $2, NULL, $3, $4, $5, $6, $7) RETURNING id`,
-        [
-          subjectId,
-          row.departmentId,
-          row.program || null,
-          row.regulation,
-          row.year,
-          row.semester,
-          row.semesterRaw
-        ]
-      );
-      newCurriculumMappings++;
 
-      await auditLog({
-        actorId,
-        action: 'CREATE_CURRICULUM_MAPPING',
-        resource: 'subject_curriculum_mappings',
-        resourceId: insertMappingRow[0].id,
-        changes: { subjectId, ...row }
-      });
+        await auditLog({
+          actorId,
+          action: 'CREATE_CURRICULUM_MAPPING',
+          resource: 'subject_curriculum_mappings',
+          resourceId: insertMappingRow[0].id,
+          changes: { subjectId, ...row }
+        });
+      }
     }
-  }
+  });
 
   return {
     rowsProcessed: validRows.length,

@@ -2,6 +2,7 @@ import { query } from '../config/database';
 import { AppError } from '../errors/AppError';
 import { getStudentsByMentor } from './mentorship.service';
 import * as roadmapService from './teachingPlanRoadmap.service';
+import { getPendingAttendanceSections, getPendingResultEntries, getPendingEvaluations } from './facultyDailyStatus.service';
 import type { FacultyWorkload, WorkloadStatus } from '../types/facultyOperations';
 
 // Weekly-teaching-hours thresholds driving the Light/Balanced/Heavy/Overloaded
@@ -34,12 +35,12 @@ export async function calculateFacultyWorkload(userId: string, facultyId: string
     weeklyRes,
     monthlyRes,
     assignmentsCreatedRes,
-    reviewRes,
+    pendingEvaluationRows,
     materialsRes,
     mentees,
     meetingsRes,
-    attendancePendingRes,
-    internalMarksPendingRes,
+    pendingAttendanceSections,
+    pendingResultEntries,
     examDutiesRes,
     progress,
   ] = await Promise.all([
@@ -72,15 +73,10 @@ export async function calculateFacultyWorkload(userId: string, facultyId: string
     query<{ count: string }>('SELECT COUNT(*)::text AS count FROM assignments WHERE faculty_id = $1 AND deleted_at IS NULL', [
       facultyId,
     ]),
-    query<{ pending: string; upcoming: string }>(
-      `SELECT
-         COUNT(*) FILTER (WHERE asub.status IN ('Submitted', 'Late Submission'))::text AS pending,
-         COUNT(*) FILTER (WHERE asub.status IN ('Submitted', 'Late Submission') AND a.due_date <= NOW() + INTERVAL '7 days')::text AS upcoming
-       FROM assignment_submissions asub
-       JOIN assignments a ON a.id = asub.assignment_id
-       WHERE a.faculty_id = $1 AND asub.deleted_at IS NULL`,
-      [facultyId]
-    ),
+    // Pending/upcoming submission counts derived from the shared per-assignment
+    // resolver (facultyDailyStatus.service.ts) instead of a separate
+    // aggregate query — same underlying rows facultyTasks.service.ts uses.
+    getPendingEvaluations(facultyId),
     query<{ count: string }>('SELECT COUNT(*)::text AS count FROM course_materials WHERE faculty_id = $1 AND deleted_at IS NULL', [
       facultyId,
     ]),
@@ -91,24 +87,10 @@ export async function calculateFacultyWorkload(userId: string, facultyId: string
          AND follow_up_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '14 days'`,
       [facultyId]
     ),
-    query<{ count: string }>(
-      `SELECT COUNT(*)::text AS count FROM teaching_assignments fsa
-       WHERE fsa.faculty_id = $1 AND fsa.is_active = TRUE AND fsa.deleted_at IS NULL
-         AND NOT EXISTS (
-           SELECT 1 FROM attendance a
-           WHERE a.subject_id = fsa.subject_id AND a.section = fsa.section
-             AND a.faculty_id = $1 AND a.attendance_date = CURRENT_DATE
-         )`,
-      [facultyId]
-    ),
-    // Sourced from result_entry_tasks (Teaching Assignment resolved,
-    // Scripts-Distributed-triggered) instead of an ad-hoc internal_marks
-    // heuristic — the single source of truth for "pending result entry".
-    query<{ count: string }>(
-      `SELECT COUNT(*)::text AS count FROM result_entry_tasks
-       WHERE faculty_id = $1 AND deleted_at IS NULL AND status NOT IN ('published', 'closed')`,
-      [facultyId]
-    ),
+    // Shared with facultyTasks.service.ts / facultyOperations.service.ts —
+    // see facultyDailyStatus.service.ts.
+    getPendingAttendanceSections(facultyId),
+    getPendingResultEntries(facultyId),
     query<{ count: string }>(
       `SELECT (
          (SELECT COUNT(*) FROM exams
@@ -125,6 +107,12 @@ export async function calculateFacultyWorkload(userId: string, facultyId: string
   const weeklyHours = Math.round((Number(weeklyRes.rows[0].minutes) / 60) * 100) / 100;
   const teachingHours = Math.round((Number(totalMinutesRes.rows[0].minutes) / 60) * 100) / 100;
 
+  const in7Days = Date.now() + 7 * 24 * 60 * 60 * 1000;
+  const pendingReview = pendingEvaluationRows.reduce((sum, r) => sum + r.pendingCount, 0);
+  const upcomingReview = pendingEvaluationRows
+    .filter((r) => r.dueDate && new Date(r.dueDate).getTime() <= in7Days)
+    .reduce((sum, r) => sum + r.pendingCount, 0);
+
   return {
     facultyId,
     facultyName: facultyRow.rows[0]?.full_name ?? '',
@@ -133,14 +121,14 @@ export async function calculateFacultyWorkload(userId: string, facultyId: string
     weeklyClasses: Number(weeklyRes.rows[0].classes),
     monthlyClasses: Number(monthlyRes.rows[0].count),
     assignmentsCreated: Number(assignmentsCreatedRes.rows[0].count),
-    assignmentsPendingReview: Number(reviewRes.rows[0].pending),
+    assignmentsPendingReview: pendingReview,
     materialsUploaded: Number(materialsRes.rows[0].count),
     mentorshipStudents: mentees.length,
-    upcomingEvaluations: Number(reviewRes.rows[0].upcoming),
+    upcomingEvaluations: upcomingReview,
     upcomingMeetings: Number(meetingsRes.rows[0].count),
     teachingPlannerProgress: progress.completionPercentage,
-    attendancePending: Number(attendancePendingRes.rows[0].count),
-    internalMarksPending: Number(internalMarksPendingRes.rows[0].count),
+    attendancePending: pendingAttendanceSections.length,
+    internalMarksPending: pendingResultEntries.length,
     examinationDuties: Number(examDutiesRes.rows[0].count),
     status: classifyWorkload(weeklyHours),
   };

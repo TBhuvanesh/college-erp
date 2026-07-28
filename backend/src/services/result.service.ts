@@ -2,6 +2,7 @@ import { query, withTransaction } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
 import { isFacultyAssigned } from './assignment.service';
+import { emitWorkflowEvent } from './workflowEngine.service';
 import { computeGrade, computeResultStatus } from '../config/grading';
 import type { Grade } from '../config/grading';
 import type {
@@ -650,6 +651,29 @@ export async function publishResults(
     resourceId: criteria.subjectId,
     changes: { section: criteria.section, published: rows.length },
   });
+
+  if (rows.length > 0) {
+    // Student Dashboard/CGPA/Notifications/Result History are already
+    // updated directly above (this IS the publish) — this event exists so
+    // an admin can attach additional configurable actions later (e.g. a
+    // calendar entry) without another code change, per the ERP integration
+    // sprint's event-coverage requirement.
+    const { rows: ctxRows } = await query<{ department_id: string; semester: number }>(
+      `SELECT scm.department_id, scm.semester FROM subject_curriculum_mappings scm
+       WHERE scm.subject_id = $1 AND scm.deleted_at IS NULL LIMIT 1`,
+      [criteria.subjectId]
+    );
+    await emitWorkflowEvent('marks.published', userId, {
+      departmentId: ctxRows[0]?.department_id ?? '',
+      semester: ctxRows[0]?.semester ?? 0,
+      title: 'Results Published',
+      message: `Results for Section ${criteria.section} have been published.`,
+      notificationType: 'Grade Released',
+      sourceId: criteria.subjectId,
+      section: criteria.section,
+      publishedCount: rows.length,
+    });
+  }
 
   return { published: rows.length };
 }

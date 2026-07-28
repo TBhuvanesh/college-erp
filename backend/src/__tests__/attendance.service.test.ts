@@ -176,6 +176,10 @@ describe('markAttendance', () => {
     // upsert inside transaction (new row: created_at == updated_at)
     const now = new Date();
     mockClient.query.mockResolvedValueOnce({ rows: [{ created_at: now, updated_at: now }], rowCount: 1 });
+    // post-transaction teaching-assignment context lookup (attendance.marked workflow event)
+    mockQuery.mockResolvedValueOnce({ rows: [{ department_id: 'dept-1', semester: 3 }], rowCount: 1 });
+    // below-threshold check (no students returned — nothing to notify)
+    mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
     const result = await attendanceService.markAttendance(input, FACULTY_USER_ID);
 
@@ -194,6 +198,8 @@ describe('markAttendance', () => {
     const created = new Date('2024-01-15T10:00:00Z');
     const updated = new Date('2024-01-15T10:00:02Z');
     mockClient.query.mockResolvedValueOnce({ rows: [{ created_at: created, updated_at: updated }], rowCount: 1 });
+    mockQuery.mockResolvedValueOnce({ rows: [{ department_id: 'dept-1', semester: 3 }], rowCount: 1 });
+    mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 });
 
     const result = await attendanceService.markAttendance(input, FACULTY_USER_ID);
 

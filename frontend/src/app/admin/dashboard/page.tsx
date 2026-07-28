@@ -243,7 +243,7 @@ export default function AdminDashboard() {
       list.push({
         id: `stud-${stud.id}`,
         title: "Student Registered",
-        description: `${stud.name} (${stud.rollNo}) registered under ${stud.department} department.`,
+        description: `${stud.fullName} (${stud.rollNumber}) registered under ${stud.departmentName} department.`,
         timestamp: stud.createdAt || new Date(BASE_DASHBOARD_TIME - 3600000 * 4).toISOString(),
         type: "registration",
         meta: stud.semester
@@ -255,7 +255,7 @@ export default function AdminDashboard() {
       list.push({
         id: `fac-${fac.id}`,
         title: "Faculty Onboarded",
-        description: `Professor ${fac.name} added to ${fac.department} staff rolls.`,
+        description: `Professor ${fac.fullName} added to ${fac.departmentName} staff rolls.`,
         timestamp: fac.createdAt || new Date(BASE_DASHBOARD_TIME - 3600000 * 8).toISOString(),
         type: "faculty"
       });

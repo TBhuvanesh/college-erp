@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { usePermission } from "@/context/PermissionContext";
 import { apiFetch } from "@/lib/api";
 import type { SubjectAllocation, WorkloadStatistics } from "@/types/subjectAllocation";
+import { useDepartments, useFaculty, useSubjects, useAcademicSessions, usePrograms, useSections } from "@/hooks/useRegistry";
 import {
   BookOpen,
   Users,
@@ -79,12 +80,6 @@ export const TeachingAssignmentManager: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Metadata dropdowns
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [faculty, setFaculty] = useState<any[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [programs, setPrograms] = useState<any[]>([]);
-
   // Filter States
   const [selectedDept, setSelectedDept] = useState<string>("ALL");
   const [selectedSemester, setSelectedSemester] = useState<string>("ALL");
@@ -94,6 +89,20 @@ export const TeachingAssignmentManager: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState<string>("2026-2027");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Central Registry Hooks
+  const { data: departments = [] } = useDepartments();
+  const { data: facultyRes } = useFaculty({ limit: 1000, status: "ACTIVE" });
+  const faculty = facultyRes?.faculty || [];
+  const { data: subjectsRes } = useSubjects({ limit: 1000, status: "ACTIVE" });
+  const subjects = subjectsRes?.subjects || [];
+  const { data: programs = [] } = usePrograms();
+  const { data: academicSessions = [] } = useAcademicSessions();
+  const { data: registrySections = [] } = useSections(
+    selectedDept !== "ALL" ? selectedDept : undefined,
+    selectedSemester !== "ALL" ? Number(selectedSemester) : undefined
+  );
+  const sectionOptions = registrySections.length > 0 ? registrySections : ["A", "B", "C", "D"];
 
   // Modals visibility
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
@@ -196,33 +205,11 @@ export const TeachingAssignmentManager: React.FC = () => {
     });
   };
 
-  const fetchMetadata = useCallback(async () => {
-    try {
-      const [deptRes, facRes, subRes, progRes] = await Promise.all([
-        apiFetch("/departments", {}, accessToken),
-        apiFetch("/faculty?limit=1000", {}, accessToken),
-        apiFetch("/subjects?limit=1000", {}, accessToken),
-        apiFetch("/departments/programs/list", {}, accessToken)
-      ]);
-
-      if (deptRes.success && deptRes.data?.departments) setDepartments(deptRes.data.departments);
-      if (facRes.success && facRes.data?.faculty) setFaculty(facRes.data.faculty);
-      if (subRes.success && subRes.data?.subjects) setSubjects(subRes.data.subjects);
-      if (progRes.success && progRes.data?.programs) setPrograms(progRes.data.programs);
-    } catch (err) {
-      console.error("Error loading dropdown metadata", err);
-    }
-  }, [accessToken]);
-
   // Initial and reactive load
   useEffect(() => {
     fetchAllocations();
     fetchStats();
   }, [fetchAllocations, fetchStats]);
-
-  useEffect(() => {
-    fetchMetadata();
-  }, [fetchMetadata]);
 
   // ── Modals / Forms Operations ────────────────────────────────────────────────
 
@@ -249,8 +236,8 @@ export const TeachingAssignmentManager: React.FC = () => {
       return;
     }
 
-    const selectedFacultyObj = faculty.find(f => f.id === formFaculty);
-    const selectedSubjectObj = subjects.find(s => s.id === formSubject);
+    const selectedFacultyObj = faculty.find((f: any) => f.id === formFaculty);
+    const selectedSubjectObj = subjects.find((s: any) => s.id === formSubject);
 
     if (selectedFacultyObj && selectedSubjectObj) {
       const facDeptId = selectedFacultyObj.departmentId || selectedFacultyObj.department?.id;
@@ -429,13 +416,13 @@ export const TeachingAssignmentManager: React.FC = () => {
   };
 
   // Get subjects matching the program / department selected in modal
-  const filteredModalSubjects = subjects.filter(s => {
+  const filteredModalSubjects = subjects.filter((s: any) => {
     if (formDept) {
       const hasDeptMapping = s.mappings?.some((m: any) => m.departmentId === formDept);
       if (!hasDeptMapping) return false;
     }
     if (formProgram) {
-      const selectedProg = programs.find(p => p.id === formProgram);
+      const selectedProg = programs.find((p: any) => p.id === formProgram);
       const matchesId = s.mappings?.some((m: any) => m.programId === formProgram);
       const matchesName = selectedProg && s.mappings?.some((m: any) => m.programName && (
         selectedProg.name.toLowerCase().includes(m.programName.toLowerCase()) ||
@@ -453,7 +440,7 @@ export const TeachingAssignmentManager: React.FC = () => {
   });
 
   // Get faculty matching department selected in modal
-  const filteredModalFaculty = faculty.filter(f => {
+  const filteredModalFaculty = faculty.filter((f: any) => {
     if (formDept && f.departmentId !== formDept && f.department?.id !== formDept) return false;
     return true;
   });
@@ -574,10 +561,9 @@ export const TeachingAssignmentManager: React.FC = () => {
               onChange={(e) => setSelectedYear(e.target.value)}
               className="px-3 py-1.5 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs font-semibold focus:outline-none focus:border-indigo-500"
             >
-              <option value="2024-2025">2024-2025</option>
-              <option value="2025-2026">2025-2026</option>
-              <option value="2026-2027">2026-2027</option>
-              <option value="2027-2028">2027-2028</option>
+              {academicSessions.map((session) => (
+                <option key={session} value={session}>{session}</option>
+              ))}
             </select>
 
             <button
@@ -624,7 +610,7 @@ export const TeachingAssignmentManager: React.FC = () => {
               className="w-full px-2 py-1.5 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500"
             >
               <option value="ALL">All Departments</option>
-              {departments.map((dept) => (
+              {departments.map((dept: any) => (
                 <option key={dept.id} value={dept.id}>{dept.name}</option>
               ))}
             </select>
@@ -654,7 +640,7 @@ export const TeachingAssignmentManager: React.FC = () => {
               className="w-full px-2 py-1.5 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500"
             >
               <option value="ALL">All Sections</option>
-              {["A", "B", "C", "D"].map((sec) => (
+              {sectionOptions.map((sec: any) => (
                 <option key={sec} value={sec}>{sec}</option>
               ))}
             </select>
@@ -669,7 +655,7 @@ export const TeachingAssignmentManager: React.FC = () => {
               className="w-full px-2 py-1.5 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500"
             >
               <option value="ALL">All Subjects</option>
-              {subjects.map((sub) => (
+              {subjects.map((sub: any) => (
                 <option key={sub.id} value={sub.id}>{sub.code} - {sub.name}</option>
               ))}
             </select>
@@ -684,7 +670,7 @@ export const TeachingAssignmentManager: React.FC = () => {
               className="w-full px-2 py-1.5 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500 block truncate"
             >
               <option value="ALL">All Faculty</option>
-              {faculty.map((f) => (
+              {faculty.map((f: any) => (
                 <option key={f.id} value={f.id}>{f.fullName || f.full_name}</option>
               ))}
             </select>
@@ -998,7 +984,7 @@ export const TeachingAssignmentManager: React.FC = () => {
                     className="w-full px-3 py-2 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500"
                   >
                     <option value="">Select Department</option>
-                    {departments.map((dept) => (
+                    {departments.map((dept: any) => (
                       <option key={dept.id} value={dept.id}>{dept.name}</option>
                     ))}
                   </select>
@@ -1015,8 +1001,8 @@ export const TeachingAssignmentManager: React.FC = () => {
                   >
                     <option value="">Select Program</option>
                     {programs
-                      .filter(p => !formDept || p.departmentId === formDept || p.department?.id === formDept)
-                      .map((p) => (
+                      .filter((p: any) => !formDept || p.departmentId === formDept || p.department?.id === formDept)
+                      .map((p: any) => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
                   </select>
@@ -1048,7 +1034,7 @@ export const TeachingAssignmentManager: React.FC = () => {
                     className="w-full px-3 py-2 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500"
                   >
                     <option value="">Select Subject</option>
-                    {filteredModalSubjects.map((sub) => (
+                    {filteredModalSubjects.map((sub: any) => (
                       <option key={sub.id} value={sub.id}>{sub.code} - {sub.name}</option>
                     ))}
                   </select>
@@ -1097,7 +1083,7 @@ export const TeachingAssignmentManager: React.FC = () => {
                     className="w-full px-3 py-2 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500"
                   >
                     <option value="">Select Faculty Member</option>
-                    {filteredModalFaculty.map((f) => (
+                    {filteredModalFaculty.map((f: any) => (
                       <option key={f.id} value={f.id}>{f.fullName || f.full_name} ({f.employeeNumber})</option>
                     ))}
                   </select>
@@ -1182,8 +1168,8 @@ export const TeachingAssignmentManager: React.FC = () => {
                     className="w-full px-3 py-2 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none"
                   >
                     {faculty
-                      .filter(f => f.departmentId === selectedAlloc.departmentId || f.department?.id === selectedAlloc.departmentId)
-                      .map((f) => (
+                      .filter((f: any) => f.departmentId === selectedAlloc.departmentId || f.department?.id === selectedAlloc.departmentId)
+                      .map((f: any) => (
                         <option key={f.id} value={f.id}>{f.fullName || f.full_name} ({f.employeeNumber})</option>
                       ))}
                   </select>
@@ -1292,8 +1278,8 @@ export const TeachingAssignmentManager: React.FC = () => {
                   >
                     <option value="">Select New Faculty</option>
                     {faculty
-                      .filter(f => f.id !== selectedAlloc.facultyId && (f.departmentId === selectedAlloc.departmentId || f.department?.id === selectedAlloc.departmentId))
-                      .map((f) => (
+                      .filter((f: any) => f.id !== selectedAlloc.facultyId && (f.departmentId === selectedAlloc.departmentId || f.department?.id === selectedAlloc.departmentId))
+                      .map((f: any) => (
                         <option key={f.id} value={f.id}>{f.fullName || f.full_name} ({f.employeeNumber})</option>
                       ))}
                   </select>

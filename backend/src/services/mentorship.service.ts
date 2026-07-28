@@ -2,6 +2,9 @@ import { query, withTransaction } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
 import { getAllGroupMemberships, type GroupMembership } from './mentorGroup.service';
+import { emitWorkflowEvent } from './workflowEngine.service';
+import { getFacultyCore, getFacultyCoreByUserId } from '../registries/facultyRegistry.service';
+import { getStudentCore } from '../registries/studentRegistry.service';
 import type {
   AssignMentorInput,
   ReassignMentorInput,
@@ -12,17 +15,13 @@ import type {
 } from '../types/mentorship';
 
 export async function assignMentor(data: AssignMentorInput, adminUserId: string): Promise<MentorAssignment> {
-  // Validate faculty mentor exists
-  const mentorCheck = await query('SELECT id FROM faculty WHERE id = $1 AND deleted_at IS NULL', [data.mentorId]);
-  if (mentorCheck.rowCount === 0) {
+  // Validate faculty mentor + student exist (via FacultyRegistry/StudentRegistry)
+  await getFacultyCore(data.mentorId).catch(() => {
     throw AppError.notFound('Faculty mentor not found');
-  }
-
-  // Validate student exists
-  const studentCheck = await query('SELECT id FROM students WHERE id = $1 AND deleted_at IS NULL', [data.studentId]);
-  if (studentCheck.rowCount === 0) {
+  });
+  const student = await getStudentCore(data.studentId).catch(() => {
     throw AppError.notFound('Student not found');
-  }
+  });
 
   // Validate student doesn't already have an active assignment
   const activeCheck = await query(
@@ -50,21 +49,28 @@ export async function assignMentor(data: AssignMentorInput, adminUserId: string)
 
   await auditLog({ actorId: adminUserId, action: 'ASSIGN', resource: 'mentor_assignment', resourceId: rows[0].id, changes: { to: data } });
 
+  await emitWorkflowEvent('mentor.assigned', adminUserId, {
+    departmentId: student.departmentId,
+    semester: student.semester,
+    title: 'Mentor Assigned',
+    message: 'A mentor has been assigned to you.',
+    notificationType: 'Announcement',
+    sourceId: rows[0].id,
+    studentId: data.studentId,
+    mentorId: data.mentorId,
+  });
+
   return rows[0];
 }
 
 export async function reassignMentor(data: ReassignMentorInput, adminUserId: string): Promise<MentorAssignment> {
-  // Validate faculty mentor exists
-  const mentorCheck = await query('SELECT id FROM faculty WHERE id = $1 AND deleted_at IS NULL', [data.mentorId]);
-  if (mentorCheck.rowCount === 0) {
+  // Validate faculty mentor + student exist (via FacultyRegistry/StudentRegistry)
+  await getFacultyCore(data.mentorId).catch(() => {
     throw AppError.notFound('New faculty mentor not found');
-  }
-
-  // Validate student exists
-  const studentCheck = await query('SELECT id FROM students WHERE id = $1 AND deleted_at IS NULL', [data.studentId]);
-  if (studentCheck.rowCount === 0) {
+  });
+  const student = await getStudentCore(data.studentId).catch(() => {
     throw AppError.notFound('Student not found');
-  }
+  });
 
   return withTransaction(async (client) => {
     // 1. Mark existing active assignment as reassigned
@@ -94,6 +100,18 @@ export async function reassignMentor(data: ReassignMentorInput, adminUserId: str
     return rows[0];
   }).then(async (assignment) => {
     await auditLog({ actorId: adminUserId, action: 'REASSIGN', resource: 'mentor_assignment', resourceId: assignment.id, changes: { to: data } });
+
+    await emitWorkflowEvent('mentor.assigned', adminUserId, {
+      departmentId: student.departmentId,
+      semester: student.semester,
+      title: 'Mentor Reassigned',
+      message: 'Your mentor has been reassigned.',
+      notificationType: 'Announcement',
+      sourceId: assignment.id,
+      studentId: data.studentId,
+      mentorId: data.mentorId,
+    });
+
     return assignment;
   });
 }
@@ -147,11 +165,11 @@ export async function getStudentsByMentor(mentorId: string) {
 
 export async function getMentorDashboard(mentorUserId: string) {
   // Resolve faculty ID from user ID
-  const facultyRes = await query<{ id: string }>('SELECT id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL', [mentorUserId]);
-  const mentorId = facultyRes.rows[0]?.id;
-  if (!mentorId) {
-    throw AppError.forbidden('No faculty profile linked to this account');
-  }
+  const mentorId = await getFacultyCoreByUserId(mentorUserId)
+    .then((f) => f.id)
+    .catch(() => {
+      throw AppError.forbidden('No faculty profile linked to this account');
+    });
 
   // Get all active mentees (delegates to the shared membership resolver)
   const menteeMemberships = await getAllGroupMemberships({ mentorId });
@@ -301,11 +319,11 @@ export async function getMentorDashboard(mentorUserId: string) {
 }
 
 export async function addNote(data: CreateMentoringNoteInput, mentorUserId: string): Promise<MentoringNote> {
-  const facultyRes = await query<{ id: string }>('SELECT id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL', [mentorUserId]);
-  const mentorId = facultyRes.rows[0]?.id;
-  if (!mentorId) {
-    throw AppError.forbidden('No faculty profile linked to this account');
-  }
+  const mentorId = await getFacultyCoreByUserId(mentorUserId)
+    .then((f) => f.id)
+    .catch(() => {
+      throw AppError.forbidden('No faculty profile linked to this account');
+    });
 
   // Ensure this faculty is the student's mentor
   const memberships = await getAllGroupMemberships({ mentorId, studentId: data.studentId });

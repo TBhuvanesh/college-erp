@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
+import { useAcademicSessions } from "@/hooks/useRegistry";
 import {
   CreditCard,
   Search,
@@ -75,6 +76,7 @@ interface FeeDetail extends FeeSummary {
 
 export default function AdminFees() {
   const { accessToken } = useAuth();
+  const { data: academicSessions = [] } = useAcademicSessions();
 
   // main ledger data
   const [fees, setFees] = useState<FeeSummary[]>([]);
@@ -712,10 +714,9 @@ export default function AdminFees() {
               className="w-full dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded px-2 py-1.5 text-xs dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
             >
               <option value="ALL">All AY</option>
-              <option value="2023-2024">2023-2024</option>
-              <option value="2024-2025">2024-2025</option>
-              <option value="2025-2026">2025-2026</option>
-              <option value="2026-2027">2026-2027</option>
+              {academicSessions.map((session) => (
+                <option key={session} value={session}>{session}</option>
+              ))}
             </select>
           </div>
           <div>
@@ -1098,14 +1099,15 @@ export default function AdminFees() {
                   <label className="block text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary mb-1.5">
                     Academic Year
                   </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 2026-2027"
+                  <select
                     value={cAcademicYear}
                     onChange={(e) => setCAcademicYear(e.target.value)}
-                    className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary font-mono focus:outline-none focus:border-blue-600 transition"
-                  />
+                    className="w-full px-3 py-2 text-xs dark:bg-neutral-950 bg-background border dark:border-neutral-850 border-border-subtle rounded dark:text-white text-text-primary focus:outline-none focus:border-blue-600 transition"
+                  >
+                    {academicSessions.map((session) => (
+                      <option key={session} value={session}>{session}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-[10px] uppercase font-bold dark:text-neutral-400 text-text-secondary mb-1.5">Semester</label>

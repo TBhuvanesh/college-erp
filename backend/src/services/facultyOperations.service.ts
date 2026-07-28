@@ -4,6 +4,7 @@ import * as roadmapService from './teachingPlanRoadmap.service';
 import * as facultyWorkloadService from './facultyWorkload.service';
 import * as facultyTasksService from './facultyTasks.service';
 import { getNotificationCount } from './notification.service';
+import { getPendingAttendanceSections, getPendingEvaluations } from './facultyDailyStatus.service';
 import type { Role } from '../types/roles';
 import type {
   FacultyOperationsDashboard,
@@ -53,28 +54,12 @@ export async function getFacultyOperationsDashboard(userId: string): Promise<Fac
     tasks,
   ] = await Promise.all([
     roadmapService.getTodayLessons(userId, 'faculty', {}),
-    query<{ subject_id: string; subject_code: string; subject_name: string; section: string }>(
-      `SELECT fsa.subject_id, s.code AS subject_code, s.name AS subject_name, fsa.section
-       FROM faculty_subject_assignments fsa
-       JOIN subjects s ON s.id = fsa.subject_id
-       WHERE fsa.faculty_id = $1 AND fsa.is_active = TRUE AND fsa.deleted_at IS NULL AND s.deleted_at IS NULL
-         AND NOT EXISTS (
-           SELECT 1 FROM attendance a WHERE a.subject_id = fsa.subject_id AND a.section = fsa.section
-             AND a.faculty_id = $1 AND a.attendance_date = CURRENT_DATE
-         )`,
-      [facultyId]
-    ),
-    query<{ assignment_id: string; assignment_title: string; subject_code: string; pending_count: string }>(
-      `SELECT a.id AS assignment_id, a.title AS assignment_title, s.code AS subject_code, COUNT(asub.id)::text AS pending_count
-       FROM assignments a
-       JOIN subjects s ON s.id = a.subject_id
-       JOIN assignment_submissions asub ON asub.assignment_id = a.id AND asub.deleted_at IS NULL
-         AND asub.status IN ('Submitted', 'Late Submission')
-       WHERE a.faculty_id = $1 AND a.deleted_at IS NULL
-       GROUP BY a.id, a.title, s.code
-       ORDER BY pending_count DESC`,
-      [facultyId]
-    ),
+    // Shared with facultyTasks.service.ts / facultyWorkload.service.ts —
+    // see facultyDailyStatus.service.ts. Previously this dashboard ran its
+    // own copy of the same query (and against the pre-rename
+    // faculty_subject_assignments view, not teaching_assignments directly).
+    getPendingAttendanceSections(facultyId),
+    getPendingEvaluations(facultyId),
     query<{ assignment_id: string; assignment_title: string; subject_code: string; due_date: Date }>(
       `SELECT a.id AS assignment_id, a.title AS assignment_title, s.code AS subject_code, a.due_date
        FROM assignments a JOIN subjects s ON s.id = a.subject_id
@@ -121,18 +106,13 @@ export async function getFacultyOperationsDashboard(userId: string): Promise<Fac
     facultyTasksService.generateTodayTasks(facultyId),
   ]);
 
-  const pendingAttendance: PendingAttendanceItem[] = pendingAttendanceRows.rows.map((r) => ({
-    subjectId: r.subject_id,
-    subjectCode: r.subject_code,
-    subjectName: r.subject_name,
-    section: r.section,
-  }));
+  const pendingAttendance: PendingAttendanceItem[] = pendingAttendanceRows;
 
-  const assignmentsPendingEvaluation: PendingEvaluationItem[] = pendingEvaluationRows.rows.map((r) => ({
-    assignmentId: r.assignment_id,
-    assignmentTitle: r.assignment_title,
-    subjectCode: r.subject_code,
-    pendingCount: Number(r.pending_count),
+  const assignmentsPendingEvaluation: PendingEvaluationItem[] = pendingEvaluationRows.map((r) => ({
+    assignmentId: r.assignmentId,
+    assignmentTitle: r.assignmentTitle,
+    subjectCode: r.subjectCode,
+    pendingCount: r.pendingCount,
   }));
 
   const upcomingDeadlines: UpcomingDeadlineItem[] = upcomingDeadlineRows.rows.map((r) => ({

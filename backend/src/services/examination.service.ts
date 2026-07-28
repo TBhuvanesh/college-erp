@@ -312,10 +312,11 @@ export async function createExam(
       }
 
       if (!facultyId) {
-        // Resolve allocated faculty from faculty_subject_assignments
+        // Resolve responsible faculty from the Teaching Assignment — the
+        // central academic entity (no manual faculty pick when one exists).
         const { rows: allocation } = await client.query<{ faculty_id: string }>(
-          `SELECT faculty_id FROM faculty_subject_assignments 
-           WHERE subject_id = $1 AND section = $2 AND deleted_at IS NULL 
+          `SELECT faculty_id FROM teaching_assignments
+           WHERE subject_id = $1 AND section = $2 AND deleted_at IS NULL
            LIMIT 1`,
           [data.subjectId, section]
         );
@@ -1173,9 +1174,9 @@ export async function publishExaminationSession(sessionId: string, userId: strin
 
     const { rows: faculty } = await client.query<{ user_id: string }>(
       `SELECT DISTINCT f.user_id
-       FROM faculty_subject_assignments fsa
-       JOIN faculty f ON f.id = fsa.faculty_id
-       WHERE fsa.subject_id = ANY($1::uuid[]) AND fsa.deleted_at IS NULL`,
+       FROM teaching_assignments ta
+       JOIN faculty f ON f.id = ta.faculty_id
+       WHERE ta.subject_id = ANY($1::uuid[]) AND ta.deleted_at IS NULL`,
       [session.subject_ids]
     );
 

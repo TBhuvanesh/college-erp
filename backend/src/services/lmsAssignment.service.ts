@@ -116,17 +116,19 @@ async function assertAssignmentAccess(row: AssignmentRow, userId: string, role: 
     return;
   }
 
-  // Student: subject must be in their current program + semester
-  const { rows: ctx } = await query<{ program_id: string; semester: number }>(
-    'SELECT program_id, semester FROM students WHERE user_id = $1 AND deleted_at IS NULL',
+  // Student: subject must be in their current department + semester curriculum
+  // (curriculum mappings are keyed by department+regulation+semester; the
+  // mapping's program_id is often NULL, so department_id is the reliable key).
+  const { rows: ctx } = await query<{ department_id: string; semester: number }>(
+    'SELECT department_id, semester FROM students WHERE user_id = $1 AND deleted_at IS NULL',
     [userId]
   );
   if (!ctx[0]) throw AppError.notFound('Student profile not found');
   const { rows: sub } = await query<{ id: string }>(
     `SELECT s.id FROM subjects s
      JOIN subject_curriculum_mappings scm ON scm.subject_id = s.id
-     WHERE s.id = $1 AND scm.program_id = $2 AND scm.semester = $3 AND s.deleted_at IS NULL`,
-    [row.subject_id, ctx[0].program_id, ctx[0].semester]
+     WHERE s.id = $1 AND scm.department_id = $2 AND scm.semester = $3 AND s.deleted_at IS NULL`,
+    [row.subject_id, ctx[0].department_id, ctx[0].semester]
   );
   if (!sub[0]) throw AppError.forbidden('This assignment is not in your enrolled subjects');
 }
@@ -205,17 +207,17 @@ export async function listAssignments(
         AND fsa.deleted_at IS NULL
     )`);
   } else if (role === 'student') {
-    const { rows: ctx } = await query<{ program_id: string; semester: number }>(
-      'SELECT program_id, semester FROM students WHERE user_id = $1 AND deleted_at IS NULL',
+    const { rows: ctx } = await query<{ department_id: string; semester: number }>(
+      'SELECT department_id, semester FROM students WHERE user_id = $1 AND deleted_at IS NULL',
       [userId]
     );
     if (!ctx[0]) return { assignments: [], total: 0, page, limit, totalPages: 0 };
-    params.push(ctx[0].program_id, ctx[0].semester);
+    params.push(ctx[0].department_id, ctx[0].semester);
     conditions.push(`EXISTS (
       SELECT 1 FROM subject_curriculum_mappings scm
       WHERE scm.subject_id = a.subject_id
-        AND scm.program_id = $${params.length - 1}
-        AND scm.semester   = $${params.length}
+        AND scm.department_id = $${params.length - 1}
+        AND scm.semester       = $${params.length}
         AND scm.deleted_at IS NULL
     )`);
   }

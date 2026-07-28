@@ -2,6 +2,7 @@ import { query, withTransaction } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
 import { createNotification } from './notification.service';
+import { emitWorkflowEvent } from './workflowEngine.service';
 import type {
   FeedbackCampaign,
   CreateCampaignInput,
@@ -146,8 +147,8 @@ export async function resolveCampaignEligibility(
       params.push(val);
       return `$${params.length}`;
     };
-    if (deptFilter) conditions.push(`s.department_id = ANY(${push(campaign.targetDepartmentIds)}::uuid[])`);
-    if (semFilter) conditions.push(`s.semester = ANY(${push(campaign.targetSemesters)}::smallint[])`);
+    if (deptFilter) conditions.push(`scm.department_id = ANY(${push(campaign.targetDepartmentIds)}::uuid[])`);
+    if (semFilter) conditions.push(`scm.semester = ANY(${push(campaign.targetSemesters)}::smallint[])`);
     if (sectionFilter) conditions.push(`ta.section = ANY(${push(campaign.targetSections)}::varchar[])`);
     if (subjectFilter) conditions.push(`ta.subject_id = ANY(${push(campaign.targetSubjectIds)}::uuid[])`);
     if (facultyFilter) conditions.push(`ta.faculty_id = ANY(${push(campaign.targetFacultyIds)}::uuid[])`);
@@ -157,7 +158,8 @@ export async function resolveCampaignEligibility(
       `SELECT DISTINCT st.id AS student_id, ta.subject_id, ta.faculty_id
        FROM teaching_assignments ta
        JOIN subjects s ON s.id = ta.subject_id
-       JOIN students st ON st.program_id = s.program_id AND st.semester = s.semester AND st.section = ta.section
+       JOIN subject_curriculum_mappings scm ON scm.id = ta.subject_curriculum_mapping_id
+       JOIN students st ON st.program_id = scm.program_id AND st.semester = scm.semester AND st.section = ta.section
        WHERE ${conditions.join(' AND ')}`,
       params
     );
@@ -444,6 +446,17 @@ export async function publishCampaign(id: string, actorId: string): Promise<Feed
 
   const published = await getCampaignOrThrow(id);
   await notifyEligibleStudents(published, studentIds, actorId);
+
+  await emitWorkflowEvent('feedback.published', actorId, {
+    departmentId: published.targetDepartmentIds[0] ?? '',
+    semester: published.targetSemesters[0] ?? 0,
+    title: 'Feedback Campaign Published',
+    message: `Feedback campaign "${published.title}" is now open (${studentIds.length} eligible student(s)).`,
+    notificationType: 'Announcement',
+    sourceId: id,
+    eligibleStudents: studentIds.length,
+  });
+
   return published;
 }
 

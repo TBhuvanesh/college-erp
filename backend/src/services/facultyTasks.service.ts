@@ -1,25 +1,22 @@
 import { query } from '../config/database';
 import type { FacultyTask } from '../types/facultyOperations';
+import { getPendingAttendanceSections, getPendingResultEntries, getPendingEvaluations } from './facultyDailyStatus.service';
 
 // Every task here is generated fresh from live data — nothing is stored, so a
 // task "disappears automatically when completed" simply because the query that
 // produced it (e.g. "no attendance row for today") stops matching.
+//
+// Pending attendance and pending result entry are resolved through
+// facultyDailyStatus.service.ts (shared with facultyWorkload.service.ts and
+// facultyOperations.service.ts) rather than re-querying attendance/
+// result_entry_tasks here — the three services previously computed the same
+// two things three different ways.
 
 export async function generateTodayTasks(facultyId: string): Promise<FacultyTask[]> {
   const tasks: FacultyTask[] = [];
 
   const [pendingAttendance, todayLessons, todayQuizzes, pendingEvaluations, todayMeetings, marksPending, todayInvigilation] = await Promise.all([
-    query<{ subject_id: string; subject_code: string; subject_name: string; section: string }>(
-      `SELECT fsa.subject_id, s.code AS subject_code, s.name AS subject_name, fsa.section
-       FROM teaching_assignments fsa
-       JOIN subjects s ON s.id = fsa.subject_id
-       WHERE fsa.faculty_id = $1 AND fsa.is_active = TRUE AND fsa.deleted_at IS NULL AND s.deleted_at IS NULL
-         AND NOT EXISTS (
-           SELECT 1 FROM attendance a WHERE a.subject_id = fsa.subject_id AND a.section = fsa.section
-             AND a.faculty_id = $1 AND a.attendance_date = CURRENT_DATE
-         )`,
-      [facultyId]
-    ),
+    getPendingAttendanceSections(facultyId),
     query<{ id: string; topic_title: string; subject_code: string; week_number: number }>(
       `SELECT tp.id, tp.topic_title, s.code AS subject_code, tp.week_number
        FROM teaching_plans tp JOIN subjects s ON s.id = tp.subject_id
@@ -34,37 +31,14 @@ export async function generateTodayTasks(facultyId: string): Promise<FacultyTask
          AND tp.quiz_planned = TRUE AND tp.lesson_status NOT IN ('Completed', 'Cancelled')`,
       [facultyId]
     ),
-    query<{ assignment_id: string; title: string; subject_code: string; pending: string }>(
-      `SELECT a.id AS assignment_id, a.title, s.code AS subject_code, COUNT(asub.id)::text AS pending
-       FROM assignments a
-       JOIN subjects s ON s.id = a.subject_id
-       JOIN assignment_submissions asub ON asub.assignment_id = a.id AND asub.deleted_at IS NULL
-         AND asub.status IN ('Submitted', 'Late Submission')
-       WHERE a.faculty_id = $1 AND a.deleted_at IS NULL
-       GROUP BY a.id, a.title, s.code`,
-      [facultyId]
-    ),
+    getPendingEvaluations(facultyId),
     query<{ id: string; student_name: string; title: string; follow_up_date: string }>(
       `SELECT mn.id, s.full_name AS student_name, mn.title, TO_CHAR(mn.follow_up_date, 'YYYY-MM-DD') AS follow_up_date
        FROM mentoring_notes mn JOIN students s ON s.id = mn.student_id
        WHERE mn.mentor_id = $1 AND mn.deleted_at IS NULL AND mn.follow_up_date = CURRENT_DATE`,
       [facultyId]
     ),
-    // Result entry tasks are the single source of truth for "marks pending" —
-    // created automatically when an exam reaches Scripts Distributed and
-    // resolved through the faculty's Teaching Assignment (see
-    // examination.service.ts / resultEntryTask.service.ts), not an ad-hoc
-    // internal_marks NOT EXISTS heuristic.
-    query<{ exam_id: string; subject_code: string; exam_type: string; section: string }>(
-      `SELECT ret.exam_id, s.code AS subject_code, e.exam_type::text AS exam_type, ta.section
-       FROM result_entry_tasks ret
-       JOIN teaching_assignments ta ON ta.id = ret.teaching_assignment_id
-       JOIN subjects s ON s.id = ta.subject_id
-       JOIN exams e ON e.id = ret.exam_id
-       WHERE ret.faculty_id = $1 AND ret.deleted_at IS NULL
-         AND ret.status NOT IN ('published', 'closed')`,
-      [facultyId]
-    ),
+    getPendingResultEntries(facultyId),
     query<{ id: string; room_name: string; start_time: string; end_time: string }>(
       `SELECT eid.id, er.name AS room_name, eid.start_time::text, eid.end_time::text
        FROM exam_invigilation_duties eid JOIN exam_rooms er ON er.id = eid.room_id
@@ -73,12 +47,12 @@ export async function generateTodayTasks(facultyId: string): Promise<FacultyTask
     ),
   ]);
 
-  for (const r of pendingAttendance.rows) {
+  for (const r of pendingAttendance) {
     tasks.push({
-      id: `attendance-${r.subject_id}-${r.section}`,
+      id: `attendance-${r.subjectId}-${r.section}`,
       type: 'attendance',
-      title: `Take attendance for ${r.subject_code} - Section ${r.section}`,
-      context: r.subject_name,
+      title: `Take attendance for ${r.subjectCode} - Section ${r.section}`,
+      context: r.subjectName,
       priority: 'high',
       dueDate: null,
     });
@@ -106,11 +80,11 @@ export async function generateTodayTasks(facultyId: string): Promise<FacultyTask
     });
   }
 
-  for (const r of pendingEvaluations.rows) {
+  for (const r of pendingEvaluations) {
     tasks.push({
-      id: `evaluation-${r.assignment_id}`,
+      id: `evaluation-${r.assignmentId}`,
       type: 'evaluation',
-      title: `Evaluate ${r.pending} submission(s) for "${r.title}" (${r.subject_code})`,
+      title: `Evaluate ${r.pendingCount} submission(s) for "${r.assignmentTitle}" (${r.subjectCode})`,
       context: null,
       priority: 'medium',
       dueDate: null,
@@ -128,11 +102,11 @@ export async function generateTodayTasks(facultyId: string): Promise<FacultyTask
     });
   }
 
-  for (const r of marksPending.rows) {
+  for (const r of marksPending) {
     tasks.push({
-      id: `result-entry-${r.exam_id}`,
+      id: `result-entry-${r.examId}`,
       type: 'internal_marks',
-      title: `Enter results for ${r.subject_code} - ${r.exam_type} (Section ${r.section})`,
+      title: `Enter results for ${r.subjectCode} - ${r.examType} (Section ${r.section})`,
       context: null,
       priority: 'high',
       dueDate: null,

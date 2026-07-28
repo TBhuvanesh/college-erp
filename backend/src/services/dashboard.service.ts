@@ -1,5 +1,11 @@
 import { query } from '../config/database';
 import { AppError } from '../errors/AppError';
+import {
+  getInstitutionCounts,
+  getFeeTotals,
+  getCampusAttendanceSummary,
+  getExaminationStatusBreakdown,
+} from './dashboardAggregator.service';
 import { getStudentSummary } from './attendance.service';
 import { getStudentDues, ensureAllStudentsHaveFees } from './fee.service';
 import { getStudentResults } from './result.service';
@@ -87,10 +93,10 @@ async function getFeedbackOverviewForStudent(userId: string) {
 
 export async function getAdminDashboardStats(userId: string) {
   const [
-    countsRes,
-    feeRes,
-    attRes,
-    examRes,
+    counts,
+    feeTotals,
+    attendanceSummary,
+    examBreakdown,
     notifRes,
     studentsRes,
     facultyRes,
@@ -100,80 +106,15 @@ export async function getAdminDashboardStats(userId: string) {
     activityRes,
   ] = await Promise.all([
 
-    // ── All scalar counts in one round-trip ───────────────────────────────────
-    query<{
-      total_students:         number;
-      total_faculty:          number;
-      total_subjects:         number;
-      total_departments:      number;
-      total_announcements:    number;
-      total_calendar_events:  number;
-      total_examinations:     number;
-      total_fee_records:      number;
-      total_materials:        number;
-      total_lms_assignments:  number;
-      total_submissions:      number;
-      lms_active_assignments: number;
-      active_opportunities:   number;
-      internship_posts:       number;
-      placement_drives:       number;
-      upcoming_workshops:     number;
-      total_notifications:    number;
-    }>(`
-      SELECT
-        (SELECT COUNT(*)::int FROM students            WHERE deleted_at IS NULL)                                           AS total_students,
-        (SELECT COUNT(*)::int FROM faculty             WHERE deleted_at IS NULL)                                           AS total_faculty,
-        (SELECT COUNT(*)::int FROM subjects            WHERE deleted_at IS NULL)                                           AS total_subjects,
-        (SELECT COUNT(*)::int FROM departments         WHERE deleted_at IS NULL)                                           AS total_departments,
-        (SELECT COUNT(*)::int FROM announcements       WHERE deleted_at IS NULL)                                           AS total_announcements,
-        (SELECT COUNT(*)::int FROM academic_calendar_events
-                                                       WHERE deleted_at IS NULL AND publish_status != 'Archived')         AS total_calendar_events,
-        (SELECT COUNT(*)::int FROM exams               WHERE deleted_at IS NULL)                                           AS total_examinations,
-        (SELECT COUNT(*)::int FROM fees                WHERE deleted_at IS NULL)                                           AS total_fee_records,
-        (SELECT COUNT(*)::int FROM course_materials    WHERE deleted_at IS NULL)                                           AS total_materials,
-        (SELECT COUNT(*)::int FROM assignments         WHERE deleted_at IS NULL)                                           AS total_lms_assignments,
-        (SELECT COUNT(*)::int FROM assignment_submissions WHERE deleted_at IS NULL)                                        AS total_submissions,
-        (SELECT COUNT(*)::int FROM assignments         WHERE deleted_at IS NULL AND due_date >= NOW())                     AS lms_active_assignments,
-        (SELECT COUNT(*)::int FROM opportunities       WHERE deleted_at IS NULL AND status = 'Active')                     AS active_opportunities,
-        (SELECT COUNT(*)::int FROM opportunities       WHERE deleted_at IS NULL AND status = 'Active'
-                                                         AND type = 'Internship')                                         AS internship_posts,
-        (SELECT COUNT(*)::int FROM opportunities       WHERE deleted_at IS NULL AND status = 'Active'
-                                                         AND type = 'Placement Drive')                                    AS placement_drives,
-        (SELECT COUNT(*)::int FROM opportunities       WHERE deleted_at IS NULL AND status = 'Active'
-                                                         AND type IN ('Workshop', 'Seminar')
-                                                         AND (start_date IS NULL OR start_date >= CURRENT_DATE))          AS upcoming_workshops,
-        (SELECT COUNT(*)::int FROM notifications       WHERE deleted_at IS NULL)                                           AS total_notifications
-    `),
-
-    // ── Fee totals ────────────────────────────────────────────────────────────
-    query<{ total_billed: string; total_collected: string; total_outstanding: string }>(`
-      SELECT
-        COALESCE(SUM(total_amount),   0) AS total_billed,
-        COALESCE(SUM(paid_amount),    0) AS total_collected,
-        COALESCE(SUM(pending_amount), 0) AS total_outstanding
-      FROM fees
-      WHERE deleted_at IS NULL
-    `),
-
-    // ── Campus-wide attendance summary ────────────────────────────────────────
-    query<{ total_records: number; total_present: number }>(`
-      SELECT
-        COUNT(*)::int                                    AS total_records,
-        COUNT(*) FILTER (WHERE status = 'present')::int AS total_present
-      FROM attendance
-    `),
-
-    // ── Examination status breakdown ──────────────────────────────────────────
-    query<{ scheduled: number; ongoing: number; completed: number; cancelled: number; total: number }>(`
-      SELECT
-        COUNT(*) FILTER (WHERE status = 'Scheduled')::int AS scheduled,
-        COUNT(*) FILTER (WHERE status = 'Ongoing')::int   AS ongoing,
-        COUNT(*) FILTER (WHERE status = 'Completed')::int AS completed,
-        COUNT(*) FILTER (WHERE status = 'Cancelled')::int AS cancelled,
-        COUNT(*)::int                                      AS total
-      FROM exams
-      WHERE deleted_at IS NULL
-    `),
+    // ── Institution-wide counts, fee totals, attendance summary, exam status
+    // breakdown — via the Dashboard Aggregator (dashboardAggregator.service.ts)
+    // instead of inline SQL, so this dashboard is composed from named,
+    // independently cacheable aggregation functions (Steps 5/8 of the ERP
+    // integration sprint). ──────────────────────────────────────────────────
+    getInstitutionCounts(),
+    getFeeTotals(),
+    getCampusAttendanceSummary(),
+    getExaminationStatusBreakdown(),
 
     // ── Admin notification unread count ───────────────────────────────────────
     query<{ total: string; unread: string }>(`
@@ -330,14 +271,10 @@ export async function getAdminDashboardStats(userId: string) {
     `),
   ]);
 
-  const c = countsRes.rows[0];
-  const f = feeRes.rows[0];
-  const a = attRes.rows[0];
-  const e = examRes.rows[0];
   const n = notifRes.rows[0];
 
-  const totalRecords = Number(a?.total_records) || 0;
-  const totalPresent = Number(a?.total_present) || 0;
+  const totalRecords = attendanceSummary.totalRecords;
+  const totalPresent = attendanceSummary.totalPresent;
   const examSeatingOverview = await getExamSeatingOverview(null);
   const mentorshipOverview = await getMentorshipAnalytics(null);
   const feedbackOverview = await getFeedbackOverviewForAdmin(null);
@@ -347,13 +284,13 @@ export async function getAdminDashboardStats(userId: string) {
     mentorshipOverview,
     feedbackOverview,
     institutionOverview: {
-      totalStudents:    Number(c.total_students)    || 0,
-      totalFaculty:     Number(c.total_faculty)     || 0,
-      totalSubjects:    Number(c.total_subjects)    || 0,
-      totalDepartments: Number(c.total_departments) || 0,
+      totalStudents:    counts.totalStudents,
+      totalFaculty:     counts.totalFaculty,
+      totalSubjects:    counts.totalSubjects,
+      totalDepartments: counts.totalDepartments,
     },
     academicOverview: {
-      upcomingExaminations:  Number(e.scheduled)           || 0,
+      upcomingExaminations:  examBreakdown.scheduled,
       upcomingCalendarEvents: eventsRes.rows.length,
       attendanceSummary: {
         totalRecords,
@@ -364,32 +301,32 @@ export async function getAdminDashboardStats(userId: string) {
       },
     },
     examinationBreakdown: {
-      scheduled: Number(e.scheduled) || 0,
-      ongoing:   Number(e.ongoing)   || 0,
-      completed: Number(e.completed) || 0,
-      cancelled: Number(e.cancelled) || 0,
-      total:     Number(e.total)     || 0,
+      scheduled: examBreakdown.scheduled,
+      ongoing:   examBreakdown.ongoing,
+      completed: examBreakdown.completed,
+      cancelled: examBreakdown.cancelled,
+      total:     examBreakdown.total,
     },
     feeStatistics: {
-      totalBilled:      parseFloat(f.total_billed)      || 0,
-      totalCollected:   parseFloat(f.total_collected)   || 0,
-      totalOutstanding: parseFloat(f.total_outstanding) || 0,
-      totalRecords:     Number(c.total_fee_records)     || 0,
+      totalBilled:      feeTotals.totalBilled,
+      totalCollected:   feeTotals.totalCollected,
+      totalOutstanding: feeTotals.totalOutstanding,
+      totalRecords:     counts.totalFeeRecords,
     },
     lmsOverview: {
-      totalMaterials:    Number(c.total_materials)        || 0,
-      totalAssignments:  Number(c.total_lms_assignments)  || 0,
-      totalSubmissions:  Number(c.total_submissions)      || 0,
-      activeAssignments: Number(c.lms_active_assignments) || 0,
+      totalMaterials:    counts.totalMaterials,
+      totalAssignments:  counts.totalLmsAssignments,
+      totalSubmissions:  counts.totalSubmissions,
+      activeAssignments: counts.lmsActiveAssignments,
     },
     opportunityHubOverview: {
-      activeOpportunities: Number(c.active_opportunities) || 0,
-      internshipPosts:     Number(c.internship_posts)     || 0,
-      placementDrives:     Number(c.placement_drives)     || 0,
-      upcomingWorkshops:   Number(c.upcoming_workshops)   || 0,
+      activeOpportunities: counts.activeOpportunities,
+      internshipPosts:     counts.internshipPosts,
+      placementDrives:     counts.placementDrives,
+      upcomingWorkshops:   counts.upcomingWorkshops,
     },
     notificationOverview: {
-      totalNotifications: Number(c.total_notifications) || 0,
+      totalNotifications: counts.totalNotifications,
       unreadNotifications: Number(n?.unread)            || 0,
     },
     upcomingEvents: eventsRes.rows.map((r) => ({
@@ -774,7 +711,7 @@ export async function getStudentDashboardStats(userId: string) {
 
   if (!profileRows[0]) throw AppError.forbidden('No student profile is linked to this account');
 
-  const { id: studentId, semester, department_id: departmentId, program_id: programId } = profileRows[0];
+  const { id: studentId, semester, department_id: departmentId } = profileRows[0];
   const yearGroup = semesterToYearGroup(semester);
 
   const [
@@ -819,12 +756,12 @@ export async function getStudentDashboardStats(userId: string) {
         ON asub.assignment_id = a.id AND asub.student_id = $1 AND asub.deleted_at IS NULL
       WHERE a.deleted_at IS NULL
         AND a.due_date >= NOW()
-        AND scm.program_id = $2
-        AND scm.semester   = $3
+        AND scm.department_id = $2
+        AND scm.semester       = $3
         AND scm.deleted_at IS NULL
       ORDER BY a.due_date ASC
       LIMIT 5
-    `, [studentId, programId, semester]),
+    `, [studentId, departmentId, semester]),
 
     // ── Recent study materials ────────────────────────────────────────────────
     query<{
@@ -843,12 +780,12 @@ export async function getStudentDashboardStats(userId: string) {
       JOIN subjects sub ON sub.id = cm.subject_id
       JOIN subject_curriculum_mappings scm ON scm.subject_id = sub.id
       WHERE cm.deleted_at IS NULL
-        AND scm.program_id = $1
-        AND scm.semester   = $2
+        AND scm.department_id = $1
+        AND scm.semester       = $2
         AND scm.deleted_at IS NULL
       ORDER BY cm.created_at DESC
       LIMIT 5
-    `, [programId, semester]),
+    `, [departmentId, semester]),
 
     // ── Graded submissions (feedback received) ────────────────────────────────
     query<{

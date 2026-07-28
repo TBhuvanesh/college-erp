@@ -344,7 +344,9 @@ describe('recordPayment', () => {
 
   it('records payment and transitions to Partially Paid', async () => {
     mockQuery
-      .mockResolvedValueOnce({ rows: [PARTIAL_FEE] })         // fetch fee
+      .mockResolvedValueOnce({ rows: [PARTIAL_FEE] })         // fetch fee (joined with students)
+      .mockResolvedValueOnce({ rows: [] })                    // emitWorkflowEvent: fetchActiveRules (fee.paid)
+      .mockResolvedValueOnce({ rows: [] })                    // emitWorkflowEvent: logExecution
       .mockResolvedValueOnce({ rows: [FEE_ROW] })             // getFeeById - fee
       .mockResolvedValueOnce({ rows: [] });                    // getFeeById - payments
 
@@ -366,6 +368,8 @@ describe('recordPayment', () => {
 
     mockQuery
       .mockResolvedValueOnce({ rows: [remainingFee] })
+      .mockResolvedValueOnce({ rows: [] })                    // emitWorkflowEvent: fetchActiveRules (fee.paid)
+      .mockResolvedValueOnce({ rows: [] })                    // emitWorkflowEvent: logExecution
       .mockResolvedValueOnce({ rows: [{ ...FEE_ROW, payment_status: 'Paid', pending_amount: '0.00' }] })
       .mockResolvedValueOnce({ rows: [PAYMENT_ROW] });
 
