@@ -182,7 +182,7 @@ export default function FacultyAttendance() {
         
         return fetchedRoster.map((r: RosterEntry) => ({
           ...r,
-          status: r.status === null && isTodaySelected ? ("present" as const) : r.status
+          status: r.status === null && isTodaySelected ? ("absent" as const) : r.status
         }));
       }
       return [];
@@ -247,10 +247,14 @@ export default function FacultyAttendance() {
     historyQuery.refetch();
   }, [historyQuery]);
 
-  const handleStatusChange = (studId: string, newStatus: "present" | "absent") => {
+  const handleToggleStatus = (studId: string) => {
     if (!isTodaySelected) return; // Prevent modifying previous days
     setRoster(prev =>
-      prev.map(item => (item.studentId === studId ? { ...item, status: newStatus } : item))
+      prev.map(item =>
+        item.studentId === studId
+          ? { ...item, status: item.status === "present" ? "absent" : "present" }
+          : item
+      )
     );
   };
 
@@ -513,85 +517,60 @@ export default function FacultyAttendance() {
                   <span className="font-mono text-xs">Pulling class roster from archives...</span>
                 </div>
               ) : filteredRoster.length > 0 ? (
-                filteredRoster.map(student => (
-                  <div 
-                    key={student.studentId} 
-                    className="glass-card border border-border-subtle rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 dark:hover:border-neutral-750 hover:border-border-strong transition"
-                  >
-                    {/* Student Info */}
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full dark:bg-neutral-850 bg-neutral-100 border dark:border-neutral-800 border-border-subtle flex items-center justify-center font-bold text-blue-400 shrink-0">
-                        {student.fullName.charAt(0)}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {filteredRoster.map(student => (
+                    <div 
+                      key={student.studentId}
+                      onClick={() => isTodaySelected && handleToggleStatus(student.studentId)}
+                      className={`border rounded-xl p-3 flex items-center justify-between gap-3 transition select-none ${
+                        isTodaySelected
+                          ? "cursor-pointer hover:scale-[1.01] hover:shadow-md duration-150"
+                          : ""
+                      } ${
+                        student.status === "present"
+                          ? "bg-emerald-500/5 border-emerald-500/30 dark:bg-emerald-500/10 dark:border-emerald-500/40"
+                          : "bg-rose-500/5 border-rose-500/25 dark:bg-rose-500/10 dark:border-rose-500/30"
+                      }`}
+                    >
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[10px] dark:text-neutral-500 text-text-muted font-mono font-bold">
+                          {student.rollNumber}
+                        </span>
+                        <h4 className="text-xs font-extrabold dark:text-white text-text-primary truncate leading-tight mt-0.5" title={student.fullName}>
+                          {student.fullName}
+                        </h4>
                       </div>
-                      <div>
-                        <h4 className="text-sm font-bold dark:text-white text-text-primary leading-tight">{student.fullName}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] dark:text-neutral-500 text-text-muted font-mono select-all" title="Student ID">
-                            ID: {student.studentId.substring(0, 8)}...
-                          </span>
-                          <span className="dark:text-neutral-700 text-neutral-300">•</span>
-                          <span className="text-[10px] dark:text-neutral-400 text-text-secondary font-mono font-semibold">
-                            Roll: {student.rollNumber}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* Roster Marking Controls */}
-                    <div className="flex items-center gap-2 self-start sm:self-center">
-                      {isTodaySelected ? (
-                        <>
-                          {/* Present Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(student.studentId, "present")}
-                            className={`px-4 py-2 rounded-lg border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
-                              student.status === "present"
-                                ? "dark:bg-emerald-500/20 bg-emerald-50 border dark:border-emerald-500/40 border-emerald-300 dark:text-emerald-400 text-emerald-700 shadow-md shadow-emerald-500/5"
-                                : "dark:bg-neutral-950 bg-surface border dark:border-neutral-900 border-border-subtle dark:text-neutral-500 text-text-muted dark:hover:text-neutral-400 hover:text-text-primary"
-                            }`}
-                          >
-                            <Check size={13} />
-                            <span>Present</span>
-                          </button>
-
-                          {/* Absent Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(student.studentId, "absent")}
-                            className={`px-4 py-2 rounded-lg border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
-                              student.status === "absent"
-                                ? "dark:bg-rose-500/20 bg-rose-50 border dark:border-rose-500/40 border-rose-300 dark:text-rose-400 text-rose-700 shadow-md shadow-rose-500/5"
-                                : "dark:bg-neutral-950 bg-surface border dark:border-neutral-900 border-border-subtle dark:text-neutral-500 text-text-muted dark:hover:text-neutral-400 hover:text-text-primary"
-                            }`}
-                          >
-                            <X size={13} />
-                            <span>Absent</span>
-                          </button>
-                        </>
-                      ) : (
-                        // View Only Mode (Render Status Badges)
-                        <div className="flex items-center">
-                          {student.status === "present" ? (
-                            <span className="flex items-center gap-1.5 text-xs font-bold dark:text-emerald-400 text-emerald-700 dark:bg-emerald-500/10 bg-emerald-50 border dark:border-emerald-500/20 border-emerald-200 rounded-lg px-3.5 py-1.5">
-                              <CheckCircle size={12} />
-                              <span>Present</span>
-                            </span>
-                          ) : student.status === "absent" ? (
-                            <span className="flex items-center gap-1.5 text-xs font-bold dark:text-rose-400 text-rose-700 dark:bg-rose-500/10 bg-rose-50 border dark:border-rose-500/20 border-rose-200 rounded-lg px-3.5 py-1.5">
-                              <XCircle size={12} />
-                              <span>Absent</span>
+                      <div className="shrink-0">
+                        {isTodaySelected ? (
+                          student.status === "present" ? (
+                            <span className="px-2.5 py-1 text-[10px] font-extrabold rounded-md bg-emerald-500 text-white dark:bg-emerald-500/20 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                              <Check size={10} /> Present
                             </span>
                           ) : (
-                            <span className="flex items-center gap-1.5 text-xs font-bold dark:text-neutral-500 text-text-muted dark:bg-neutral-950 bg-neutral-100 border dark:border-neutral-900 border-border-subtle rounded-lg px-3.5 py-1.5 font-mono">
-                              No Record
+                            <span className="px-2.5 py-1 text-[10px] font-extrabold rounded-md bg-rose-500 text-white dark:bg-rose-500/20 dark:text-rose-400 uppercase tracking-wider flex items-center gap-1">
+                              <X size={10} /> Absent
                             </span>
-                          )}
-                        </div>
-                      )}
+                          )
+                        ) : (
+                          student.status === "present" ? (
+                            <span className="px-2.5 py-1 text-[10px] font-extrabold rounded-md bg-emerald-500/20 text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                              <CheckCircle size={10} /> Present
+                            </span>
+                          ) : student.status === "absent" ? (
+                            <span className="px-2.5 py-1 text-[10px] font-extrabold rounded-md bg-rose-500/20 text-rose-400 uppercase tracking-wider flex items-center gap-1">
+                              <XCircle size={10} /> Absent
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 text-[10px] font-extrabold rounded-md bg-neutral-100 dark:bg-neutral-850 text-neutral-500 uppercase tracking-wider">
+                              Unmarked
+                            </span>
+                          )
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : (
                 <div className="p-12 text-center glass-card border border-border-subtle dark:text-neutral-500 text-text-muted font-mono text-xs">
                   {searchTerm ? "No students match your query." : "No students found. Verify subject assignment parameters."}

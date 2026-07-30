@@ -79,7 +79,6 @@ export const Sidebar: React.FC = () => {
       items: [
         { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
         { name: "Opportunity Hub", href: "/admin/opportunities", icon: Briefcase },
-        { name: "Mentorship Registry", href: "/admin/mentorship", icon: Users },
       ]
     },
     {
@@ -87,6 +86,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { name: "Student Registry", href: "/admin/students", icon: Users },
         { name: "Faculty Roster", href: "/admin/faculty", icon: GraduationCap },
+        { name: "Mentorship Registry", href: "/admin/mentorship", icon: Users },
         { name: "Accountant Registry", href: "/admin/accountants", icon: Users },
       ]
     },
