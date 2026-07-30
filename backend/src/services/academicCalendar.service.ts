@@ -1,6 +1,8 @@
 import { query } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
+import { getFacultyCoreByUserId } from '../registries/facultyRegistry.service';
+import { getStudentCoreByUserId } from '../registries/studentRegistry.service';
 import type { Role } from '../types/roles';
 import type { ParsedEventType, ParsedEventAudience } from '../types/parsedEvent';
 import type {
@@ -124,25 +126,21 @@ interface FacultyContext { departmentId: string | null; }
 interface StudentContext { semester: number | null; departmentId: string | null; }
 
 async function resolveFacultyContext(userId: string): Promise<FacultyContext> {
-  const { rows } = await query<{ department_id: string }>(
-    'SELECT department_id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-    [userId]
-  );
-  return { departmentId: rows[0]?.department_id ?? null };
+  try {
+    const faculty = await getFacultyCoreByUserId(userId);
+    return { departmentId: faculty.departmentId };
+  } catch {
+    return { departmentId: null };
+  }
 }
 
 async function resolveStudentContext(userId: string): Promise<StudentContext> {
-  const { rows } = await query<{ semester: number; department_id: string }>(
-    `SELECT st.semester, p.department_id
-     FROM students st
-     JOIN programs p ON p.id = st.program_id
-     WHERE st.user_id = $1 AND st.deleted_at IS NULL`,
-    [userId]
-  );
-  return {
-    semester:     rows[0]?.semester     ?? null,
-    departmentId: rows[0]?.department_id ?? null,
-  };
+  try {
+    const student = await getStudentCoreByUserId(userId);
+    return { semester: student.semester, departmentId: student.departmentId };
+  } catch {
+    return { semester: null, departmentId: null };
+  }
 }
 
 /**

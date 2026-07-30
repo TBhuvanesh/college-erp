@@ -1,6 +1,7 @@
 import { query } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
+import { getStudentCoreByUserId } from '../registries/studentRegistry.service';
 import type { Role } from '../types/roles';
 import type {
   Opportunity,
@@ -110,15 +111,13 @@ interface StudentCtx {
 }
 
 async function resolveStudentCtx(userId: string): Promise<StudentCtx> {
-  const { rows } = await query<{ id: string; department_id: string; semester: number }>(
-    'SELECT id, department_id, semester FROM students WHERE user_id = $1 AND deleted_at IS NULL',
-    [userId]
-  );
-  if (!rows[0]) throw AppError.notFound('Student profile not found');
+  const student = await getStudentCoreByUserId(userId).catch(() => {
+    throw AppError.notFound('Student profile not found');
+  });
   return {
-    studentId:    rows[0].id,
-    departmentId: rows[0].department_id,
-    yearGroup:    semesterToYearGroup(rows[0].semester),
+    studentId:    student.id,
+    departmentId: student.departmentId,
+    yearGroup:    semesterToYearGroup(student.semester),
   };
 }
 

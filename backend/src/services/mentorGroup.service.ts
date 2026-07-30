@@ -3,6 +3,8 @@ import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
 import { createNotification } from './notification.service';
 import * as mentorshipSettingsService from './mentorshipSettings.service';
+import { getFacultyCore } from '../registries/facultyRegistry.service';
+import { getDepartment } from '../registries/academicRegistry.service';
 import { semesterToYear, semesterToSessionLabel } from '../types/mentorGroup';
 import type {
   CreateMentorGroupInput,
@@ -313,11 +315,13 @@ async function notifyGroupParticipants(group: MentorGroup, action: 'created' | '
 }
 
 export async function createMentorGroup(data: CreateMentorGroupInput, createdBy: string, actorRole: 'admin' | 'faculty'): Promise<MentorGroup> {
-  const mentorCheck = await query('SELECT id FROM faculty WHERE id = $1 AND deleted_at IS NULL', [data.mentorId]);
-  if (mentorCheck.rowCount === 0) throw AppError.notFound('Faculty mentor not found');
+  await getFacultyCore(data.mentorId).catch(() => {
+    throw AppError.notFound('Faculty mentor not found');
+  });
 
-  const deptCheck = await query('SELECT id FROM departments WHERE id = $1', [data.departmentId]);
-  if (deptCheck.rowCount === 0) throw AppError.notFound('Department not found');
+  await getDepartment(data.departmentId).catch(() => {
+    throw AppError.notFound('Department not found');
+  });
 
   const conflictResult = await checkMentorGroupConflicts({
     mentorId: data.mentorId,
@@ -560,8 +564,9 @@ export async function splitMentorGroup(groupId: string, data: SplitMentorGroupIn
   const originalMembers = members.slice(0, splitIndex);
   const newMembers = members.slice(splitIndex);
 
-  const mentorCheck = await query('SELECT id FROM faculty WHERE id = $1 AND deleted_at IS NULL', [data.newMentorId]);
-  if (mentorCheck.rowCount === 0) throw AppError.notFound('New mentor faculty not found');
+  await getFacultyCore(data.newMentorId).catch(() => {
+    throw AppError.notFound('New mentor faculty not found');
+  });
 
   const conflictResult = await checkMentorGroupConflicts({
     mentorId: data.newMentorId,

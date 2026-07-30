@@ -147,10 +147,10 @@ describe('listMaterials', () => {
     expect(listSql).toMatch(/teaching_assignments/);
   });
 
-  it('student query filters by program_id and semester', async () => {
+  it('student query filters by department_id and semester', async () => {
     // resolveStudentCtx
     mockQuery.mockResolvedValueOnce({
-      rows: [{ program_id: 'prog-1', semester: 3 }],
+      rows: [{ department_id: 'dept-1', semester: 3 }],
       rowCount: 1,
     } as never);
     // list query
@@ -160,7 +160,7 @@ describe('listMaterials', () => {
 
     expect(result.total).toBe(0);
     const listSql = mockQuery.mock.calls[1][0] as string;
-    expect(listSql).toMatch(/program_id/);
+    expect(listSql).toMatch(/department_id/);
     expect(listSql).toMatch(/semester/);
   });
 
@@ -224,7 +224,7 @@ describe('getMaterialById', () => {
   it('throws 403 for student whose semester does not match material subject', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [mockMaterialRow], rowCount: 1 } as never);
     // student ctx
-    mockQuery.mockResolvedValueOnce({ rows: [{ program_id: 'prog-1', semester: 5 }], rowCount: 1 } as never);
+    mockQuery.mockResolvedValueOnce({ rows: [{ department_id: 'dept-1', semester: 5 }], rowCount: 1 } as never);
     // subject check → no match
     mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
 

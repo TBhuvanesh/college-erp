@@ -12,12 +12,18 @@ export const WORKFLOW_TRIGGER_EVENTS = [
   'exam_seating.published',
   'exam.completed',
   'teaching_assignment.created',
+  'teaching_assignment.updated',
+  'teaching_assignment.revoked',
   'student_import.completed',
   'attendance.marked',
   'marks.published',
   'feedback.published',
   'mentor.assigned',
   'fee.paid',
+  'faculty.created',
+  'faculty.updated',
+  'faculty.deactivated',
+  'result.finalized',
 ] as const;
 export type WorkflowTriggerEvent = (typeof WORKFLOW_TRIGGER_EVENTS)[number];
 

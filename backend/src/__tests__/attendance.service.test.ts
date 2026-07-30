@@ -122,7 +122,7 @@ describe('getRoster', () => {
   it('throws 404 when subject does not exist', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [{ id: FACULTY_ID }], rowCount: 1 });
     mockIsFacultyAssigned.mockResolvedValueOnce(true);
-    mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 });
+    mockResolveTeachingAssignmentId.mockResolvedValueOnce(null);
 
     await expect(attendanceService.getRoster(SUBJECT_ID, 'A', PAST_DATE, FACULTY_USER_ID)).rejects.toMatchObject({
       statusCode: 404,

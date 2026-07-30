@@ -232,8 +232,9 @@ describe('createExam', () => {
 
   it('admin creates an exam without assignment check', async () => {
     mockQuery
-      .mockResolvedValueOnce({ rows: [{ semester: 3 }] })          // subject lookup
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-uuid-1' }] })     // subject lookup
       .mockResolvedValueOnce({ rows: [{ id: 'fac-uuid-1' }] })     // faculty lookup
+      .mockResolvedValueOnce({ rows: [{ semester: 3 }] })          // curriculum mapping semester lookup
       .mockResolvedValueOnce({ rows: [] })                         // duplicate check query
       .mockResolvedValueOnce({ rows: [{ id: 'exam-uuid-1' }] })    // INSERT
       .mockResolvedValueOnce({ rows: [EXAM_ROW] });                 // getExamById
@@ -249,9 +250,10 @@ describe('createExam', () => {
     delete (inputWithoutFaculty as any).facultyId;
 
     mockQuery
-      .mockResolvedValueOnce({ rows: [{ semester: 3 }] })                         // subject lookup
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-uuid-1' }] })                     // subject lookup
       .mockResolvedValueOnce({ rows: [{ faculty_id: 'fac-allocated-uuid' }] })    // allocation lookup
       .mockResolvedValueOnce({ rows: [{ id: 'fac-allocated-uuid' }] })            // faculty lookup
+      .mockResolvedValueOnce({ rows: [{ semester: 3 }] })                         // curriculum mapping semester lookup
       .mockResolvedValueOnce({ rows: [] })                                        // duplicate check query
       .mockResolvedValueOnce({ rows: [{ id: 'exam-uuid-1' }] })                    // INSERT
       .mockResolvedValueOnce({ rows: [EXAM_ROW] });                               // getExamById
@@ -265,8 +267,9 @@ describe('createExam', () => {
   it('faculty creates an exam after assignment check passes', async () => {
     mockQuery
       .mockResolvedValueOnce({ rows: [{ id: 'fac-uuid-1' }] })     // resolveFacultyId
-      .mockResolvedValueOnce({ rows: [{ semester: 3 }] })          // subject lookup
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-uuid-1' }] })     // subject lookup
       .mockResolvedValueOnce({ rows: [{ id: 'fac-uuid-1' }] })     // faculty lookup
+      .mockResolvedValueOnce({ rows: [{ semester: 3 }] })          // curriculum mapping semester lookup
       .mockResolvedValueOnce({ rows: [] })                         // duplicate check query
       .mockResolvedValueOnce({ rows: [{ id: 'exam-uuid-1' }] })    // INSERT
       .mockResolvedValueOnce({ rows: [EXAM_ROW] });                 // getExamById

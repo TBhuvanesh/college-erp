@@ -3,6 +3,8 @@ import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
 import { isFacultyAssigned } from './assignment.service';
 import { emitWorkflowEvent } from './workflowEngine.service';
+import { checkAndFinalizeCohortResults } from './workflowSync.service';
+import { getFacultyCoreByUserId } from '../registries/facultyRegistry.service';
 import { computeGrade, computeResultStatus } from '../config/grading';
 import type { Grade } from '../config/grading';
 import type {
@@ -171,12 +173,8 @@ function toSummary(r: ResultRow): ResultSummary {
 // ── Private helpers ───────────────────────────────────────────────────────────
 
 async function resolveFacultyId(userId: string): Promise<string> {
-  const { rows } = await query<{ id: string }>(
-    'SELECT id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-    [userId]
-  );
-  if (!rows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
-  return rows[0].id;
+  const faculty = await getFacultyCoreByUserId(userId);
+  return faculty.id;
 }
 
 interface ComputedResult {
@@ -673,6 +671,10 @@ export async function publishResults(
       section: criteria.section,
       publishedCount: rows.length,
     });
+
+    if (ctxRows[0]) {
+      await checkAndFinalizeCohortResults(ctxRows[0].department_id, ctxRows[0].semester, userId);
+    }
   }
 
   return { published: rows.length };

@@ -1,6 +1,7 @@
 import { query } from '../config/database';
 import { AppError } from '../errors/AppError';
 import { auditLog } from '../utils/audit';
+import { getFacultyCoreByUserId } from '../registries/facultyRegistry.service';
 import type { ResultEntryTask, ResultEntryTaskStatus, ListResultEntryTasksQuery } from '../types/resultEntryTask';
 
 // Faculty Results page consumes this instead of a manual subject dropdown —
@@ -61,12 +62,8 @@ function toTask(r: any): ResultEntryTask {
 }
 
 export async function resolveFacultyId(userId: string): Promise<string> {
-  const { rows } = await query<{ id: string }>(
-    'SELECT id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-    [userId]
-  );
-  if (!rows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
-  return rows[0].id;
+  const faculty = await getFacultyCoreByUserId(userId);
+  return faculty.id;
 }
 
 export async function listMyResultEntryTasks(

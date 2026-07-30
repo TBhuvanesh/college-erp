@@ -5,6 +5,7 @@ import { AppError } from '../errors/AppError';
 import { isFacultyAssigned } from './assignment.service';
 import { createNotification } from './notification.service';
 import { emitWorkflowEvent } from './workflowEngine.service';
+import { getFacultyCoreByUserId } from '../registries/facultyRegistry.service';
 import type {
   ExamDetail,
   ExamSummary,
@@ -122,14 +123,10 @@ function toSummary(r: ExamRow): ExamSummary {
 
 // ── Private helpers ───────────────────────────────────────────────────────────
 
-/** Resolves users.id → faculty.id. Throws 403 when no faculty profile exists. */
+/** Resolves users.id → faculty.id via FacultyRegistry. Throws 403 when no faculty profile exists. */
 async function resolveFacultyId(userId: string): Promise<string> {
-  const { rows } = await query<{ id: string }>(
-    'SELECT id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-    [userId]
-  );
-  if (!rows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
-  return rows[0].id;
+  const faculty = await getFacultyCoreByUserId(userId);
+  return faculty.id;
 }
 
 // ── Read operations ───────────────────────────────────────────────────────────
@@ -295,13 +292,15 @@ export async function createExam(
   }
 
   const createdIds = await withTransaction(async (client) => {
-    // Validate subject exists and retrieve its semester for denormalization
-    const { rows: sub } = await client.query<{ semester: number }>(
-      `SELECT semester FROM subjects WHERE id = $1 AND deleted_at IS NULL`,
+    // Validate subject exists (semester is resolved per-section below, once the
+    // responsible faculty's department is known — subjects.semester was dropped
+    // by migration 038; semester now lives on subject_curriculum_mappings, keyed
+    // by department, so it must be resolved relative to a specific department).
+    const { rows: sub } = await client.query<{ id: string }>(
+      `SELECT id FROM subjects WHERE id = $1 AND deleted_at IS NULL`,
       [data.subjectId]
     );
     if (!sub[0]) throw AppError.notFound('Subject not found');
-    const semester = sub[0].semester;
 
     const ids: string[] = [];
 
@@ -353,6 +352,21 @@ export async function createExam(
         [facultyId]
       );
       if (!fac[0]) throw AppError.notFound('Faculty member not found');
+
+      // Resolve semester from the curriculum mapping for this subject in the
+      // responsible faculty's department (a subject can map to different
+      // semesters in different departments' curricula).
+      const { rows: scmRow } = await client.query<{ semester: number }>(
+        `SELECT scm.semester FROM subject_curriculum_mappings scm
+         JOIN faculty f ON f.department_id = scm.department_id
+         WHERE scm.subject_id = $1 AND f.id = $2 AND scm.deleted_at IS NULL
+         LIMIT 1`,
+        [data.subjectId, facultyId]
+      );
+      if (!scmRow[0]) {
+        throw AppError.badRequest('This subject is not in the curriculum for the responsible faculty\'s department', 'CURRICULUM_MISMATCH');
+      }
+      const semester = scmRow[0].semester;
 
       // Prevent duplicate schedules: same subject, section, examType, examDate
       const { rows: duplicate } = await client.query(

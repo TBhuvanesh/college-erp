@@ -308,10 +308,26 @@ export async function updateAllocation(
   });
 
   const allocation = await getAllocationById(id);
+
+  if (existing.facultyId !== allocation.facultyId) {
+    await emitWorkflowEvent('teaching_assignment.updated', actorId, {
+      departmentId: allocation.departmentId,
+      semester: allocation.semester,
+      title: 'Teaching Assignment Updated',
+      message: `Teaching assignment for ${allocation.subjectCode} section ${allocation.section} was transferred.`,
+      notificationType: 'Academic Alert',
+      sourceId: id,
+      oldFacultyId: existing.facultyId,
+      newFacultyId: allocation.facultyId,
+    });
+  }
+
   return { allocation, warning };
 }
 
 export async function deleteAllocation(id: string, reason: string, actorId: string): Promise<void> {
+  const existing = await getAllocationById(id);
+
   const { rowCount } = await query(
     `UPDATE teaching_assignments
      SET deleted_at = NOW(), is_active = FALSE, status = 'inactive', removed_by = $1, removal_reason = $2
@@ -326,6 +342,15 @@ export async function deleteAllocation(id: string, reason: string, actorId: stri
     resource: 'teaching_assignments',
     resourceId: id,
     changes: { removalReason: reason },
+  });
+
+  await emitWorkflowEvent('teaching_assignment.revoked', actorId, {
+    departmentId: existing.departmentId,
+    semester: existing.semester,
+    title: 'Teaching Assignment Revoked',
+    message: `Teaching assignment for ${existing.subjectCode} section ${existing.section} has been revoked.`,
+    notificationType: 'Academic Alert',
+    sourceId: id,
   });
 }
 
@@ -383,6 +408,18 @@ export async function transferAllocation(
   });
 
   const allocation = await getAllocationById(id);
+
+  await emitWorkflowEvent('teaching_assignment.updated', actorId, {
+    departmentId: allocation.departmentId,
+    semester: allocation.semester,
+    title: 'Teaching Assignment Transferred',
+    message: `Teaching assignment for ${allocation.subjectCode} section ${allocation.section} was transferred.`,
+    notificationType: 'Academic Alert',
+    sourceId: id,
+    oldFacultyId: existing.facultyId,
+    newFacultyId: allocation.facultyId,
+  });
+
   return { allocation, warning };
 }
 

@@ -169,14 +169,14 @@ export default function AdminAnalyticsPage() {
     ],
   };
 
-  // Mock static historical comparison data since backend returns only current snapshot
-  const attendanceMonthlyLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+  // Fetch historical comparison data directly from backend instead of mock
+  const attendanceMonthlyLabels = academicAnalytics.attendanceMonthlyTrend?.map((t: any) => t.month) || ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
   const attendanceMonthlyData = {
     labels: attendanceMonthlyLabels,
     series: [
       {
         label: "Attendance Rate %",
-        data: [72, 75, 78, 80, 82, academicAnalytics.averageAttendance || 85],
+        data: academicAnalytics.attendanceMonthlyTrend?.map((t: any) => t.rate) || [72, 75, 78, 80, 82, academicAnalytics.averageAttendance || 85],
       },
     ],
   };

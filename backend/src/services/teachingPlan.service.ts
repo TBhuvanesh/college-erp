@@ -5,6 +5,8 @@ import { eventBus } from './eventBus.service';
 import { isFacultyAssigned, resolveTeachingAssignmentId } from './assignment.service';
 import * as notificationService from './notification.service';
 import { emitWorkflowEvent } from './workflowEngine.service';
+import { getFacultyCoreByUserId } from '../registries/facultyRegistry.service';
+import { getStudentCoreByUserId } from '../registries/studentRegistry.service';
 import type { Role } from '../types/roles';
 import type { NotificationType } from '../types/notification';
 import type {
@@ -163,12 +165,10 @@ export function toTeachingPlan(r: TeachingPlanRow): TeachingPlan {
 // ── Internal helpers ───────────────────────────────────────────────────────────
 
 export async function resolveFacultyId(userId: string): Promise<string> {
-  const { rows } = await query<{ id: string }>(
-    'SELECT id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-    [userId]
-  );
-  if (!rows[0]) throw AppError.notFound('Faculty profile not found');
-  return rows[0].id;
+  const faculty = await getFacultyCoreByUserId(userId).catch(() => {
+    throw AppError.notFound('Faculty profile not found');
+  });
+  return faculty.id;
 }
 
 export interface StudentCtx {
@@ -180,23 +180,15 @@ export interface StudentCtx {
 }
 
 export async function resolveStudentCtx(userId: string): Promise<StudentCtx> {
-  const { rows } = await query<{
-    id: string;
-    program_id: string;
-    department_id: string;
-    semester: number;
-    section: string | null;
-  }>(
-    'SELECT id, program_id, department_id, semester, section FROM students WHERE user_id = $1 AND deleted_at IS NULL',
-    [userId]
-  );
-  if (!rows[0]) throw AppError.notFound('Student profile not found');
+  const student = await getStudentCoreByUserId(userId).catch(() => {
+    throw AppError.notFound('Student profile not found');
+  });
   return {
-    studentId: rows[0].id,
-    programId: rows[0].program_id,
-    departmentId: rows[0].department_id,
-    semester: rows[0].semester,
-    section: rows[0].section,
+    studentId: student.id,
+    programId: student.programId,
+    departmentId: student.departmentId,
+    semester: student.semester,
+    section: student.section,
   };
 }
 

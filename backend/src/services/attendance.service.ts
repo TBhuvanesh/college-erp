@@ -5,6 +5,8 @@ import { eventBus } from './eventBus.service';
 import { isFacultyAssigned, resolveTeachingAssignmentId } from './assignment.service';
 import { emitWorkflowEvent } from './workflowEngine.service';
 import { createNotification } from './notification.service';
+import { getFacultyCoreByUserId } from '../registries/facultyRegistry.service';
+import { getAllocationById } from '../registries/teachingAssignmentRegistry.service';
 import type {
   MarkAttendanceInput,
   UpdateAttendanceInput,
@@ -120,14 +122,10 @@ function toRecord(r: AttendanceRow): AttendanceRecord {
   };
 }
 
-/** Resolves users.id → faculty.id. Throws 403 if no faculty profile exists. */
+/** Resolves users.id → faculty.id via FacultyRegistry. Throws 403 if no faculty profile exists. */
 async function resolveFacultyId(userId: string): Promise<string> {
-  const { rows } = await query<{ id: string }>(
-    'SELECT id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-    [userId]
-  );
-  if (!rows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
-  return rows[0].id;
+  const faculty = await getFacultyCoreByUserId(userId);
+  return faculty.id;
 }
 
 /** Returns today's date as a YYYY-MM-DD string in local server time. */
@@ -167,15 +165,13 @@ export async function getRoster(
     );
   }
 
-  // Verify subject exists and retrieve program_id + semester for enrollment join
-  const { rows: sub } = await query<{ program_id: string; semester: number }>(
-    `SELECT scm.program_id, scm.semester
-     FROM faculty_subject_assignments fsa
-     JOIN subject_curriculum_mappings scm ON scm.id = fsa.subject_curriculum_mapping_id
-     WHERE fsa.faculty_id = $1 AND fsa.subject_id = $2 AND fsa.section = $3 AND fsa.deleted_at IS NULL`,
-    [facultyId, subjectId, section]
-  );
-  if (!sub[0]) throw AppError.notFound('Subject not found');
+  // Verify the teaching assignment exists and retrieve department_id + semester
+  // for the enrollment join — curriculum mappings are keyed by
+  // department+regulation+semester, and program_id on the mapping is often
+  // NULL, so department_id (via TeachingAssignmentRegistry) is the reliable key.
+  const taId = await resolveTeachingAssignmentId(facultyId, subjectId, section);
+  if (!taId) throw AppError.notFound('Subject not found');
+  const allocation = await getAllocationById(taId);
 
   const { rows } = await query<RosterRow>(
     `SELECT
@@ -190,13 +186,13 @@ export async function getRoster(
        ON a.student_id      = st.id
       AND a.subject_id      = $1
       AND a.attendance_date = $4::date
-     WHERE st.program_id   = $2
+     WHERE st.department_id = $2
        AND st.semester      = $3
        AND st.section       = $5
        AND st.status        = 'active'
        AND st.deleted_at    IS NULL
      ORDER BY st.roll_number`,
-    [subjectId, sub[0].program_id, sub[0].semester, date, section]
+    [subjectId, allocation.departmentId, allocation.semester, date, section]
   );
 
   return rows.map((r) => ({

@@ -115,6 +115,8 @@ export const Sidebar: React.FC = () => {
     {
       section: "System",
       items: [
+        { name: "Departments", href: "/admin/settings/departments", icon: Database },
+        { name: "Programs", href: "/admin/settings/programs", icon: Database },
         { name: "Data Import Center", href: "/admin/import", icon: Database },
         { name: "ERP Settings", href: "/admin/settings", icon: Settings },
       ]

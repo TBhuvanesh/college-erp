@@ -1,6 +1,7 @@
 import { query } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
+import { getFacultyCore } from '../registries/facultyRegistry.service';
 import type { AssignmentDetail, CreateAssignmentInput, ListAssignmentsQuery } from '../types/assignment';
 
 // ── Row type ───────────────────────────────────────────────────────────────────
@@ -194,11 +195,9 @@ export async function createAssignment(
   actorId: string
 ): Promise<AssignmentDetail> {
   // Validate faculty exists
-  const { rows: f } = await query<{ id: string; department_id: string }>(
-    'SELECT id, department_id FROM faculty WHERE id = $1 AND deleted_at IS NULL',
-    [data.facultyId]
-  );
-  if (!f[0]) throw AppError.notFound('Faculty member not found');
+  const faculty = await getFacultyCore(data.facultyId).catch(() => {
+    throw AppError.notFound('Faculty member not found');
+  });
 
   // Validate subject exists and is active
   const { rows: s } = await query<{ id: string; status: string }>(
@@ -214,7 +213,7 @@ export async function createAssignment(
   const { rows: scm } = await query<{ id: string }>(
     `SELECT id FROM subject_curriculum_mappings
      WHERE subject_id = $1 AND department_id = $2 AND deleted_at IS NULL LIMIT 1`,
-    [data.subjectId, f[0].department_id]
+    [data.subjectId, faculty.departmentId]
   );
   if (!scm[0]) {
     throw AppError.badRequest('Subject is not mapped to the faculty member\'s department curriculum', 'CURRICULUM_MISMATCH');

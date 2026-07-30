@@ -119,6 +119,20 @@ export async function getAcademicAnalytics(departmentId: string | null): Promise
     resultParams
   );
 
+  // Aggregated historical trend by month
+  const trendRes = await query<{ month_date: string; total: string; present: string }>(
+    `SELECT 
+       TO_CHAR(DATE_TRUNC('month', a.attendance_date), 'Mon') AS month_date,
+       COUNT(*)::text AS total,
+       COUNT(*) FILTER (WHERE a.status = 'present')::text AS present
+     FROM attendance a
+     ${attJoin}
+     WHERE 1=1 ${attWhere}
+     GROUP BY DATE_TRUNC('month', a.attendance_date)
+     ORDER BY DATE_TRUNC('month', a.attendance_date) ASC`,
+    attParams
+  );
+
   const totalPoints = Number(gradeRes.rows[0].total_points);
   const totalCredits = Number(gradeRes.rows[0].total_credits);
 
@@ -128,6 +142,10 @@ export async function getAcademicAnalytics(departmentId: string | null): Promise
     passPercentage: pct(Number(gradeRes.rows[0].pass_count), Number(gradeRes.rows[0].total_results)),
     failPercentage: pct(Number(gradeRes.rows[0].fail_count), Number(gradeRes.rows[0].total_results)),
     subjectCompletionRate: pct(Number(completionRes.rows[0].published), Number(completionRes.rows[0].total)),
+    attendanceMonthlyTrend: trendRes.rows.map(r => ({
+      month: r.month_date,
+      rate: pct(Number(r.present), Number(r.total)),
+    })),
   };
 }
 
@@ -446,13 +464,25 @@ export async function getHodAnalytics(userId: string): Promise<HodAnalyticsRespo
 
   const departmentId = facRows[0].department_id;
 
-  const [overview, academic, teaching, mentorship, opportunity, feedbackAnalytics] = await Promise.all([
+  const [overview, academic, teaching, mentorship, opportunity, feedbackAnalytics, trendRes] = await Promise.all([
     getInstitutionOverview(departmentId),
     getAcademicAnalytics(departmentId),
     getTeachingAnalytics(userId, departmentId),
     getMentorshipAnalytics(departmentId),
     getOpportunityAnalytics(departmentId),
     getInstitutionFeedbackAnalytics(departmentId),
+    query<{ week_date: string; total: string; present: string }>(
+      `SELECT 
+         'Week ' || TO_CHAR(DATE_TRUNC('week', a.attendance_date), 'IW') AS week_date,
+         COUNT(*)::text AS total,
+         COUNT(*) FILTER (WHERE a.status = 'present')::text AS present
+       FROM attendance a
+       JOIN students st ON st.id = a.student_id
+       WHERE st.department_id = $1
+       GROUP BY DATE_TRUNC('week', a.attendance_date)
+       ORDER BY DATE_TRUNC('week', a.attendance_date) ASC`,
+      [departmentId]
+    ),
   ]);
 
   const { rows: feePendingRows } = await query<{ count: string }>(
@@ -489,6 +519,10 @@ export async function getHodAnalytics(userId: string): Promise<HodAnalyticsRespo
       workshops: opportunity.workshops,
     },
     feedbackAnalytics,
+    deptAttendanceTrend: trendRes.rows.map(r => ({
+      week: r.week_date,
+      rate: pct(Number(r.present), Number(r.total)),
+    })),
   };
 }
 
@@ -544,6 +578,18 @@ export async function getFacultyAnalytics(userId: string): Promise<FacultyAnalyt
   const feePending = mentees.filter((m) => m.alerts.feePending).length;
   const assignmentPending = mentees.filter((m) => m.alerts.assignmentOverdue).length;
 
+  const { rows: performanceTrendRows } = await query<{ subject_name: string; avg_score: string }>(
+    `SELECT 
+       sub.name AS subject_name,
+       AVG(im.obtained_marks / NULLIF(im.maximum_marks, 0) * 100)::text AS avg_score
+     FROM internal_marks im
+     JOIN subjects sub ON sub.id = im.subject_id
+     WHERE im.faculty_id = $1 AND im.deleted_at IS NULL
+     GROUP BY sub.id, sub.name
+     ORDER BY sub.name ASC`,
+    [facultyId]
+  );
+
   return {
     teachingOverview: {
       subjectsAssigned: Number(subjRes.rows[0].count),
@@ -563,6 +609,10 @@ export async function getFacultyAnalytics(userId: string): Promise<FacultyAnalyt
       mentees,
     },
     feedbackAnalytics,
+    subjectPerformanceTrend: performanceTrendRows.map(r => ({
+      subjectName: r.subject_name,
+      avgScore: r.avg_score ? Math.round(Number(r.avg_score) * 100) / 100 : 0,
+    })),
   };
 }
 

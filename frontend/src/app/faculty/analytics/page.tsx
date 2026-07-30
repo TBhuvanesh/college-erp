@@ -113,13 +113,13 @@ export default function FacultyAnalyticsPage() {
     ],
   };
 
-  // Mock student marks distributions
+  // Use subject performance trend from backend response instead of mock
   const marksChartData = {
-    labels: ["DBMS", "Data Structures", "Algorithms", "Computer Networks"],
+    labels: data?.subjectPerformanceTrend?.map((t: any) => t.subjectName) || ["DBMS", "Data Structures", "Algorithms", "Computer Networks"],
     series: [
       {
         label: "Average Score %",
-        data: [76, 82, teachingOverview.averageInternalMarks || 74, 88],
+        data: data?.subjectPerformanceTrend?.map((t: any) => t.avgScore) || [76, 82, teachingOverview.averageInternalMarks || 74, 88],
       },
     ],
   };

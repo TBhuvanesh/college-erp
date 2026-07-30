@@ -80,3 +80,15 @@ export async function getFacultyCoreBatch(facultyIds: string[]): Promise<Map<str
   );
   return new Map(rows.map((r) => [r.id, toCore(r)]));
 }
+
+/** All faculty in a department — the un-paginated "give me every faculty id
+ * in this department" shape several dept-scoped aggregations need (workload
+ * distribution, HOD-scoped analytics), as opposed to listFaculty's paginated
+ * admin-listing shape. */
+export async function listFacultyCoreByDepartment(departmentId: string): Promise<FacultyCore[]> {
+  const { rows } = await query<FacultyCoreRow>(
+    `SELECT ${CORE_COLS} FROM faculty WHERE department_id = $1 AND deleted_at IS NULL`,
+    [departmentId]
+  );
+  return rows.map(toCore);
+}

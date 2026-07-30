@@ -5,6 +5,8 @@ import * as facultyWorkloadService from './facultyWorkload.service';
 import * as facultyTasksService from './facultyTasks.service';
 import { getNotificationCount } from './notification.service';
 import { getPendingAttendanceSections, getPendingEvaluations } from './facultyDailyStatus.service';
+import { getFacultyCore, getFacultyCoreByUserId, listFacultyCoreByDepartment } from '../registries/facultyRegistry.service';
+import { getDepartment } from '../registries/academicRegistry.service';
 import type { Role } from '../types/roles';
 import type {
   FacultyOperationsDashboard,
@@ -23,14 +25,9 @@ import type {
 async function resolveFacultyContext(
   userId: string
 ): Promise<{ id: string; departmentId: string; departmentName: string; designation: string | null }> {
-  const { rows } = await query<{ id: string; department_id: string; department_name: string; designation: string | null }>(
-    `SELECT f.id, f.department_id, d.name AS department_name, f.designation
-     FROM faculty f JOIN departments d ON d.id = f.department_id
-     WHERE f.user_id = $1 AND f.deleted_at IS NULL`,
-    [userId]
-  );
-  if (!rows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
-  return { id: rows[0].id, departmentId: rows[0].department_id, departmentName: rows[0].department_name, designation: rows[0].designation };
+  const faculty = await getFacultyCoreByUserId(userId);
+  const department = await getDepartment(faculty.departmentId);
+  return { id: faculty.id, departmentId: faculty.departmentId, departmentName: department.name, designation: faculty.designation };
 }
 
 // ── GET /faculty-operations/dashboard (faculty only) ─────────────────────────
@@ -189,12 +186,9 @@ async function getDepartmentWorkloadDistribution(departmentId: string): Promise<
   facultyWorkloads: FacultyWorkload[];
   overloadedCount: number;
 }> {
-  const { rows } = await query<{ id: string; user_id: string }>(
-    'SELECT id, user_id FROM faculty WHERE department_id = $1 AND deleted_at IS NULL',
-    [departmentId]
-  );
+  const facultyRows = await listFacultyCoreByDepartment(departmentId);
   const facultyWorkloads = await Promise.all(
-    rows.map((r) => facultyWorkloadService.calculateFacultyWorkload(r.user_id, r.id))
+    facultyRows.map((f) => facultyWorkloadService.calculateFacultyWorkload(f.userId, f.id))
   );
   return {
     departmentId,
@@ -236,11 +230,10 @@ export async function getWorkloadView(userId: string, role: Role, filters: Workl
 
   if (role === 'admin') {
     if (filters.facultyId) {
-      const { rows } = await query<{ user_id: string }>('SELECT user_id FROM faculty WHERE id = $1 AND deleted_at IS NULL', [
-        filters.facultyId,
-      ]);
-      if (!rows[0]) throw AppError.notFound('Faculty not found');
-      return facultyWorkloadService.calculateFacultyWorkload(rows[0].user_id, filters.facultyId);
+      const faculty = await getFacultyCore(filters.facultyId).catch(() => {
+        throw AppError.notFound('Faculty not found');
+      });
+      return facultyWorkloadService.calculateFacultyWorkload(faculty.userId, filters.facultyId);
     }
     return getInstitutionWorkloadDistribution(filters.departmentId ?? null);
   }
@@ -302,10 +295,8 @@ export async function getWorkloadAnalyticsView(
   if (role === 'faculty') {
     const ctx = await resolveFacultyContext(userId);
     if (ctx.designation === 'hod') {
-      const { rows } = await query<{ id: string }>('SELECT id FROM faculty WHERE department_id = $1 AND deleted_at IS NULL', [
-        ctx.departmentId,
-      ]);
-      return computeWorkloadAnalytics(rows.map((r) => r.id));
+      const facultyRows = await listFacultyCoreByDepartment(ctx.departmentId);
+      return computeWorkloadAnalytics(facultyRows.map((f) => f.id));
     }
     return computeWorkloadAnalytics([ctx.id]);
   }

@@ -126,13 +126,13 @@ export default function HodAnalyticsPage() {
     ],
   };
 
-  // Mock department attendance trend over time
+  // Use department attendance trend from backend response
   const deptAttendanceTrend = {
-    labels: ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6"],
+    labels: data?.deptAttendanceTrend?.map((t: any) => t.week) || ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6"],
     series: [
       {
         label: "Weekly Attendance %",
-        data: [78, 81, 80, 83, 84, departmentAttendance || 85],
+        data: data?.deptAttendanceTrend?.map((t: any) => t.rate) || [78, 81, 80, 83, 84, departmentAttendance || 85],
       },
     ],
   };

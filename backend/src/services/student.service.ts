@@ -3,6 +3,7 @@ import { query, withTransaction } from '../config/database';
 import { hashPassword } from '../utils/password';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
+import { emitWorkflowEvent } from './workflowEngine.service';
 import type {
   CreateStudentInput,
   UpdateStudentInput,
@@ -276,6 +277,15 @@ export async function createStudent(
       changes: { rollNumber: data.rollNumber, email: data.email, role: 'student' },
     });
 
+    await emitWorkflowEvent('student_import.completed', actorId, {
+      departmentId: data.departmentId,
+      semester: data.semester,
+      title: 'Student Profile Created',
+      message: `Student ${data.fullName} was enrolled.`,
+      notificationType: 'Announcement',
+      sourceId: studentId,
+    });
+
     return toDetail(detail[0]);
   });
 }
@@ -346,6 +356,21 @@ export async function updateStudent(
     resourceId: id,
     changes: data as Record<string, unknown>,
   });
+
+  const hasAcademicGroupChange = data.departmentId !== undefined || data.semester !== undefined || ('section' in data);
+  
+  if (hasAcademicGroupChange) {
+    const updated = await getStudentById(id);
+    await emitWorkflowEvent('student_import.completed', actorId, {
+      departmentId: updated.department.id,
+      semester: updated.semester,
+      title: 'Student Profile Updated',
+      message: `Student ${updated.fullName} details updated.`,
+      notificationType: 'Announcement',
+      sourceId: id,
+    });
+    return updated;
+  }
 
   return getStudentById(id);
 }

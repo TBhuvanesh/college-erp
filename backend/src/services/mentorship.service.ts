@@ -325,10 +325,18 @@ export async function addNote(data: CreateMentoringNoteInput, mentorUserId: stri
       throw AppError.forbidden('No faculty profile linked to this account');
     });
 
-  // Ensure this faculty is the student's mentor
+  // Ensure this faculty is the student's mentor — via either relationship
+  // model this codebase supports: a direct mentor_assignments row (assignMentor/
+  // reassignMentor) or mentor_groups membership.
   const memberships = await getAllGroupMemberships({ mentorId, studentId: data.studentId });
   if (memberships.length === 0) {
-    throw AppError.forbidden('You are not assigned as the mentor for this student');
+    const { rows: direct } = await query<{ id: string }>(
+      `SELECT id FROM mentor_assignments WHERE mentor_id = $1 AND student_id = $2 AND status = 'active' AND deleted_at IS NULL`,
+      [mentorId, data.studentId]
+    );
+    if (!direct[0]) {
+      throw AppError.forbidden('You are not assigned as the mentor for this student');
+    }
   }
 
   const { rows } = await query<MentoringNote>(

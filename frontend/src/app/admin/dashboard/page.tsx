@@ -361,8 +361,8 @@ export default function AdminDashboard() {
     };
   });
 
-  // Mock Pending Maker-Checker Approvals
-  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  // Maker-checker and pendingApprovals are not implemented or needed. Let's keep it as an empty array or remove.
+  const pendingApprovals: any[] = [];
 
   // Form Submissions — all write through the real backend API
   const handleAddStudent = async (e: React.FormEvent) => {
@@ -480,7 +480,6 @@ export default function AdminDashboard() {
   };
 
   const handleApprove = (id: string) => {
-    setPendingApprovals(prev => prev.filter(app => app.id !== id));
     triggerToast(`Approval request successfully authorized (Checker action).`);
   };
 

@@ -2,6 +2,7 @@ import { query, withTransaction } from '../config/database';
 import { hashPassword } from '../utils/password';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
+import { emitWorkflowEvent } from './workflowEngine.service';
 import type {
   CreateFacultyInput,
   UpdateFacultyInput,
@@ -211,6 +212,15 @@ export async function createFaculty(
       changes: { employeeNumber: data.employeeNumber, email: data.email, role: 'faculty' },
     });
 
+    await emitWorkflowEvent('faculty.created', actorId, {
+      facultyId,
+      departmentId: data.departmentId,
+      semester: 0,
+      title: 'Faculty Profile Created',
+      message: `A new faculty profile has been created for ${data.fullName}.`,
+      notificationType: 'Announcement',
+    });
+
     return toDetail(detail[0]);
   });
 }
@@ -267,7 +277,17 @@ export async function updateFaculty(
     changes: data as Record<string, unknown>,
   });
 
-  return getFacultyById(id);
+  const updated = await getFacultyById(id);
+  await emitWorkflowEvent('faculty.updated', actorId, {
+    facultyId: id,
+    departmentId: updated.department.id,
+    semester: 0,
+    title: 'Faculty Profile Updated',
+    message: `Faculty profile for ${updated.fullName} was updated.`,
+    notificationType: 'Announcement',
+  });
+
+  return updated;
 }
 
 export async function updateFacultyStatus(
@@ -290,10 +310,33 @@ export async function updateFacultyStatus(
     changes: { status: data.status },
   });
 
-  return getFacultyById(id);
+  const updated = await getFacultyById(id);
+  if (data.status === 'resigned' || data.status === 'retired') {
+    await emitWorkflowEvent('faculty.deactivated', actorId, {
+      facultyId: id,
+      departmentId: updated.department.id,
+      semester: 0,
+      title: 'Faculty Deactivated',
+      message: `Faculty member ${updated.fullName} has been deactivated.`,
+      notificationType: 'Academic Alert',
+    });
+  } else {
+    await emitWorkflowEvent('faculty.updated', actorId, {
+      facultyId: id,
+      departmentId: updated.department.id,
+      semester: 0,
+      title: 'Faculty Profile Status Updated',
+      message: `Faculty profile status for ${updated.fullName} was updated to ${data.status}.`,
+      notificationType: 'Announcement',
+    });
+  }
+
+  return updated;
 }
 
 export async function deleteFaculty(id: string, actorId: string): Promise<void> {
+  const faculty = await getFacultyById(id);
+
   const { rowCount } = await query(
     `UPDATE faculty
      SET deleted_at = NOW(), status = 'resigned'
@@ -314,5 +357,14 @@ export async function deleteFaculty(id: string, actorId: string): Promise<void> 
     action: 'DELETE_FACULTY',
     resource: 'faculty',
     resourceId: id,
+  });
+
+  await emitWorkflowEvent('faculty.deactivated', actorId, {
+    facultyId: id,
+    departmentId: faculty.department.id,
+    semester: 0,
+    title: 'Faculty Profile Deleted',
+    message: `Faculty member ${faculty.fullName} has been deleted.`,
+    notificationType: 'Academic Alert',
   });
 }

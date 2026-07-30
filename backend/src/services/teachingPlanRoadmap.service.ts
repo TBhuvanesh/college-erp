@@ -1,5 +1,6 @@
 import { query } from '../config/database';
 import { AppError } from '../errors/AppError';
+import { getStudentCore } from '../registries/studentRegistry.service';
 import {
   COLS,
   JOINS,
@@ -28,22 +29,15 @@ import type {
 const ACTIVE_STATUSES = ['Planned', 'In Progress', 'Rescheduled'];
 
 async function resolveStudentCtxByStudentId(studentId: string): Promise<StudentCtx> {
-  const { rows } = await query<{
-    id: string;
-    program_id: string;
-    department_id: string;
-    semester: number;
-    section: string | null;
-  }>('SELECT id, program_id, department_id, semester, section FROM students WHERE id = $1 AND deleted_at IS NULL', [
-    studentId,
-  ]);
-  if (!rows[0]) throw AppError.notFound('Student not found');
+  const student = await getStudentCore(studentId).catch(() => {
+    throw AppError.notFound('Student not found');
+  });
   return {
-    studentId: rows[0].id,
-    programId: rows[0].program_id,
-    departmentId: rows[0].department_id,
-    semester: rows[0].semester,
-    section: rows[0].section,
+    studentId: student.id,
+    programId: student.programId,
+    departmentId: student.departmentId,
+    semester: student.semester,
+    section: student.section,
   };
 }
 

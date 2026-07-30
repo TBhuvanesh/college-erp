@@ -1,6 +1,8 @@
 import { query } from '../config/database';
 import { AppError } from '../errors/AppError';
 import * as notificationService from './notification.service';
+import { getFacultyCoreByUserId } from '../registries/facultyRegistry.service';
+import * as workflowSync from './workflowSync.service';
 import type { Role } from '../types/roles';
 import type {
   WorkflowTriggerEvent,
@@ -226,6 +228,23 @@ export async function emitWorkflowEvent(
   payload: WorkflowEventPayload
 ): Promise<void> {
   try {
+    if (triggerEvent === 'student_import.completed') {
+      await workflowSync.syncAllUnassignedStudents();
+    } else if (triggerEvent === 'faculty.deactivated') {
+      await workflowSync.handleFacultyDeactivation(payload.facultyId as string, actorId);
+    } else if (triggerEvent === 'teaching_assignment.updated') {
+      await workflowSync.handleAssignmentUpdate(
+        payload.sourceId as string,
+        payload.oldFacultyId as string,
+        payload.newFacultyId as string,
+        actorId
+      );
+    } else if (triggerEvent === 'teaching_assignment.revoked') {
+      await workflowSync.handleAssignmentRevocation(payload.sourceId as string, actorId);
+    } else if (triggerEvent === 'result.finalized') {
+      await workflowSync.handleResultFinalization(payload, actorId);
+    }
+
     const rules = await fetchActiveRules(triggerEvent);
     const matched = rules.filter((r) => evaluateCondition(r.condition, payload));
 
@@ -301,14 +320,10 @@ export async function getWorkflowLogs(
   };
 
   if (role === 'faculty') {
-    const { rows } = await query<{ id: string; department_id: string; designation: string | null }>(
-      'SELECT id, department_id, designation FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-      [userId]
-    );
-    if (!rows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
+    const faculty = await getFacultyCoreByUserId(userId);
 
-    if (rows[0].designation === 'hod') {
-      params.push(rows[0].department_id);
+    if (faculty.designation === 'hod') {
+      params.push(faculty.departmentId);
       conditions.push(`wl.actor_id IN (SELECT user_id FROM faculty WHERE department_id = $${params.length} AND deleted_at IS NULL)`);
     } else {
       push('wl.actor_id =', userId);

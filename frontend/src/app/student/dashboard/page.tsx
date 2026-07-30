@@ -111,14 +111,33 @@ export default function StudentDashboard() {
   });
   const computedCGPA = totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : "8.25";
 
-  const cgpaTrend = [
-    { semester: "Sem 1", cgpa: 7.8 },
-    { semester: "Sem 2", cgpa: 8.1 },
-    { semester: "Sem 3", cgpa: 8.0 },
-    { semester: "Sem 4", cgpa: 8.4 },
-    { semester: "Sem 5", cgpa: 8.5 },
-    { semester: "Current", cgpa: parseFloat(computedCGPA) }
-  ];
+  const [studentAnalytics, setStudentAnalytics] = useState<any>(null);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    apiFetch("/analytics/student", {}, accessToken).then(res => {
+      if (res.success && res.data) {
+        setStudentAnalytics(res.data);
+      }
+    });
+  }, [accessToken, loadDashboardData]);
+
+  const cgpaTrend = useMemo(() => {
+    if (studentAnalytics?.cgpaTrend && studentAnalytics.cgpaTrend.length > 0) {
+      return studentAnalytics.cgpaTrend.map((t: any) => ({
+        semester: `Sem ${t.semester}`,
+        cgpa: t.sgpa,
+      }));
+    }
+    return [
+      { semester: "Sem 1", cgpa: 7.8 },
+      { semester: "Sem 2", cgpa: 8.1 },
+      { semester: "Sem 3", cgpa: 8.0 },
+      { semester: "Sem 4", cgpa: 8.4 },
+      { semester: "Sem 5", cgpa: 8.5 },
+      { semester: "Current", cgpa: parseFloat(computedCGPA) }
+    ];
+  }, [studentAnalytics, computedCGPA]);
 
   const pendingAssignments = useMemo(() => {
     return apiAssignments.filter(a => {

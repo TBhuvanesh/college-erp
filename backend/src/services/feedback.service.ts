@@ -3,6 +3,7 @@ import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
 import { createNotification } from './notification.service';
 import { emitWorkflowEvent } from './workflowEngine.service';
+import { getStudentCoreBatch } from '../registries/studentRegistry.service';
 import type {
   FeedbackCampaign,
   CreateCampaignInput,
@@ -159,7 +160,7 @@ export async function resolveCampaignEligibility(
        FROM teaching_assignments ta
        JOIN subjects s ON s.id = ta.subject_id
        JOIN subject_curriculum_mappings scm ON scm.id = ta.subject_curriculum_mapping_id
-       JOIN students st ON st.program_id = scm.program_id AND st.semester = scm.semester AND st.section = ta.section
+       JOIN students st ON st.department_id = scm.department_id AND st.semester = scm.semester AND st.section = ta.section
        WHERE ${conditions.join(' AND ')}`,
       params
     );
@@ -641,12 +642,8 @@ export async function getCampaignAnalytics(
   if (filters.departmentId) {
     const studentIds = Array.from(new Set(entries.map((e) => e.studentId)));
     if (studentIds.length > 0) {
-      const { rows } = await query<{ id: string }>(
-        `SELECT id FROM students WHERE id = ANY($1::uuid[]) AND department_id = $2`,
-        [studentIds, filters.departmentId]
-      );
-      const inDept = new Set(rows.map((r) => r.id));
-      entries = entries.filter((e) => inDept.has(e.studentId));
+      const studentsById = await getStudentCoreBatch(studentIds);
+      entries = entries.filter((e) => studentsById.get(e.studentId)?.departmentId === filters.departmentId);
     }
   }
 

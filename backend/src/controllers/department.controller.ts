@@ -30,3 +30,43 @@ export const updateDepartmentColor = asyncHandler(async (req: Request, res: Resp
   const department = await departmentService.updateDepartmentColor(req.user!.id, req.params.id, data);
   sendSuccess(res, { department }, 'Department color updated successfully');
 });
+
+export const createDepartment = asyncHandler(async (req: Request, res: Response) => {
+  const department = await departmentService.createDepartment(req.user!.id, req.body);
+  sendSuccess(res, { department }, 'Department created successfully', 201);
+});
+
+export const updateDepartment = asyncHandler(async (req: Request, res: Response) => {
+  const department = await departmentService.updateDepartment(req.user!.id, req.params.id, req.body);
+  sendSuccess(res, { department }, 'Department updated successfully');
+});
+
+export const archiveDepartment = asyncHandler(async (req: Request, res: Response) => {
+  await departmentService.archiveDepartment(req.user!.id, req.params.id);
+  sendSuccess(res, null, 'Department archived successfully');
+});
+
+export const restoreDepartment = asyncHandler(async (req: Request, res: Response) => {
+  await departmentService.restoreDepartment(req.user!.id, req.params.id);
+  sendSuccess(res, null, 'Department restored successfully');
+});
+
+export const createProgram = asyncHandler(async (req: Request, res: Response) => {
+  const program = await departmentService.createProgram(req.user!.id, req.body);
+  sendSuccess(res, { program }, 'Program created successfully', 201);
+});
+
+export const updateProgram = asyncHandler(async (req: Request, res: Response) => {
+  const program = await departmentService.updateProgram(req.user!.id, req.params.id, req.body);
+  sendSuccess(res, { program }, 'Program updated successfully');
+});
+
+export const archiveProgram = asyncHandler(async (req: Request, res: Response) => {
+  await departmentService.archiveProgram(req.user!.id, req.params.id);
+  sendSuccess(res, null, 'Program archived successfully');
+});
+
+export const restoreProgram = asyncHandler(async (req: Request, res: Response) => {
+  await departmentService.restoreProgram(req.user!.id, req.params.id);
+  sendSuccess(res, null, 'Program restored successfully');
+});

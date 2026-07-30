@@ -25,6 +25,7 @@ export interface AcademicAnalytics {
   passPercentage: number;
   failPercentage: number;
   subjectCompletionRate: number;
+  attendanceMonthlyTrend?: Array<{ month: string; rate: number }>;
 }
 
 export interface TeachingAnalytics {
@@ -121,6 +122,7 @@ export interface HodAnalyticsResponse {
     workshops: number;
   };
   feedbackAnalytics: FeedbackAnalytics;
+  deptAttendanceTrend?: Array<{ week: string; rate: number }>;
 }
 
 export interface FacultyAnalyticsResponse {
@@ -145,6 +147,7 @@ export interface FacultyAnalyticsResponse {
     activeCampaigns: number;
     campaigns: Array<{ campaignId: string; title: string; status: string; eligibleStudents: number; submittedCount: number; completionPercent: number }>;
   };
+  subjectPerformanceTrend?: Array<{ subjectName: string; avgScore: number }>;
 }
 
 export interface StudentAnalyticsResponse {

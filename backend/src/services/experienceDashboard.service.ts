@@ -13,6 +13,8 @@ import { getStudentSummary as getAttendanceSummary } from './attendance.service'
 import { getMentorByStudent, getNotesByStudent } from './mentorship.service';
 import { listOpportunities, listBookmarks } from './opportunityHub.service';
 import { listCalendarEntries } from './calendarEntry.service';
+import { getFacultyCoreByUserId } from '../registries/facultyRegistry.service';
+import { getStudentCoreByUserId } from '../registries/studentRegistry.service';
 import type { Role } from '../types/roles';
 import type {
   TimelineEvent,
@@ -75,11 +77,10 @@ export async function getStudentWeek(userId: string): Promise<WeekView> {
 // ── Mentorship / LMS / Opportunity / Calendar summaries (student) ───────────
 
 async function getStudentMentorshipSummary(userId: string) {
-  const { rows } = await query<{ id: string }>('SELECT id FROM students WHERE user_id = $1 AND deleted_at IS NULL', [userId]);
-  if (!rows[0]) throw AppError.forbidden('No student profile is linked to this account');
+  const student = await getStudentCoreByUserId(userId);
 
-  const mentor = await getMentorByStudent(rows[0].id);
-  const notes = await getNotesByStudent(rows[0].id);
+  const mentor = await getMentorByStudent(student.id);
+  const notes = await getNotesByStudent(student.id);
   const nextMeeting = notes
     .filter((n) => n.followUpDate && new Date(n.followUpDate) >= new Date())
     .sort((a, b) => new Date(a.followUpDate!).getTime() - new Date(b.followUpDate!).getTime())[0] ?? null;
@@ -331,12 +332,8 @@ export async function getDashboardWidgets(userId: string, role: Role, filters: D
   if (role === 'student') return buildStudentWidgets(userId);
   if (role === 'admin') return buildAdminWidgets(userId, filters.departmentId);
   if (role === 'faculty') {
-    const { rows } = await query<{ designation: string | null }>(
-      'SELECT designation FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-      [userId]
-    );
-    if (!rows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
-    return rows[0].designation === 'hod' ? buildHodWidgets(userId) : buildFacultyWidgets(userId);
+    const faculty = await getFacultyCoreByUserId(userId);
+    return faculty.designation === 'hod' ? buildHodWidgets(userId) : buildFacultyWidgets(userId);
   }
   throw AppError.forbidden('You do not have access to dashboard widgets');
 }
@@ -369,8 +366,7 @@ export async function getStudentExperience(userId: string) {
 }
 
 async function getFacultyLmsSummary(userId: string) {
-  const { rows } = await query<{ id: string }>('SELECT id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL', [userId]);
-  if (!rows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
+  await getFacultyCoreByUserId(userId);
 
   const [submissionsRes, materialsRes] = await Promise.all([
     listSubmissions(userId, 'faculty', { page: 1, limit: 5 } as never),
@@ -385,12 +381,8 @@ async function getFacultyLmsSummary(userId: string) {
 }
 
 export async function getFacultyExperience(userId: string) {
-  const { rows: facRows } = await query<{ designation: string | null }>(
-    'SELECT designation FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-    [userId]
-  );
-  if (!facRows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
-  const isHod = facRows[0].designation === 'hod';
+  const faculty = await getFacultyCoreByUserId(userId);
+  const isHod = faculty.designation === 'hod';
 
   const [dashboard, timeline, actions, widgets, lmsSummary, calendarSummary] = await Promise.all([
     facultyOperationsService.getFacultyOperationsDashboard(userId),

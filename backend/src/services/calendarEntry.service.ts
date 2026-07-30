@@ -1,6 +1,8 @@
 import { query } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
+import { getFacultyCoreByUserId } from '../registries/facultyRegistry.service';
+import { getStudentCoreByUserId } from '../registries/studentRegistry.service';
 import type { Role } from '../types/roles';
 import type {
   CalendarEntry,
@@ -154,19 +156,18 @@ interface UserCtx {
 
 async function resolveUserCtx(userId: string, role: Role): Promise<UserCtx> {
   if (role === 'faculty') {
-    const { rows } = await query<{ department_id: string }>(
-      'SELECT department_id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-      [userId]
-    );
-    return { departmentId: rows[0]?.department_id ?? null, semester: null };
+    try {
+      const faculty = await getFacultyCoreByUserId(userId);
+      return { departmentId: faculty.departmentId, semester: null };
+    } catch {
+      return { departmentId: null, semester: null };
+    }
   }
   if (role === 'student') {
-    const { rows } = await query<{ department_id: string; semester: number }>(
-      'SELECT department_id, semester FROM students WHERE user_id = $1 AND deleted_at IS NULL',
-      [userId]
-    );
-    if (!rows[0]) throw AppError.notFound('Student profile not found');
-    return { departmentId: rows[0].department_id, semester: rows[0].semester };
+    const student = await getStudentCoreByUserId(userId).catch(() => {
+      throw AppError.notFound('Student profile not found');
+    });
+    return { departmentId: student.departmentId, semester: student.semester };
   }
   return { departmentId: null, semester: null };
 }
@@ -354,11 +355,8 @@ export async function updateCalendarEntry(
   let allowed = role === 'admin' || existing[0].created_by === userId;
 
   if (!allowed && role === 'faculty') {
-    const { rows: facRows } = await query<{ designation: string; department_id: string }>(
-      'SELECT designation, department_id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-      [userId]
-    );
-    if (facRows[0] && facRows[0].designation === 'hod' && existing[0].department_id === facRows[0].department_id) {
+    const faculty = await getFacultyCoreByUserId(userId).catch(() => null);
+    if (faculty && faculty.designation === 'hod' && existing[0].department_id === faculty.departmentId) {
       allowed = true;
     }
   }
@@ -430,11 +428,8 @@ export async function deleteCalendarEntry(
   let allowed = role === 'admin' || existing[0].created_by === userId;
 
   if (!allowed && role === 'faculty') {
-    const { rows: facRows } = await query<{ designation: string; department_id: string }>(
-      'SELECT designation, department_id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-      [userId]
-    );
-    if (facRows[0] && facRows[0].designation === 'hod' && existing[0].department_id === facRows[0].department_id) {
+    const faculty = await getFacultyCoreByUserId(userId).catch(() => null);
+    if (faculty && faculty.designation === 'hod' && existing[0].department_id === faculty.departmentId) {
       allowed = true;
     }
   }

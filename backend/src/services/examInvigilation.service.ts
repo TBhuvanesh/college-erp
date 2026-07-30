@@ -2,6 +2,7 @@ import { query, withTransaction } from '../config/database';
 import { AppError } from '../errors/AppError';
 import { auditLog } from '../utils/audit';
 import { listFacultyAvailability, overlaps } from './resourceAvailability.service';
+import { getFacultyCoreByUserId } from '../registries/facultyRegistry.service';
 import type { Role } from '../types/roles';
 import type {
   InvigilationDuty,
@@ -20,13 +21,9 @@ async function resolveSchedulingScope(userId: string, role: Role): Promise<Sched
   if (role === 'admin') return { departmentId: null };
 
   if (role === 'faculty') {
-    const { rows } = await query<{ department_id: string; designation: string | null }>(
-      'SELECT department_id, designation FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-      [userId]
-    );
-    if (!rows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
-    if (rows[0].designation !== 'hod') throw AppError.forbidden('Only admins and HODs can manage exam invigilation');
-    return { departmentId: rows[0].department_id };
+    const faculty = await getFacultyCoreByUserId(userId);
+    if (faculty.designation !== 'hod') throw AppError.forbidden('Only admins and HODs can manage exam invigilation');
+    return { departmentId: faculty.departmentId };
   }
 
   throw AppError.forbidden('You do not have access to exam invigilation management');
@@ -280,16 +277,12 @@ export async function listInvigilationDuties(
   };
 
   if (role === 'faculty') {
-    const { rows } = await query<{ id: string; department_id: string; designation: string | null }>(
-      'SELECT id, department_id, designation FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-      [userId]
-    );
-    if (!rows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
-    if (rows[0].designation === 'hod') {
-      params.push(rows[0].department_id);
+    const faculty = await getFacultyCoreByUserId(userId);
+    if (faculty.designation === 'hod') {
+      params.push(faculty.departmentId);
       conditions.push(`eid.faculty_id IN (SELECT id FROM faculty WHERE department_id = $${params.length} AND deleted_at IS NULL)`);
     } else {
-      push('eid.faculty_id =', rows[0].id);
+      push('eid.faculty_id =', faculty.id);
     }
   } else if (role !== 'admin') {
     throw AppError.forbidden('You do not have access to invigilation duties');

@@ -2,6 +2,8 @@ import { query, withTransaction } from '../config/database';
 import { auditLog } from '../utils/audit';
 import { AppError } from '../errors/AppError';
 import { isFacultyAssigned, resolveTeachingAssignmentId } from './assignment.service';
+import { getFacultyCoreByUserId } from '../registries/facultyRegistry.service';
+import { getStudentCoreByUserId } from '../registries/studentRegistry.service';
 import type {
   InternalMarksRecord,
   PaginatedInternalMarks,
@@ -103,14 +105,10 @@ function toRecord(r: MarksRow): InternalMarksRecord {
   };
 }
 
-/** Resolves users.id → faculty.id. Throws 403 if no faculty profile exists. */
+/** Resolves users.id → faculty.id via FacultyRegistry. Throws 403 if no faculty profile exists. */
 async function resolveFacultyId(userId: string): Promise<string> {
-  const { rows } = await query<{ id: string }>(
-    'SELECT id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-    [userId]
-  );
-  if (!rows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
-  return rows[0].id;
+  const faculty = await getFacultyCoreByUserId(userId);
+  return faculty.id;
 }
 
 // ── Read operations ───────────────────────────────────────────────────────────
@@ -316,14 +314,10 @@ export async function getStudentHistory(
   filters: { page: number; limit: number; subjectId?: string }
 ): Promise<PaginatedInternalMarks> {
   // Resolve user_id to student_id
-  const { rows: stud } = await query<{ id: string }>(
-    'SELECT id FROM students WHERE user_id = $1 AND deleted_at IS NULL',
-    [userId]
-  );
-  if (!stud[0]) throw AppError.forbidden('No student profile is linked to this account');
+  const student = await getStudentCoreByUserId(userId);
 
   const conditions: string[] = ['m.student_id = $1'];
-  const params: unknown[] = [stud[0].id];
+  const params: unknown[] = [student.id];
 
   const push = (condition: string, value: unknown) => {
     params.push(value);

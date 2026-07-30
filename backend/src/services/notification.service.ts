@@ -280,7 +280,7 @@ export async function createNotification(
       departmentId,
       data.semester ?? null,
       data.recipientUserId ?? null,
-      data.isImportant,
+      data.isImportant ?? false,
       userId,
     ]
   );

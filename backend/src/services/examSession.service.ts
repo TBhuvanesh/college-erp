@@ -5,6 +5,7 @@ import { generateSeatingPlan, checkSeatingConflicts } from './examSeating.servic
 import { generateInvigilationDuties } from './examInvigilation.service';
 import { createNotification } from './notification.service';
 import { emitWorkflowEvent } from './workflowEngine.service';
+import { getFacultyCoreByUserId } from '../registries/facultyRegistry.service';
 import type { Role } from '../types/roles';
 import type {
   ExamSession,
@@ -27,13 +28,9 @@ async function resolveSchedulingScope(userId: string, role: Role): Promise<Sched
   if (role === 'admin') return { departmentId: null };
 
   if (role === 'faculty') {
-    const { rows } = await query<{ department_id: string; designation: string | null }>(
-      'SELECT department_id, designation FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
-      [userId]
-    );
-    if (!rows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
-    if (rows[0].designation !== 'hod') throw AppError.forbidden('Only admins and HODs can manage exam sessions');
-    return { departmentId: rows[0].department_id };
+    const faculty = await getFacultyCoreByUserId(userId);
+    if (faculty.designation !== 'hod') throw AppError.forbidden('Only admins and HODs can manage exam sessions');
+    return { departmentId: faculty.departmentId };
   }
 
   throw AppError.forbidden('You do not have access to exam session management');
