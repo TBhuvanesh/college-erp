@@ -40,6 +40,7 @@ export interface CalendarEntry {
   isOwner: boolean;
   createdAt: Date;
   updatedAt: Date;
+  isReadOnly?: boolean;
 }
 
 export interface PaginatedCalendarEntries {

@@ -150,7 +150,7 @@ describe('listMaterials', () => {
   it('student query filters by program_id and semester', async () => {
     // resolveStudentCtx
     mockQuery.mockResolvedValueOnce({
-      rows: [{ program_id: 'prog-1', semester: 3 }],
+      rows: [{ department_id: 'dept-1', semester: 3 }],
       rowCount: 1,
     } as never);
     // list query
@@ -160,7 +160,7 @@ describe('listMaterials', () => {
 
     expect(result.total).toBe(0);
     const listSql = mockQuery.mock.calls[1][0] as string;
-    expect(listSql).toMatch(/program_id/);
+    expect(listSql).toMatch(/department_id/);
     expect(listSql).toMatch(/semester/);
   });
 

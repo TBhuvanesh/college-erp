@@ -397,6 +397,8 @@ describe('updateCalendarEntry', () => {
       rows: [{ id: ENTRY_ID, created_by: FACULTY_ID, start_date: new Date('2026-07-10'), end_date: null }],
       rowCount: 1,
     } as never);
+    // HOD check query for faculty roles
+    mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
 
     await expect(
       calendarService.updateCalendarEntry(OTHER_USER, 'faculty', ENTRY_ID, { title: 'Hijack' })

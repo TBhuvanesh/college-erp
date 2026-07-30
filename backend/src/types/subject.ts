@@ -42,6 +42,7 @@ export interface SubjectDetail {
   tutorialHours: number;
   practicalHours: number;
   description: string | null;
+  abbreviation: string | null;
   createdAt: Date;
   updatedAt: Date;
   mappings: SubjectCurriculumMappingDetail[];
@@ -58,6 +59,7 @@ export interface SubjectSummary {
   lectureHours: number;
   tutorialHours: number;
   practicalHours: number;
+  abbreviation: string | null;
   // If filtered by department, these fields represent that matching mapping's details:
   departmentId?: string;
   departmentName?: string;
@@ -129,6 +131,7 @@ export const createSubjectSchema = z.object({
   type: z.enum(SUBJECT_TYPES),
   description: z.string().max(1000).trim().optional().nullable(),
   status: z.enum(SUBJECT_STATUSES).default('active'),
+  abbreviation: z.string().max(20).trim().optional().nullable(),
 });
 
 export const updateSubjectSchema = z
@@ -141,6 +144,7 @@ export const updateSubjectSchema = z
     type: z.enum(SUBJECT_TYPES).optional(),
     description: z.string().max(1000).trim().optional().nullable(),
     status: z.enum(SUBJECT_STATUSES).optional(),
+    abbreviation: z.string().max(20).trim().optional().nullable(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided',

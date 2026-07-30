@@ -48,6 +48,8 @@ export default function StudentDashboard() {
   const [apiOpportunities, setApiOpportunities] = useState<any[]>([]);
   const [apiAssignments, setApiAssignments] = useState<any[]>([]);
   const [apiSubmissions, setApiSubmissions] = useState<any[]>([]);
+  const [todaySchedule, setTodaySchedule] = useState<any[]>([]);
+  const [nextClassSubtext, setNextClassSubtext] = useState("None Scheduled");
 
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -57,7 +59,7 @@ export default function StudentDashboard() {
     if (!accessToken) return;
     setLoading(true);
     try {
-      const [attRes, resRes, examRes, feeRes, calRes, notifRes, oppRes, assignRes, subRes] = await Promise.all([
+      const [attRes, resRes, examRes, feeRes, calRes, notifRes, oppRes, assignRes, subRes, dashRes] = await Promise.all([
         apiFetch("/attendance/summary", {}, accessToken),
         apiFetch("/results/my-results", {}, accessToken),
         apiFetch("/examinations/upcoming", {}, accessToken),
@@ -66,7 +68,8 @@ export default function StudentDashboard() {
         apiFetch("/notifications?limit=20", {}, accessToken),
         apiFetch("/opportunities?limit=50", {}, accessToken),
         apiFetch("/lms/assignments?limit=50", {}, accessToken),
-        apiFetch("/lms/submissions?limit=100", {}, accessToken)
+        apiFetch("/lms/submissions?limit=100", {}, accessToken),
+        apiFetch("/dashboard/student", {}, accessToken).catch(() => null)
       ]);
 
       if (attRes.success && attRes.data) setApiAttendance(attRes.data);
@@ -80,6 +83,21 @@ export default function StudentDashboard() {
       if (oppRes.success && oppRes.data?.opportunities) setApiOpportunities(oppRes.data.opportunities);
       if (assignRes.success && assignRes.data?.assignments) setApiAssignments(assignRes.data.assignments);
       if (subRes.success && subRes.data?.submissions) setApiSubmissions(subRes.data.submissions);
+
+      if (dashRes && dashRes.success && dashRes.data?.todaySchedule) {
+        const schedule = dashRes.data.todaySchedule;
+        setTodaySchedule(schedule);
+        const now = new Date();
+        const nowTimeStr = now.toTimeString().slice(0, 8);
+        const upcoming = schedule.find((c: any) => c.startTime && c.startTime > nowTimeStr);
+        if (upcoming) {
+          setNextClassSubtext(`Next: ${upcoming.startTime.slice(0, 5)}`);
+        } else if (schedule.length > 0) {
+          setNextClassSubtext("Completed");
+        } else {
+          setNextClassSubtext("None Scheduled");
+        }
+      }
     } catch (err) {
       console.error("Failed to load UXL components dashboard data", err);
     } finally {
@@ -130,23 +148,49 @@ export default function StudentDashboard() {
   // Today's Focus Metrics
   const focusMetrics: FocusMetric[] = useMemo(() => {
     return [
-      { label: "Lectures Today", value: 3, subtext: "Next: 9:00 AM" },
+      { label: "Lectures Today", value: todaySchedule.length, subtext: nextClassSubtext },
       { label: "Homework Pending", value: pendingAssignments.length, subtext: `${apiAssignments.length - pendingAssignments.length} submitted`, colorClass: pendingAssignments.length > 0 ? "text-amber-500" : "" },
       { label: "Attendance Status", value: `${overallAttendancePct}%`, subtext: overallAttendancePct >= 75 ? "Compliant ✓" : "Alert ⚠", colorClass: overallAttendancePct >= 75 ? "text-emerald-500" : "text-red-500" },
       { label: "Fee Balance", value: unpaidTotalAmount > 0 ? `₹${unpaidTotalAmount.toLocaleString("en-IN")}` : "Paid", subtext: unpaidTotalAmount > 0 ? "Due" : "Cleared", colorClass: unpaidTotalAmount > 0 ? "text-red-500" : "text-emerald-500" }
     ];
-  }, [pendingAssignments, overallAttendancePct, unpaidTotalAmount, apiAssignments]);
+  }, [todaySchedule, nextClassSubtext, pendingAssignments, overallAttendancePct, unpaidTotalAmount, apiAssignments]);
 
   // Timeline Events
   const timelineEvents: TimelineEvent[] = useMemo(() => {
-    return [
-      { id: "t1", time: "09:00 AM", title: "Database Management Systems", subtitle: "Topic: Normalization & 3NF (Notes uploaded in LMS)", category: "Class", status: "normal" },
-      { id: "t2", time: "11:00 AM", title: "Operating Systems", subtitle: "Topic: Deadlocks Avoidance & Banker's Algorithm", category: "Class" },
-      { id: "t3", time: "02:00 PM", title: "AI Lab Practice", subtitle: "Topic: Implementation of DFS/BFS in Python", category: "Class" },
-      { id: "t4", time: "04:00 PM", title: "Assignment Deadline (DBMS)", subtitle: "LMS assignment #3 queries due", category: "Assignment", status: "urgent", actionText: "Open LMS", actionRoute: "/student/lms" },
-      { id: "t5", time: "Tomorrow", title: "Workshop: Cloud Architectures", subtitle: "Conducted by Microsoft MVP guest series", category: "Event" }
-    ];
-  }, []);
+    const list: TimelineEvent[] = todaySchedule.map((cls, idx) => ({
+      id: `class-${idx}`,
+      time: cls.time,
+      title: `${cls.subjectName} (${cls.subjectAbbreviation || cls.subjectCode})`,
+      subtitle: `Room: ${cls.room || "N/A"} | Class: ${cls.classType} | Faculty: ${cls.faculties}`,
+      category: "Class",
+      status: "normal"
+    }));
+
+    if (list.length === 0) {
+      list.push({
+        id: "no-classes",
+        time: "Today",
+        title: "No Lectures Scheduled",
+        subtitle: "Enjoy your free day or work on pending assignments.",
+        category: "Event"
+      });
+    }
+
+    pendingAssignments.slice(0, 2).forEach((a, idx) => {
+      list.push({
+        id: `deadline-${idx}`,
+        time: "Due: " + new Date(a.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        title: `Assignment: ${a.title}`,
+        subtitle: `Course: ${a.subjectName} (Requires submission)`,
+        category: "Assignment",
+        status: "urgent",
+        actionText: "Open LMS",
+        actionRoute: "/student/lms"
+      });
+    });
+
+    return list;
+  }, [todaySchedule, pendingAssignments]);
 
   // Action Center Items
   const actionItems: ActionItem[] = useMemo(() => {

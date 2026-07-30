@@ -11,6 +11,7 @@ import type {
   ListCalendarQuery,
   PaginatedCalendarEntries,
 } from '../types/calendarEntry';
+import { getTimetableForStudent, getTimetableForFaculty } from './timetable.service';
 
 // ── Row types ────────────────────────────────────────────────────────────────────
 
@@ -329,9 +330,119 @@ export async function listCalendarEntries(
     params
   );
 
-  const total = rows[0] ? Number(rows[0].total_count) : 0;
+  let entries = rows.map((r) => toCalendarEntry(r, userId));
+  let total = rows[0] ? Number(rows[0].total_count) : 0;
+
+  if (role === 'student' || role === 'faculty') {
+    // 1. Resolve date range
+    const startDateVal = from ? new Date(from) : new Date(Date.now() - 14 * 24 * 3600 * 1000);
+    const endDateVal = to ? new Date(to) : new Date(Date.now() + 30 * 24 * 3600 * 1000);
+
+    // 2. Fetch active holiday events
+    const holidayRes = await query<any>(
+      `SELECT start_date, end_date, target_audience, department_id, semester
+       FROM academic_calendar_events
+       WHERE event_type = 'Holiday'
+         AND start_date <= $2 AND COALESCE(end_date, start_date) >= $1
+         AND deleted_at IS NULL AND publish_status != 'Archived'`,
+      [startDateVal.toISOString().slice(0, 10), endDateVal.toISOString().slice(0, 10)]
+    );
+    const holidayRows = holidayRes?.rows || [];
+
+    // 3. Fetch timetable
+    let timetable: any = null;
+    let studentDeptId: string | null = null;
+    if (role === 'student') {
+      timetable = await getTimetableForStudent(userId);
+    } else {
+      timetable = await getTimetableForFaculty(userId);
+    }
+
+    if (timetable) {
+      if (role === 'student') {
+        studentDeptId = timetable.departmentId;
+      }
+
+      // Generate virtual classes day-by-day
+      const virtualEntries: CalendarEntry[] = [];
+      let currentMillis = startDateVal.getTime();
+      const endMillis = endDateVal.getTime();
+
+      // Loop day-by-day (using 86400000ms steps)
+      for (let ms = currentMillis; ms <= endMillis; ms += 24 * 3600 * 1000) {
+        const loopDate = new Date(ms);
+        const dateStr = loopDate.toISOString().slice(0, 10);
+
+        // Check if this date is a holiday
+        const isHoliday = holidayRows.some((h) => {
+          const start = new Date(h.start_date);
+          const end = h.end_date ? new Date(h.end_date) : start;
+          const curr = new Date(dateStr);
+          if (curr >= start && curr <= end) {
+            if (h.target_audience === 'All') return true;
+            if (role === 'student' && h.target_audience === 'Students') {
+              if (!h.department_id || h.department_id === studentDeptId) return true;
+            }
+            if (role === 'faculty' && h.target_audience === 'Faculty') return true;
+          }
+          return false;
+        });
+
+        if (!isHoliday) {
+          const weekday = loopDate.toLocaleDateString('en-US', { weekday: 'long' });
+          let dayEntries: any[] = [];
+          if (role === 'student') {
+            dayEntries = timetable.entries.filter((e: any) => e.dayOfWeek === weekday);
+          } else {
+            dayEntries = timetable.schedule[weekday] || [];
+          }
+
+          for (const entry of dayEntries) {
+            if (entry.slots && entry.slots.length > 0) {
+              const startSlot = entry.slots[0];
+              const endSlot = entry.slots[entry.slots.length - 1];
+
+              const startDateTime = new Date(`${dateStr}T${startSlot.startTime}`);
+              const endDateTime = new Date(`${dateStr}T${endSlot.endTime}`);
+
+              const desc = role === 'student'
+                ? `Room: ${timetable.roomNumber || 'N/A'} | Faculty: ${entry.faculties.map((f: any) => f.fullName).join(', ')}`
+                : `Room: ${entry.roomNumber || 'N/A'} | Section: ${entry.departmentCode} Sem ${entry.semester}-${entry.section}`;
+
+              virtualEntries.push({
+                id: `virtual-timetable-${entry.id}-${dateStr}`,
+                title: `${entry.subjectAbbreviation || entry.subjectCode} (${entry.classType})`,
+                description: desc,
+                eventType: 'Academic',
+                startDate: startDateTime,
+                endDate: endDateTime,
+                visibility: role === 'student' ? 'student' : 'faculty',
+                sourceModule: 'timetable',
+                sourceId: entry.id,
+                departmentId: role === 'student' ? studentDeptId : (entry.departmentId || null),
+                departmentName: null,
+                semester: role === 'student' ? timetable.semester : (entry.semester || null),
+                createdBy: 'system',
+                createdByName: 'System Timetable',
+                isOwner: false,
+                isReadOnly: true,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              });
+            }
+          }
+        }
+      }
+
+      // Merge and sort
+      entries = [...entries, ...virtualEntries];
+      entries.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+      total = entries.length;
+    }
+  }
+
   return {
-    entries:    rows.map((r) => toCalendarEntry(r, userId)),
+    entries,
     total,
     page,
     limit,

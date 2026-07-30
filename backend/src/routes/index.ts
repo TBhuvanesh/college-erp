@@ -45,6 +45,7 @@ import teachingAssignmentRouter from './teachingAssignment.routes';
 import resultEntryTaskRouter from './resultEntryTask.routes';
 import teachingLoadSettingsRouter from './teachingLoadSettings.routes';
 import academicImportRouter from './academicImport.routes';
+import timetablesRouter from './timetable.routes';
 
 const router = Router();
 
@@ -94,6 +95,7 @@ router.use('/teaching-assignments', teachingAssignmentRouter);
 router.use('/result-entry-tasks', resultEntryTaskRouter);
 router.use('/teaching-load-settings', teachingLoadSettingsRouter);
 router.use('/academic-import', academicImportRouter);
+router.use('/timetables', timetablesRouter);
 
 // Reference implementation for auth middleware patterns
 router.use('/example', protectedRouter);

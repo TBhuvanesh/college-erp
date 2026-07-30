@@ -95,7 +95,7 @@ export async function parseExcelSyncFile(fileBuffer?: Buffer): Promise<{
 }> {
   const workbook = new ExcelJS.Workbook();
   if (fileBuffer) {
-    await workbook.xlsx.load(fileBuffer);
+    await workbook.xlsx.load(fileBuffer as any);
   } else {
     const xlsxPath = path.join(__dirname, '../../../../I SEMESTER ROLL LIST WITH FULL DATA.xlsx');
     if (!fs.existsSync(xlsxPath)) {

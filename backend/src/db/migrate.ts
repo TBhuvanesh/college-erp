@@ -55,6 +55,7 @@ const MIGRATION_FILES = [
   '047_student_import_profile_fields.sql',
   '048_import_jobs_mode.sql',
   '049_workflow_event_coverage.sql',
+  '050_timetable_management.sql',
 ];
 
 async function runMigrations(): Promise<void> {

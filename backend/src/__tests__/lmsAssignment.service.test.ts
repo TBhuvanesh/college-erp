@@ -123,7 +123,7 @@ describe('listAssignments', () => {
 
   it('student query filters by program_id and semester', async () => {
     mockQuery.mockResolvedValueOnce({
-      rows: [{ program_id: 'prog-1', semester: 3 }],
+      rows: [{ department_id: 'dept-1', semester: 3 }],
       rowCount: 1,
     } as never);
     mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as never);
@@ -131,7 +131,7 @@ describe('listAssignments', () => {
     await assignmentService.listAssignments(STUDENT_USER_ID, 'student', { page: 1, limit: 20 });
 
     const listSql = mockQuery.mock.calls[1][0] as string;
-    expect(listSql).toMatch(/program_id/);
+    expect(listSql).toMatch(/department_id/);
   });
 
   it('returns empty when student profile not found', async () => {

@@ -60,7 +60,7 @@ async function validateProgramPlacement(
 export async function getSubjectById(id: string): Promise<SubjectDetail> {
   // 1. Fetch Subject Master Details
   const { rows: subRows } = await query<any>(
-    `SELECT id, code, name, credits, type, status, lecture_hours, tutorial_hours, practical_hours, description, created_at, updated_at
+    `SELECT id, code, name, credits, type, status, lecture_hours, tutorial_hours, practical_hours, description, abbreviation, created_at, updated_at
      FROM subjects
      WHERE id = $1 AND deleted_at IS NULL`,
     [id]
@@ -91,6 +91,7 @@ export async function getSubjectById(id: string): Promise<SubjectDetail> {
     tutorialHours: sub.tutorial_hours,
     practicalHours: sub.practical_hours,
     description: sub.description,
+    abbreviation: sub.abbreviation,
     createdAt: sub.created_at,
     updatedAt: sub.updated_at,
     mappings: mapRows.map((m: any) => ({
@@ -160,7 +161,7 @@ export async function listSubjects(filters: ListSubjectsQuery): Promise<Paginate
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     queryText = `
-      SELECT s.id, s.code, s.name, s.credits, s.type, s.status,
+      SELECT s.id, s.code, s.name, s.credits, s.type, s.status, s.abbreviation,
              s.lecture_hours, s.tutorial_hours, s.practical_hours,
              scm.id AS mapping_id, scm.department_id, d.name AS department_name, d.code AS department_code,
              scm.program_id, p.name AS program_name, p.code AS program_code, scm.program,
@@ -191,7 +192,7 @@ export async function listSubjects(filters: ListSubjectsQuery): Promise<Paginate
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     queryText = `
-      SELECT s.id, s.code, s.name, s.credits, s.type, s.status,
+      SELECT s.id, s.code, s.name, s.credits, s.type, s.status, s.abbreviation,
              s.lecture_hours, s.tutorial_hours, s.practical_hours,
              (
                SELECT JSON_AGG(JSON_BUILD_OBJECT(
@@ -234,6 +235,7 @@ export async function listSubjects(filters: ListSubjectsQuery): Promise<Paginate
         lectureHours: r.lecture_hours,
         tutorialHours: r.tutorial_hours,
         practicalHours: r.practical_hours,
+        abbreviation: r.abbreviation || r.code,
         departmentId: r.department_id,
         departmentName: r.department_name,
         programId: r.program_id,
@@ -254,6 +256,7 @@ export async function listSubjects(filters: ListSubjectsQuery): Promise<Paginate
         lectureHours: r.lecture_hours,
         tutorialHours: r.tutorial_hours,
         practicalHours: r.practical_hours,
+        abbreviation: r.abbreviation || r.code,
         mappings: r.mappings_json || [],
       };
     }
@@ -341,8 +344,8 @@ export async function createSubject(
     const { rows: newSubRow } = await query<{ id: string }>(
       `INSERT INTO subjects (
         code, name, credits, type, status,
-        lecture_hours, tutorial_hours, practical_hours, description
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+        lecture_hours, tutorial_hours, practical_hours, description, abbreviation
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
       [
         data.code,
         data.name,
@@ -353,6 +356,7 @@ export async function createSubject(
         data.tutorialHours || 0,
         data.practicalHours || 0,
         data.description || null,
+        data.abbreviation || data.code.toUpperCase(),
       ]
     );
     subjectId = newSubRow[0].id;
@@ -415,6 +419,7 @@ export async function updateSubject(
   if (data.practicalHours !== undefined) set('practical_hours', data.practicalHours);
   if (data.description !== undefined) set('description', data.description);
   if (data.status !== undefined) set('status', data.status);
+  if (data.abbreviation !== undefined) set('abbreviation', data.abbreviation);
 
   if (setClauses.length > 0) {
     params.push(id);

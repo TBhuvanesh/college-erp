@@ -274,11 +274,17 @@ export async function getMentorDashboard(mentorUserId: string) {
          COUNT(a.id)::int AS total, 
          COUNT(sub.id)::int AS submitted, 
          COUNT(a.id) FILTER (WHERE a.due_date < NOW() AND sub.id IS NULL)::int AS overdue
-       FROM assignments a
-       JOIN subjects s ON a.subject_id = s.id
-       JOIN students st ON st.program_id = s.program_id AND st.semester = s.semester
+       FROM students st
+       CROSS JOIN assignments a
+       JOIN subjects s ON a.subject_id = s.id AND s.deleted_at IS NULL
+       JOIN subject_curriculum_mappings scm 
+         ON scm.subject_id = a.subject_id 
+        AND scm.department_id = st.department_id 
+        AND scm.semester = st.semester 
+        AND scm.regulation = st.regulation
+        AND scm.deleted_at IS NULL
        LEFT JOIN assignment_submissions sub ON sub.assignment_id = a.id AND sub.student_id = st.id AND sub.deleted_at IS NULL
-       WHERE st.id = $1 AND a.deleted_at IS NULL AND s.deleted_at IS NULL AND st.deleted_at IS NULL`,
+       WHERE st.id = $1 AND a.deleted_at IS NULL AND st.deleted_at IS NULL`,
       [student.id]
     );
     const assignInfo = assignRes.rows[0] || { total: 0, submitted: 0, overdue: 0 };

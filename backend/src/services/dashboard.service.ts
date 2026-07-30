@@ -15,6 +15,7 @@ import { getMentorshipAnalytics } from './analytics.service';
 import { getMentorDashboard } from './mentorship.service';
 import { getMentorGroups } from './mentorGroup.service';
 import * as feedbackService from './feedback.service';
+import { getTodayClassesForStudent, getTodayClassesForFaculty } from './timetable.service';
 
 // ── Exam Seating & Invigilation admin widget — reused by both the admin and
 // HOD dashboards (HOD scoped to their own department's sessions). ────────────
@@ -400,6 +401,7 @@ export async function getFacultyDashboardStats(userId: string) {
   if (!profileRows[0]) throw AppError.forbidden('No faculty profile is linked to this account');
 
   const { id: facultyId, department_id: departmentId } = profileRows[0];
+  const todaySchedule = await getTodayClassesForFaculty(userId);
 
   const [
     assignmentsRes,
@@ -607,6 +609,7 @@ export async function getFacultyDashboardStats(userId: string) {
   const feedbackOverview = await getFeedbackOverviewForFaculty(facultyId);
 
   return {
+    todaySchedule,
     mentorshipOverview,
     feedbackOverview,
     profile: {
@@ -713,6 +716,7 @@ export async function getStudentDashboardStats(userId: string) {
 
   const { id: studentId, semester, department_id: departmentId } = profileRows[0];
   const yearGroup = semesterToYearGroup(semester);
+  const todaySchedule = await getTodayClassesForStudent(userId);
 
   const [
     attendanceSummary,
@@ -942,6 +946,7 @@ export async function getStudentDashboardStats(userId: string) {
   const feedbackOverview = await getFeedbackOverviewForStudent(userId);
 
   return {
+    todaySchedule,
     feedbackOverview,
     profile: {
       id:             profileRows[0].id,

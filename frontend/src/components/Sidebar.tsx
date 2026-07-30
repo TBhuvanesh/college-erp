@@ -96,6 +96,7 @@ export const Sidebar: React.FC = () => {
         { name: "Subjects", href: "/admin/subjects", icon: BookOpen },
         { name: "Curriculum Scheme", href: "/admin/courses", icon: BookOpen },
         { name: "Teaching Assignments", href: "/admin/subject-allocations", icon: UserCheck },
+        { name: "Timetable Management", href: "/admin/timetables", icon: Calendar },
         { name: "Attendance Registry", href: "/admin/attendance", icon: Calendar },
         { name: "Examinations", href: "/admin/examinations", icon: FileText },
         { name: "Results Desk", href: "/admin/results", icon: GraduationCap },
@@ -135,6 +136,7 @@ export const Sidebar: React.FC = () => {
       section: "Academics",
       items: [
         { name: "Teaching Workload", href: "/faculty/subjects", icon: BookOpen },
+        { name: "My Timetable", href: "/faculty/timetable", icon: Calendar },
         { name: "Attendance Register", href: "/faculty/attendance", icon: Users },
         { name: "Internal Marks", href: "/faculty/grades", icon: FileText },
         { name: "Examinations", href: "/faculty/examinations", icon: Calendar },
@@ -160,6 +162,7 @@ export const Sidebar: React.FC = () => {
     {
       section: "Academics",
       items: [
+        { name: "My Timetable", href: "/student/timetable", icon: Calendar },
         { name: "Attendance Logs", href: "/student/attendance", icon: Calendar },
         { name: "Semester Results", href: "/student/results", icon: GraduationCap },
         { name: "Examinations", href: "/student/examinations", icon: Calendar },

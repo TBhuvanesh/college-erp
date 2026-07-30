@@ -100,9 +100,11 @@ export function hasAccessToPath(role: RbacRole, path: string): boolean {
       p === "/faculty/examinations" ||
       p === "/faculty/results" ||
       p === "/faculty/calendar" ||
+      p === "/faculty/timetable" ||
       p === "/faculty/teaching-planner" ||
       p === "/faculty/opportunities" ||
       p === "/faculty/mentorship" ||
+      p.startsWith("/faculty/mentorship/") ||
       p === "/faculty/analytics" ||
       p === "/faculty/reports" ||
       p === "/faculty/invigilation" ||
@@ -145,6 +147,7 @@ export function hasAccessToPath(role: RbacRole, path: string): boolean {
     return (
       p === "/faculty/dashboard" ||
       p === "/faculty/mentorship" ||
+      p.startsWith("/faculty/mentorship/") ||
       p === "/faculty/analytics" ||
       p === "/faculty/reports" ||
       p === "/faculty/lms" ||
@@ -163,7 +166,9 @@ export function hasAccessToPath(role: RbacRole, path: string): boolean {
       p === "/faculty/examinations" ||
       p === "/faculty/results" ||
       p === "/faculty/calendar" ||
+      p === "/faculty/timetable" ||
       p === "/faculty/mentorship" ||
+      p.startsWith("/faculty/mentorship/") ||
       p === "/faculty/analytics" ||
       p === "/faculty/reports" ||
       p === "/faculty/invigilation" ||

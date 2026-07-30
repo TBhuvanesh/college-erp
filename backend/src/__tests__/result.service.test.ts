@@ -164,6 +164,7 @@ describe('listResults', () => {
 describe('getRoster', () => {
   it('returns roster pre-populated with existing results', async () => {
     mockQuery
+      .mockResolvedValueOnce({ rows: [{ id: 'fac-uuid-1' }] }) // resolveFacultyId
       .mockResolvedValueOnce({ rows: [{ program_id: 'prog-1', semester: 3 }] }) // subject lookup
       .mockResolvedValueOnce({
         rows: [
@@ -186,7 +187,8 @@ describe('getRoster', () => {
 
   it('returns roster with null result fields for students without a result', async () => {
     mockQuery
-      .mockResolvedValueOnce({ rows: [{ program_id: 'prog-1', semester: 3 }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'fac-uuid-1' }] }) // resolveFacultyId
+      .mockResolvedValueOnce({ rows: [{ program_id: 'prog-1', semester: 3 }] }) // subject lookup
       .mockResolvedValueOnce({
         rows: [
           {
@@ -206,7 +208,9 @@ describe('getRoster', () => {
   });
 
   it('throws 404 when subject not found', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [] });
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ id: 'fac-uuid-1' }] }) // resolveFacultyId
+      .mockResolvedValueOnce({ rows: [] }); // subject lookup
     await expect(getRoster('missing-sub', 'A', 'fac-user')).rejects.toMatchObject({ statusCode: 404 });
   });
 });

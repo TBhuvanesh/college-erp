@@ -63,6 +63,9 @@ const PAYMENT_ROW = {
 const mockClient = { query: jest.fn() };
 
 beforeEach(() => {
+  mockQuery.mockReset();
+  mockClient.query.mockReset();
+  mockWithTransaction.mockReset();
   mockWithTransaction.mockImplementation(
     async (fn: (client: typeof mockClient) => Promise<void>) => fn(mockClient)
   );
@@ -99,6 +102,7 @@ describe('listFees', () => {
 
   it('runs overdue refresh then returns paginated fees', async () => {
     mockQuery
+      .mockResolvedValueOnce({ rows: [] })                    // ensureAllStudentsHaveFees check
       .mockResolvedValueOnce({ rows: [] })                    // UPDATE overdue refresh
       .mockResolvedValueOnce({ rows: [FEE_LIST_ROW] });       // main query
 
@@ -107,14 +111,15 @@ describe('listFees', () => {
     expect(result.fees).toHaveLength(1);
     expect(result.pagination.total).toBe(5);
 
-    // First call must be the overdue UPDATE
-    const firstSql = mockQuery.mock.calls[0][0] as string;
-    expect(firstSql).toContain("payment_status = 'Overdue'");
-    expect(firstSql).toContain('due_date < CURRENT_DATE');
+    // Second call must be the overdue UPDATE (due to ensureAllStudentsHaveFees)
+    const secondSql = mockQuery.mock.calls[1][0] as string;
+    expect(secondSql).toContain("payment_status = 'Overdue'");
+    expect(secondSql).toContain('due_date < CURRENT_DATE');
   });
 
   it('returns empty result when no fees match', async () => {
     mockQuery
+      .mockResolvedValueOnce({ rows: [] }) // ensureAllStudentsHaveFees check
       .mockResolvedValueOnce({ rows: [] }) // UPDATE
       .mockResolvedValueOnce({ rows: [] }); // SELECT
 
@@ -125,28 +130,35 @@ describe('listFees', () => {
 
   it('applies studentId filter', async () => {
     mockQuery
+      .mockResolvedValueOnce({ rows: [] }) // ensureAllStudentsHaveFees check
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] });
 
     await listFees({ ...base, studentId: 'stu-uuid-1' });
-    const sql = mockQuery.mock.calls[1][0] as string;
+    const sql = mockQuery.mock.calls[2][0] as string;
     expect(sql).toContain('f.student_id =');
   });
 
   it('applies academicYear and semester filters', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] });
+    mockQuery
+      .mockResolvedValueOnce({ rows: [] }) // ensureAllStudentsHaveFees check
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
 
     await listFees({ ...base, academicYear: '2024-2025', semester: 3 });
-    const sql = mockQuery.mock.calls[1][0] as string;
+    const sql = mockQuery.mock.calls[2][0] as string;
     expect(sql).toContain('f.academic_year =');
     expect(sql).toContain('f.semester =');
   });
 
   it('applies paymentStatus filter', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] });
+    mockQuery
+      .mockResolvedValueOnce({ rows: [] }) // ensureAllStudentsHaveFees check
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
 
     await listFees({ ...base, paymentStatus: 'Overdue' });
-    const sql = mockQuery.mock.calls[1][0] as string;
+    const sql = mockQuery.mock.calls[2][0] as string;
     expect(sql).toContain('f.payment_status =');
   });
 });
@@ -273,7 +285,7 @@ describe('bulkCreateFees', () => {
       .mockResolvedValueOnce({ rows: [] });                  // INSERT SELECT returns nothing
 
     await expect(
-      bulkCreateFees({ ...BASE, programId: 'prog-uuid-1' }, 'admin-user')
+      bulkCreateFees({ ...BASE, programId: 'prog-uuid-empty' }, 'admin-user')
     ).rejects.toMatchObject({ statusCode: 400, code: 'NO_STUDENTS_FOUND' });
   });
 

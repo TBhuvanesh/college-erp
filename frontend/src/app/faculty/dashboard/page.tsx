@@ -48,6 +48,8 @@ export default function FacultyDashboard() {
   const [lmsAssignments, setLmsAssignments] = useState<any[]>([]);
   const [lmsSubmissions, setLmsSubmissions] = useState<any[]>([]);
   const [mentorStudents, setMentorStudents] = useState<any[]>([]);
+  const [todaySchedule, setTodaySchedule] = useState<any[]>([]);
+  const [nextLectureSubtext, setNextLectureSubtext] = useState("None Scheduled");
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,14 +59,15 @@ export default function FacultyDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [workRes, examRes, calRes, notifRes, lmsRes, subRes, mentorRes] = await Promise.all([
+      const [workRes, examRes, calRes, notifRes, lmsRes, subRes, mentorRes, dashRes] = await Promise.all([
         apiFetch("/teaching-assignments/my", {}, accessToken),
         apiFetch("/examinations/my-schedule", {}, accessToken),
         apiFetch("/calendar?limit=50", {}, accessToken),
         apiFetch("/notifications?limit=20", {}, accessToken),
         apiFetch("/lms/assignments?limit=50", {}, accessToken),
         apiFetch("/lms/submissions?limit=100", {}, accessToken),
-        apiFetch("/mentorship/my-mentees", {}, accessToken).catch(() => ({ success: true, data: [] }))
+        apiFetch("/mentorship/my-mentees", {}, accessToken).catch(() => ({ success: true, data: [] })),
+        apiFetch("/dashboard/faculty", {}, accessToken).catch(() => null)
       ]);
 
       if (workRes.success && workRes.data?.teachingAssignments) setWorkload(workRes.data.teachingAssignments);
@@ -74,6 +77,21 @@ export default function FacultyDashboard() {
       if (lmsRes.success && lmsRes.data?.assignments) setLmsAssignments(lmsRes.data.assignments);
       if (subRes.success && subRes.data?.submissions) setLmsSubmissions(subRes.data.submissions);
       if (mentorRes.success && mentorRes.data) setMentorStudents(mentorRes.data);
+
+      if (dashRes && dashRes.success && dashRes.data?.todaySchedule) {
+        const schedule = dashRes.data.todaySchedule;
+        setTodaySchedule(schedule);
+        const now = new Date();
+        const nowTimeStr = now.toTimeString().slice(0, 8);
+        const upcoming = schedule.find((c: any) => c.startTime && c.startTime > nowTimeStr);
+        if (upcoming) {
+          setNextLectureSubtext(`Next: ${upcoming.startTime.slice(0, 5)}`);
+        } else if (schedule.length > 0) {
+          setNextLectureSubtext("Completed");
+        } else {
+          setNextLectureSubtext("None Scheduled");
+        }
+      }
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to compile operations workspace.");
@@ -129,56 +147,53 @@ export default function FacultyDashboard() {
     });
   }, [workload]);
 
-  const todayClasses = useMemo(() => {
-    return workload.map((sub: any, idx: number) => {
-      const times = ["9:30 AM", "11:30 AM", "2:00 PM", "4:00 PM"];
-      return {
-        id: sub.subjectId,
-        subjectName: sub.subjectName,
-        subjectCode: sub.subjectCode,
-        time: times[idx % times.length],
-        room: `Block B, Room ${300 + idx * 5}`
-      };
-    }).slice(0, 3);
-  }, [workload]);
-
   // Today's Focus Metrics
   const focusMetrics: FocusMetric[] = useMemo(() => {
     return [
-      { label: "Today's Lectures", value: todayClasses.length, subtext: "Next: 9:30 AM" },
+      { label: "Today's Lectures", value: todaySchedule.length, subtext: nextLectureSubtext },
       { label: "Grading Pending", value: pendingEvaluations, subtext: `${completedEvaluations} Evaluated`, colorClass: pendingEvaluations > 0 ? "text-amber-500" : "" },
       { label: "Weekly Classes", value: weeklyClasses || 12, subtext: `${teachingHours} teaching hrs` },
-      { label: "Mentees List", value: mentorStudents.length || 15, subtext: "Group 4 meeting today" }
+      { label: "Mentees List", value: mentorStudents.length || 15, subtext: "Group meeting" }
     ];
-  }, [todayClasses, pendingEvaluations, completedEvaluations, weeklyClasses, teachingHours, mentorStudents]);
+  }, [todaySchedule, nextLectureSubtext, pendingEvaluations, completedEvaluations, weeklyClasses, teachingHours, mentorStudents]);
 
   // Chronological Faculty Timeline
   const timelineEvents: TimelineEvent[] = useMemo(() => {
     const list: TimelineEvent[] = [];
     
-    todayClasses.forEach((cls: any, idx: number) => {
+    todaySchedule.forEach((cls: any, idx: number) => {
       list.push({
         id: `c-${idx}`,
         time: cls.time,
-        title: `Deliver Lecture: ${cls.subjectName} (${cls.subjectCode})`,
-        subtitle: `Room: ${cls.room}. Remember to mark attendance in portal.`,
+        title: `Deliver Lecture: ${cls.subjectName} (${cls.subjectAbbreviation || cls.subjectCode})`,
+        subtitle: `Room: ${cls.room || "N/A"} | Section: ${cls.sectionDetails}. Mark attendance in portal.`,
         category: "Class"
       });
       list.push({
         id: `att-${idx}`,
         time: cls.time,
-        title: `Attendance Registry: ${cls.subjectCode}`,
+        title: `Attendance Registry: ${cls.subjectCode} (${cls.sectionDetails})`,
         subtitle: `Mark pending attendance lists.`,
         category: "Attendance",
         status: "pending"
       });
     });
 
+    if (todaySchedule.length === 0) {
+      list.push({
+        id: "no-lectures",
+        time: "Today",
+        title: "No Lectures Scheduled",
+        subtitle: "No teaching sessions scheduled for today.",
+        category: "Event"
+      });
+    }
+
     list.push({
       id: "t-upload",
       time: "01:00 PM",
-      title: "Upload DBMS Lesson Notes",
-      subtitle: "Upload Unit-III SQL Transactions notes to LMS.",
+      title: "Upload Lesson Notes",
+      subtitle: "Upload Unit-III/IV notes to LMS.",
       category: "LMS"
     });
 
@@ -186,7 +201,7 @@ export default function FacultyDashboard() {
       id: "t-mentorship",
       time: "03:30 PM",
       title: "Mentorship Session",
-      subtitle: "Remedial advice for CSE-A academic risk students.",
+      subtitle: "Advice for academic risk students.",
       category: "Mentorship"
     });
 
@@ -202,7 +217,7 @@ export default function FacultyDashboard() {
     }
 
     return list.sort((a, b) => a.time.localeCompare(b.time));
-  }, [todayClasses, pendingEvaluations]);
+  }, [todaySchedule, pendingEvaluations]);
 
   // Action Center Items
   const actionItems: ActionItem[] = useMemo(() => {

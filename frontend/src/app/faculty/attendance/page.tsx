@@ -88,6 +88,23 @@ export default function FacultyAttendance() {
   });
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [todayClasses, setTodayClasses] = useState<any[]>([]);
+
+  // Fetch today's classes from timetable
+  useEffect(() => {
+    if (!accessToken) return;
+    const fetchTodayClasses = async () => {
+      try {
+        const res = await apiFetch("/dashboard/faculty", {}, accessToken);
+        if (res.success && res.data?.todaySchedule) {
+          setTodayClasses(res.data.todaySchedule);
+        }
+      } catch (err) {
+        console.error("Failed to load today classes", err);
+      }
+    };
+    fetchTodayClasses();
+  }, [accessToken]);
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
@@ -364,6 +381,39 @@ export default function FacultyAttendance() {
         {/* Roster column */}
         <div className="flex-1 w-full space-y-6">
           
+          {/* Today's Lectures shortcuts */}
+          {todayClasses.length > 0 && (
+            <div className="bg-sky-50 dark:bg-sky-950/20 border border-sky-100 dark:border-sky-900/30 rounded-xl p-4 space-y-3 mb-6 no-print">
+              <h4 className="text-xs font-extrabold text-sky-850 dark:text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Calendar size={14} /> Today's Scheduled Lectures (Timetable Guide)
+              </h4>
+              <div className="flex flex-wrap gap-3">
+                {todayClasses.map((cls) => {
+                  const isActive = selectedSubjId === cls.subjectId && selectedSection === cls.section;
+                  return (
+                    <button
+                      key={cls.id}
+                      onClick={() => {
+                        setSelectedSubjId(cls.subjectId);
+                        setSelectedSection(cls.section);
+                      }}
+                      className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 border transition ${
+                        isActive
+                          ? "bg-sky-500 text-white border-sky-600 shadow"
+                          : "bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700"
+                      }`}
+                    >
+                      <Clock size={12} />
+                      <span className="font-extrabold">{cls.subjectAbbreviation || cls.subjectCode}</span>
+                      <span>({cls.time})</span>
+                      <span className="text-[10px] opacity-75">{cls.sectionDetails}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Class Selectors & Search bar */}
           <div className="glass-card border border-border-subtle rounded-xl p-4 flex flex-col md:flex-row gap-3">
             {/* Subject Select */}
