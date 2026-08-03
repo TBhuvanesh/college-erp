@@ -51,6 +51,11 @@ export const createTeachingAssignmentSchema = z.object({
   endDate: z.string().date().optional(),
   weeklyTeachingHours: z.number().min(0).max(60).optional(),
   notes: z.string().optional(),
+  departmentId: z.string().uuid().optional(),
+  programId: z.string().uuid().optional().nullable(),
+  regulation: z.string().optional(),
+  year: z.string().optional(),
+  semester: z.number().optional(),
 });
 
 export const updateTeachingAssignmentSchema = z.object({
@@ -106,3 +111,14 @@ export type UpdateAllocationInput = UpdateTeachingAssignmentInput;
 export type TransferAllocationInput = TransferTeachingAssignmentInput;
 export type DeleteAllocationInput = DeleteTeachingAssignmentInput;
 export type ListAllocationsQuery = ListTeachingAssignmentsQuery;
+
+export const resolveSubjectsForAssignmentQuerySchema = z.object({
+  departmentId: z.string().uuid('Invalid department ID'),
+  programId: z.string().optional().nullable(),
+  regulation: z.string().min(1, 'Regulation is required'),
+  year: z.string().min(1, 'Year is required'),
+  semester: z.preprocess((val) => (val ? Number(val) : undefined), z.number().int().min(1).max(12)),
+});
+
+export type ResolveSubjectsForAssignmentQuery = z.infer<typeof resolveSubjectsForAssignmentQuerySchema>;
+

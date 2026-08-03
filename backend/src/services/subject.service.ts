@@ -162,10 +162,21 @@ export async function listSubjects(filters: ListSubjectsQuery): Promise<Paginate
 
     queryText = `
       SELECT s.id, s.code, s.name, s.credits, s.type, s.status, s.abbreviation,
-             s.lecture_hours, s.tutorial_hours, s.practical_hours,
+             s.lecture_hours, s.tutorial_hours, s.practical_hours, s.description,
              scm.id AS mapping_id, scm.department_id, d.name AS department_name, d.code AS department_code,
              scm.program_id, p.name AS program_name, p.code AS program_code, scm.program,
              scm.regulation, scm.year, scm.semester, scm.semester_raw,
+             (SELECT COUNT(*)::int FROM students std 
+              WHERE std.program_id = scm.program_id 
+                AND std.semester = scm.semester 
+                AND std.status = 'active'
+                AND std.deleted_at IS NULL
+             ) AS student_count,
+             (SELECT COUNT(DISTINCT ta.faculty_id)::int 
+              FROM teaching_assignments ta 
+              WHERE ta.subject_curriculum_mapping_id = scm.id 
+                AND ta.deleted_at IS NULL
+             ) AS faculty_count,
              COUNT(*) OVER() AS total_count
       FROM subject_curriculum_mappings scm
       JOIN subjects s ON s.id = scm.subject_id
@@ -193,7 +204,7 @@ export async function listSubjects(filters: ListSubjectsQuery): Promise<Paginate
 
     queryText = `
       SELECT s.id, s.code, s.name, s.credits, s.type, s.status, s.abbreviation,
-             s.lecture_hours, s.tutorial_hours, s.practical_hours,
+             s.lecture_hours, s.tutorial_hours, s.practical_hours, s.description,
              (
                SELECT JSON_AGG(JSON_BUILD_OBJECT(
                  'id', scm.id,
@@ -244,6 +255,9 @@ export async function listSubjects(filters: ListSubjectsQuery): Promise<Paginate
         year: r.year,
         semester: r.semester,
         semesterRaw: r.semester_raw,
+        description: r.description,
+        studentCount: r.student_count || 0,
+        facultyCount: r.faculty_count || 0,
       };
     } else {
       return {
@@ -257,6 +271,7 @@ export async function listSubjects(filters: ListSubjectsQuery): Promise<Paginate
         tutorialHours: r.tutorial_hours,
         practicalHours: r.practical_hours,
         abbreviation: r.abbreviation || r.code,
+        description: r.description,
         mappings: r.mappings_json || [],
       };
     }

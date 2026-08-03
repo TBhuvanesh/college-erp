@@ -10,6 +10,7 @@ import {
   transferTeachingAssignmentSchema,
   deleteTeachingAssignmentSchema,
   listTeachingAssignmentsQuerySchema,
+  ResolveSubjectsForAssignmentQuery,
 } from '../types/teachingAssignment';
 
 async function getFacultyProfile(userId: string) {
@@ -188,4 +189,11 @@ export const getSubjectProfile = asyncHandler(async (req: Request, res: Response
   const profile = await teachingAssignmentService.getSubjectProfile(subjectId);
 
   sendSuccess(res, { profile });
+});
+
+// ── GET /api/teaching-assignments/subjects (Resolve subjects for assignment) ──
+export const resolveSubjectsForAssignment = asyncHandler(async (req: Request, res: Response) => {
+  const filters = req.query as unknown as ResolveSubjectsForAssignmentQuery;
+  const result = await teachingAssignmentService.resolveSubjectsForAssignment(filters);
+  sendSuccess(res, result);
 });

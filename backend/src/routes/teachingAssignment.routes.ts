@@ -2,6 +2,8 @@ import { Router } from 'express';
 import * as controller from '../controllers/teachingAssignment.controller';
 import { authenticate } from '../middleware/authenticate';
 import { requireRole } from '../middleware/authorize';
+import { validate } from '../middleware/validate';
+import { resolveSubjectsForAssignmentQuerySchema } from '../types/teachingAssignment';
 
 const router = Router();
 
@@ -12,6 +14,7 @@ router.get('/', controller.listTeachingAssignments);
 router.get('/my', controller.getMyTeachingAssignments);
 router.get('/statistics', controller.getStatistics);
 router.get('/workload-overview', controller.getFacultyWorkloadOverview);
+router.get('/subjects', validate({ query: resolveSubjectsForAssignmentQuerySchema }), controller.resolveSubjectsForAssignment);
 router.get('/subject/:subjectId/profile', controller.getSubjectProfile);
 router.get('/:id', controller.getTeachingAssignment);
 

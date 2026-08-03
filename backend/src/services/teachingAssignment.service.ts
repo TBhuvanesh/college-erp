@@ -8,6 +8,7 @@ import type {
   CreateTeachingAssignmentInput,
   UpdateTeachingAssignmentInput,
   ListTeachingAssignmentsQuery,
+  ResolveSubjectsForAssignmentQuery,
 } from '../types/teachingAssignment';
 import type { FacultyWorkloadOverview, FacultyTeachingLoadRow } from '../types/facultyTeachingLoad';
 
@@ -123,20 +124,43 @@ export async function createAllocation(
     throw AppError.badRequest('Cannot assign an archived subject', 'SUBJECT_ARCHIVED');
   }
 
-  const { rows: scm } = await query<{ id: string; department_id: string }>(
-    `SELECT id, department_id FROM subject_curriculum_mappings
-     WHERE subject_id = $1 AND department_id = $2 AND deleted_at IS NULL LIMIT 1`,
-    [data.subjectId, f[0].department_id]
-  );
-  if (!scm[0]) {
-    throw AppError.badRequest("Subject is not mapped to the faculty member's department curriculum", 'CURRICULUM_MISMATCH');
+  let scmId: string;
+  let scmDeptId = f[0].department_id;
+
+  if (data.departmentId && data.regulation && data.year && data.semester) {
+    const { rows: scm } = await query<{ id: string; department_id: string }>(
+      `SELECT id, department_id FROM subject_curriculum_mappings
+       WHERE subject_id = $1 
+         AND department_id = $2 
+         AND (program_id = $3 OR ($3 IS NULL AND program_id IS NULL))
+         AND regulation = $4 
+         AND year = $5 
+         AND semester = $6 
+         AND deleted_at IS NULL LIMIT 1`,
+      [data.subjectId, data.departmentId, data.programId || null, data.regulation, data.year, data.semester]
+    );
+    if (!scm[0]) {
+      throw AppError.badRequest("Subject is not mapped to the selected curriculum context", 'CURRICULUM_MISMATCH');
+    }
+    scmId = scm[0].id;
+    scmDeptId = scm[0].department_id;
+  } else {
+    const { rows: scm } = await query<{ id: string; department_id: string }>(
+      `SELECT id, department_id FROM subject_curriculum_mappings
+       WHERE subject_id = $1 AND department_id = $2 AND deleted_at IS NULL LIMIT 1`,
+      [data.subjectId, f[0].department_id]
+    );
+    if (!scm[0]) {
+      throw AppError.badRequest("Subject is not mapped to the faculty member's department curriculum", 'CURRICULUM_MISMATCH');
+    }
+    scmId = scm[0].id;
+    scmDeptId = scm[0].department_id;
   }
-  const scmId = scm[0].id;
 
   const { rows: duplicate } = await query<{ id: string }>(
     `SELECT id FROM teaching_assignments
-     WHERE subject_id = $1 AND academic_year = $2 AND section = $3 AND deleted_at IS NULL LIMIT 1`,
-    [data.subjectId, data.academicYear, data.section]
+     WHERE subject_curriculum_mapping_id = $1 AND academic_year = $2 AND section = $3 AND deleted_at IS NULL LIMIT 1`,
+    [scmId, data.academicYear, data.section]
   );
   if (duplicate[0]) {
     throw AppError.badRequest(
@@ -168,7 +192,7 @@ export async function createAllocation(
       data.facultyId,
       data.subjectId,
       scmId,
-      scm[0].department_id,
+      scmDeptId,
       data.academicYear,
       data.section,
       data.status,
@@ -396,10 +420,13 @@ export interface WorkloadStatistics {
   facultyWithMinWorkload: { facultyId: string; facultyName: string; employeeNumber: string; count: number } | null;
   averageSubjectsPerFaculty: number;
   pendingAllocations: number;
+  labSubjectsCount?: number;
+  theorySubjectsCount?: number;
   analytics: {
     subjectsPerFaculty: { facultyName: string; count: number }[];
     departmentDistribution: { departmentName: string; count: number }[];
     semesterDistribution: { semester: number; count: number }[];
+    sectionDistribution?: { section: string; count: number }[];
   };
 }
 
@@ -496,6 +523,31 @@ export async function getWorkloadStatistics(academicYear: string): Promise<Workl
     count: parseInt(r.count, 10),
   }));
 
+  // Query Lab vs Theory active subjects
+  const { rows: labCountRes } = await query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM subjects WHERE type IN ('lab', 'laboratory') AND status = 'active' AND deleted_at IS NULL`
+  );
+  const labSubjectsCount = parseInt(labCountRes[0].count, 10);
+
+  const { rows: theoryCountRes } = await query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM subjects WHERE type NOT IN ('lab', 'laboratory') AND status = 'active' AND deleted_at IS NULL`
+  );
+  const theorySubjectsCount = parseInt(theoryCountRes[0].count, 10);
+
+  // Query section distribution
+  const { rows: sectionDistRes } = await query<{ section: string; count: string }>(
+    `SELECT section, COUNT(*)::text AS count
+     FROM teaching_assignments
+     WHERE academic_year = $1 AND deleted_at IS NULL AND status = 'active'
+     GROUP BY section
+     ORDER BY section`,
+    [academicYear]
+  );
+  const sectionDistribution = sectionDistRes.map((r) => ({
+    section: r.section,
+    count: parseInt(r.count, 10),
+  }));
+
   return {
     totalSubjects,
     assignedSubjects,
@@ -504,10 +556,13 @@ export async function getWorkloadStatistics(academicYear: string): Promise<Workl
     facultyWithMinWorkload,
     averageSubjectsPerFaculty,
     pendingAllocations,
+    labSubjectsCount,
+    theorySubjectsCount,
     analytics: {
       subjectsPerFaculty,
       departmentDistribution,
       semesterDistribution,
+      sectionDistribution,
     },
   };
 }
@@ -739,5 +794,97 @@ export async function getSubjectProfile(subjectId: string): Promise<any> {
     attendanceStatus: attendanceSessionsLogged > 0 ? `Active (${attendanceSessionsLogged} sessions logged)` : 'No records logged',
     lmsStatus: `Active (${materialsCount} materials, ${assignmentsCount} assignments)`,
     internalMarksStatus: internalMarksSubmittedCount > 0 ? `Submitted (${internalMarksSubmittedCount} marks records)` : 'Pending submissions',
+  };
+}
+
+export async function resolveSubjectsForAssignment(
+  filters: ResolveSubjectsForAssignmentQuery
+): Promise<{ subjects: any[]; warning?: string }> {
+  // Trace logging
+  console.log(`[Resolve Subjects API] Trace:`);
+  console.log(`Department = ${filters.departmentId}`);
+  console.log(`Program = ${filters.programId}`);
+  console.log(`Regulation = ${filters.regulation}`);
+  console.log(`Year = ${filters.year}`);
+  console.log(`Semester = ${filters.semester}`);
+
+  // 1. Fetch Curriculum Mappings
+  const params = [filters.departmentId, filters.regulation, filters.semester];
+  let programCondition = '';
+  if (filters.programId) {
+    if (filters.programId === 'B.Tech') {
+      programCondition = `AND (scm.program_id IS NULL OR scm.program = 'B.Tech')`;
+    } else {
+      params.push(filters.programId);
+      programCondition = `AND (scm.program_id = $4 OR scm.program_id IS NULL)`;
+    }
+  }
+
+  const { rows: mappings } = await query<{ id: string; subject_id: string; program_id: string | null; program: string | null }>(
+    `SELECT id, subject_id, program_id, program
+     FROM subject_curriculum_mappings scm
+     WHERE department_id = $1
+       AND regulation = $2
+       AND semester = $3
+       ${programCondition}
+       AND deleted_at IS NULL`,
+    params
+  );
+
+  console.log(`↓`);
+  if (mappings.length === 0) {
+    console.log(`Found curriculum = NO`);
+    console.log(`↓`);
+    console.log(`Returning subjects`);
+    return {
+      subjects: [],
+      warning: 'No curriculum has been created for this academic context.',
+    };
+  }
+
+  console.log(`Found curriculum = YES`);
+
+  // 2. Fetch Subjects details matching mapped subject IDs
+  const subjectIds = mappings.map(m => m.subject_id);
+  const { rows: subjects } = await query<{ id: string; code: string; name: string; credits: number; type: string; status: string }>(
+    `SELECT id, code, name, credits, type, status 
+     FROM subjects 
+     WHERE id = ANY($1) 
+       AND deleted_at IS NULL 
+       AND status = 'active'`,
+    [subjectIds]
+  );
+
+  console.log(`Found mapped subjects = ${subjects.length}`);
+
+  // Check for orphan / missing subjects
+  const resolvedIds = new Set(subjects.map(s => s.id));
+  const missingSubjectIds = subjectIds.filter(id => !resolvedIds.has(id));
+  if (missingSubjectIds.length > 0) {
+    console.warn(`[Resolve Subjects API] Missing/Orphan Subject IDs referenced in SCM:`, missingSubjectIds);
+  }
+
+  if (subjects.length === 0) {
+    console.log(`↓`);
+    console.log(`Returning subjects`);
+    return {
+      subjects: [],
+      warning: 'Curriculum exists but no subjects are mapped.',
+    };
+  }
+
+  // Attach mapping details to subjects returned
+  const subjectsWithMapping = subjects.map(s => {
+    const matchingMapping = mappings.find(m => m.subject_id === s.id);
+    return {
+      ...s,
+      mappingId: matchingMapping ? matchingMapping.id : null,
+    };
+  });
+
+  console.log(`↓`);
+  console.log(`Returning subjects`);
+  return {
+    subjects: subjectsWithMapping,
   };
 }

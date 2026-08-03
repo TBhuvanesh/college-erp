@@ -40,10 +40,13 @@ export interface WorkloadStatistics {
   } | null;
   averageSubjectsPerFaculty: number;
   pendingAllocations: number;
+  labSubjectsCount?: number;
+  theorySubjectsCount?: number;
   analytics: {
     subjectsPerFaculty: { facultyName: string; count: number }[];
     departmentDistribution: { departmentName: string; count: number }[];
     semesterDistribution: { semester: number; count: number }[];
+    sectionDistribution?: { section: string; count: number }[];
   };
 }
 

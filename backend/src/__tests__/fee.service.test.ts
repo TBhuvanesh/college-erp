@@ -204,7 +204,7 @@ describe('createFee', () => {
     semester: 3,
     feeType: 'Tuition Fee' as const,
     totalAmount: 50000,
-    dueDate: '2026-07-31',
+    dueDate: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().split('T')[0],
   };
 
   it('creates a fee with Pending status for a future due date', async () => {

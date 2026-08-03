@@ -62,8 +62,15 @@ interface FacultyTeachingLoadRow {
   maxAllowedLoad: number;
   minAllowedLoad: number | null;
   status: "Under Minimum" | "Balanced" | "Overloaded";
-  subjects: FacultyTeachingLoadSubject[];
 }
+
+const getSemestersForYear = (yr: string): number[] => {
+  if (yr === "I") return [1, 2];
+  if (yr === "II") return [3, 4];
+  if (yr === "III") return [5, 6];
+  if (yr === "IV") return [7, 8];
+  return [1, 2, 3, 4, 5, 6, 7, 8];
+};
 
 export const TeachingAssignmentManager: React.FC = () => {
   const { accessToken } = useAuth();
@@ -115,8 +122,11 @@ export const TeachingAssignmentManager: React.FC = () => {
   const [selectedAlloc, setSelectedAlloc] = useState<SubjectAllocation | null>(null);
 
   // Action Form Inputs
+  const [formAcademicYear, setFormAcademicYear] = useState<string>("2026-2027");
   const [formDept, setFormDept] = useState<string>("");
   const [formProgram, setFormProgram] = useState<string>("");
+  const [formRegulation, setFormRegulation] = useState<string>("R22");
+  const [formYearVal, setFormYearVal] = useState<string>("I");
   const [formSemester, setFormSemester] = useState<number>(1);
   const [formSection, setFormSection] = useState<string>("A");
   const [formSubject, setFormSubject] = useState<string>("");
@@ -124,6 +134,59 @@ export const TeachingAssignmentManager: React.FC = () => {
   const [formStatus, setFormStatus] = useState<'active' | 'inactive' | 'pending'>('active');
   const [formNotes, setFormNotes] = useState<string>("");
   const [formReason, setFormReason] = useState<string>("");
+
+  const [formSubjectsList, setFormSubjectsList] = useState<any[]>([]);
+  const [formSubjectsLoading, setFormSubjectsLoading] = useState<boolean>(false);
+
+  // Load subjects dynamically inside the Create modal when the 6 curriculum filters change
+  useEffect(() => {
+    const fetchModalSubjects = async () => {
+      if (!showCreateModal) {
+        setFormSubjectsList([]);
+        return;
+      }
+      if (!formDept || !formProgram || !formRegulation || !formYearVal || !formSemester) {
+        setFormSubjectsList([]);
+        return;
+      }
+      setFormSubjectsLoading(true);
+      setValidationError(null);
+      try {
+        const res = await apiFetch(
+          `/teaching-assignments/subjects?departmentId=${formDept}&programId=${formProgram}&regulation=${formRegulation}&year=${formYearVal}&semester=${formSemester}`,
+          {},
+          accessToken
+        );
+        if (res.success) {
+          const apiWarning = res.data?.warning;
+          const apiSubjects = res.data?.subjects || [];
+          if (apiWarning) {
+            setValidationError(apiWarning);
+            setFormSubjectsList([]);
+            setFormSubject("");
+          } else {
+            setFormSubjectsList(apiSubjects);
+            // If the currently selected subject is not in the new list, clear it
+            if (formSubject && !apiSubjects.some((s: any) => s.id === formSubject)) {
+              setFormSubject("");
+            }
+          }
+        } else {
+          setValidationError(res.message || "Failed to resolve subjects from Curriculum Scheme.");
+          setFormSubjectsList([]);
+          setFormSubject("");
+        }
+      } catch (err) {
+        console.error("Error fetching modal subjects dynamically", err);
+        setValidationError("Failed to resolve subjects from Curriculum Scheme.");
+        setFormSubjectsList([]);
+        setFormSubject("");
+      } finally {
+        setFormSubjectsLoading(false);
+      }
+    };
+    fetchModalSubjects();
+  }, [showCreateModal, formDept, formProgram, formRegulation, formYearVal, formSemester, accessToken]);
   
   // Workload and validation warnings
   const [workloadWarning, setWorkloadWarning] = useState<string | null>(null);
@@ -256,14 +319,18 @@ export const TeachingAssignmentManager: React.FC = () => {
 
   // Actions trigger handlers
   const handleOpenCreate = () => {
+    setFormAcademicYear(selectedYear);
     setFormDept("");
     setFormProgram("");
+    setFormRegulation("R22");
+    setFormYearVal("I");
     setFormSemester(1);
     setFormSection("A");
     setFormSubject("");
     setFormFaculty("");
     setFormStatus("active");
     setFormNotes("");
+    setFormSubjectsList([]);
     setValidationError(null);
     setWorkloadWarning(null);
     setShowCreateModal(true);
@@ -313,9 +380,14 @@ export const TeachingAssignmentManager: React.FC = () => {
           facultyId: formFaculty,
           subjectId: formSubject,
           section: formSection,
-          academicYear: selectedYear,
+          academicYear: formAcademicYear,
           status: formStatus,
-          notes: formNotes
+          notes: formNotes,
+          departmentId: formDept,
+          programId: formProgram,
+          regulation: formRegulation,
+          year: formYearVal,
+          semester: formSemester
         })
       }, accessToken);
 
@@ -481,6 +553,11 @@ export const TeachingAssignmentManager: React.FC = () => {
             <p className="text-[10px] text-text-secondary mt-1">
               Active assigned subjects of total curriculum.
             </p>
+            {stats && (
+              <div className="text-[9px] dark:text-indigo-400 text-indigo-650 font-bold mt-1.5 font-mono">
+                Theory: {stats.theorySubjectsCount || 0} • Labs: {stats.labSubjectsCount || 0}
+              </div>
+            )}
           </div>
         </div>
 
@@ -515,8 +592,13 @@ export const TeachingAssignmentManager: React.FC = () => {
               {statsLoading ? "..." : `${stats?.averageSubjectsPerFaculty} subjects`}
             </h3>
             <p className="text-[10px] text-text-secondary mt-1">
-              Average allocated load per active department instructor.
+              Average allocated load per active instructor.
             </p>
+            {stats?.analytics?.sectionDistribution && stats.analytics.sectionDistribution.length > 0 && (
+              <div className="text-[8px] text-text-muted font-mono mt-1.5 truncate">
+                Secs: {stats.analytics.sectionDistribution.map(s => `${s.section}:${s.count}`).join(" | ")}
+              </div>
+            )}
           </div>
         </div>
 
@@ -944,7 +1026,7 @@ export const TeachingAssignmentManager: React.FC = () => {
 
       {/* ── CREATE ALLOCATION MODAL ── */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex justify-center items-start bg-black/60 backdrop-blur-xs p-4 overflow-y-auto md:py-12 py-6">
           <div className="glass-card dark:border-neutral-800 border-border-subtle bg-surface rounded-xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="px-6 py-4 border-b dark:border-neutral-800 border-border-subtle flex items-center justify-between">
               <h3 className="font-display font-bold text-base dark:text-white text-text-primary">Create Teaching Assignment</h3>
@@ -970,6 +1052,21 @@ export const TeachingAssignmentManager: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 
+                {/* Academic Year */}
+                <div className="col-span-2 space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Academic Year</label>
+                  <select
+                    required
+                    value={formAcademicYear}
+                    onChange={(e) => setFormAcademicYear(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500"
+                  >
+                    {academicSessions.map((session) => (
+                      <option key={session} value={session}>{session}</option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Department */}
                 <div className="col-span-2 space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Department</label>
@@ -978,6 +1075,7 @@ export const TeachingAssignmentManager: React.FC = () => {
                     value={formDept}
                     onChange={(e) => {
                       setFormDept(e.target.value);
+                      setFormProgram("");
                       setFormSubject("");
                       setFormFaculty("");
                     }}
@@ -996,15 +1094,63 @@ export const TeachingAssignmentManager: React.FC = () => {
                   <select
                     required
                     value={formProgram}
-                    onChange={(e) => setFormProgram(e.target.value)}
+                    disabled={!formDept}
+                    onChange={(e) => {
+                      setFormProgram(e.target.value);
+                      setFormSubject("");
+                    }}
                     className="w-full px-3 py-2 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500"
                   >
                     <option value="">Select Program</option>
+                    <option value="B.Tech">B.Tech</option>
                     {programs
                       .filter((p: any) => !formDept || p.departmentId === formDept || p.department?.id === formDept)
                       .map((p: any) => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
+                  </select>
+                </div>
+
+                {/* Regulation */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Regulation</label>
+                  <select
+                    required
+                    value={formRegulation}
+                    disabled={!formProgram}
+                    onChange={(e) => {
+                      setFormRegulation(e.target.value);
+                      setFormSubject("");
+                    }}
+                    className="w-full px-3 py-2 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="R22">R22</option>
+                    <option value="R18">R18</option>
+                    <option value="R16">R16</option>
+                  </select>
+                </div>
+
+                {/* Year */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Year</label>
+                  <select
+                    required
+                    value={formYearVal}
+                    disabled={!formProgram}
+                    onChange={(e) => {
+                      const newYear = e.target.value;
+                      setFormYearVal(newYear);
+                      // Reset semester to the first semester of the new year
+                      const sems = getSemestersForYear(newYear);
+                      setFormSemester(sems[0]);
+                      setFormSubject("");
+                    }}
+                    className="w-full px-3 py-2 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="I">Year 1</option>
+                    <option value="II">Year 2</option>
+                    <option value="III">Year 3</option>
+                    <option value="IV">Year 4</option>
                   </select>
                 </div>
 
@@ -1014,37 +1160,21 @@ export const TeachingAssignmentManager: React.FC = () => {
                   <select
                     required
                     value={formSemester}
-                    onChange={(e) => setFormSemester(Number(e.target.value))}
+                    disabled={!formProgram}
+                    onChange={(e) => {
+                      setFormSemester(Number(e.target.value));
+                      setFormSubject("");
+                    }}
                     className="w-full px-3 py-2 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500"
                   >
-                    {[1,2,3,4,5,6,7,8].map((s) => (
+                    {getSemestersForYear(formYearVal).map((s) => (
                       <option key={s} value={s}>Semester {s}</option>
                     ))}
                   </select>
                 </div>
 
-                {/* Subject Selector */}
-                <div className="col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Subject</label>
-                  <select
-                    required
-                    value={formSubject}
-                    disabled={!formDept}
-                    onChange={(e) => setFormSubject(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="">Select Subject</option>
-                    {filteredModalSubjects.map((sub: any) => (
-                      <option key={sub.id} value={sub.id}>{sub.code} - {sub.name}</option>
-                    ))}
-                  </select>
-                  {!formDept && (
-                    <span className="text-[9px] text-text-muted block mt-0.5">Please select a department first to narrow subject list.</span>
-                  )}
-                </div>
-
                 {/* Section */}
-                <div className="space-y-1">
+                <div className="col-span-2 space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Section</label>
                   <select
                     required
@@ -1058,21 +1188,38 @@ export const TeachingAssignmentManager: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Status */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Initial Status</label>
-                  <select
-                    value={formStatus}
-                    onChange={(e) => setFormStatus(e.target.value as any)}
-                    className="w-full px-3 py-2 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="active">Active</option>
-                    <option value="pending">Pending</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
+                {/* Subject Selector (Loaded Automatically) */}
+                <div className="col-span-2 space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Subject</label>
+                  {formSubjectsLoading ? (
+                    <div className="flex items-center gap-2 py-2 text-xs text-text-secondary">
+                      <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent animate-spin rounded-full" />
+                      <span>Loading active curriculum subjects...</span>
+                    </div>
+                  ) : (
+                    <select
+                      required
+                      value={formSubject}
+                      disabled={!formDept || !formProgram || formSubjectsList.length === 0}
+                      onChange={(e) => setFormSubject(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="">
+                        {formSubjectsList.length === 0 
+                          ? "No subjects mapped for selected configuration" 
+                          : "Select Subject"}
+                      </option>
+                      {formSubjectsList.map((sub: any) => (
+                        <option key={sub.id} value={sub.id}>{sub.code} - {sub.name} ({sub.credits} Credits)</option>
+                      ))}
+                    </select>
+                  )}
+                  {(!formDept || !formProgram) && (
+                    <span className="text-[9px] text-text-muted block mt-0.5">Please select Department and Program first to automatically load subjects.</span>
+                  )}
                 </div>
 
-                {/* Faculty Selector */}
+                {/* Faculty Selector (Filtered to selected Department) */}
                 <div className="col-span-2 space-y-1">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Faculty Member</label>
                   <select
@@ -1086,6 +1233,23 @@ export const TeachingAssignmentManager: React.FC = () => {
                     {filteredModalFaculty.map((f: any) => (
                       <option key={f.id} value={f.id}>{f.fullName || f.full_name} ({f.employeeNumber})</option>
                     ))}
+                  </select>
+                  {!formDept && (
+                    <span className="text-[9px] text-text-muted block mt-0.5">Select a department to view available faculty roster.</span>
+                  )}
+                </div>
+
+                {/* Status */}
+                <div className="col-span-2 space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Initial Status</label>
+                  <select
+                    value={formStatus}
+                    onChange={(e) => setFormStatus(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-lg border dark:border-neutral-800 border-border-subtle bg-surface text-xs focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="inactive">Inactive</option>
                   </select>
                 </div>
 
@@ -1128,7 +1292,7 @@ export const TeachingAssignmentManager: React.FC = () => {
 
       {/* ── EDIT ALLOCATION MODAL ── */}
       {showEditModal && selectedAlloc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex justify-center items-start bg-black/60 backdrop-blur-xs p-4 overflow-y-auto md:py-12 py-6">
           <div className="glass-card dark:border-neutral-800 border-border-subtle bg-surface rounded-xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="px-6 py-4 border-b dark:border-neutral-800 border-border-subtle flex items-center justify-between">
               <h3 className="font-display font-bold text-base dark:text-white text-text-primary">Edit Teaching Assignment</h3>
@@ -1234,7 +1398,7 @@ export const TeachingAssignmentManager: React.FC = () => {
 
       {/* ── TRANSFER ALLOCATION MODAL ── */}
       {showTransferModal && selectedAlloc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex justify-center items-start bg-black/60 backdrop-blur-xs p-4 overflow-y-auto md:py-12 py-6">
           <div className="glass-card dark:border-neutral-800 border-border-subtle bg-surface rounded-xl shadow-2xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="px-6 py-4 border-b dark:border-neutral-800 border-border-subtle flex items-center justify-between">
               <h3 className="font-display font-bold text-base dark:text-white text-text-primary">Transfer Teaching Assignment</h3>
