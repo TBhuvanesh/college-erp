@@ -105,6 +105,44 @@ export default function AdminResults() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [resultToDelete, setResultToDelete] = useState<ResultSummary | null>(null);
 
+  // Maker-Checker Verification Queue
+  const [verificationTasks, setVerificationTasks] = useState<any[]>([]);
+  const [loadingVerification, setLoadingVerification] = useState(true);
+
+  const fetchVerificationTasks = useCallback(async () => {
+    if (!accessToken) return;
+    setLoadingVerification(true);
+    try {
+      const res = await apiFetch("/result-entry-tasks?status=submitted_for_approval", {}, accessToken);
+      if (res.success && res.data?.tasks) {
+        setVerificationTasks(res.data.tasks);
+      }
+    } catch (err: any) {
+      console.error("Failed to load verification queue", err);
+    } finally {
+      setLoadingVerification(false);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    fetchVerificationTasks();
+  }, [fetchVerificationTasks]);
+
+  const handleVerifyTask = async (taskId: string) => {
+    if (!accessToken) return;
+    try {
+      const res = await apiFetch(`/result-entry-tasks/${taskId}/verify`, { method: "POST" }, accessToken);
+      if (res.success) {
+        triggerToast("Results verified and published successfully!");
+        fetchVerificationTasks();
+        setPage(1);
+        fetchResults();
+      }
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to verify results.");
+    }
+  };
+
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(""), 3000);
@@ -418,9 +456,69 @@ export default function AdminResults() {
               : "dark:bg-neutral-850 bg-neutral-100 dark:text-neutral-600 text-text-muted dark:border-neutral-800 border-border-subtle"
           }`}>
             <Clock size={18} />
-          </div>
         </div>
       </div>
+      {/* Verification Queue Section */}
+      {verificationTasks.length > 0 && (
+        <div className="glass-card dark:border-neutral-800 border-border-subtle bg-surface rounded-xl p-5 space-y-4">
+          <div className="flex items-center gap-2 pb-2 border-b dark:border-neutral-850 border-border-subtle">
+            <UserCheck size={18} className="text-amber-500" />
+            <h3 className="font-display font-bold text-base dark:text-white text-text-primary">
+              Maker-Checker Verification Queue
+            </h3>
+            <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+              {verificationTasks.length} Awaiting Verification
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {verificationTasks.map((task) => (
+              <div 
+                key={task.id} 
+                className="p-4 rounded-xl border dark:border-neutral-850 border-border-subtle dark:bg-neutral-900/50 bg-background flex flex-col justify-between gap-3 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="space-y-1">
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase font-mono">
+                      {task.examType}
+                    </span>
+                    <span className="text-[10px] font-semibold text-text-muted dark:text-neutral-500 font-mono">
+                      Sec {task.section}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-bold dark:text-white text-text-primary mt-1 line-clamp-1">
+                    {task.subjectName}
+                  </h4>
+                  <p className="text-[10px] text-text-secondary dark:text-neutral-400">
+                    Faculty: {task.facultyName || "Assigned Staff"}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2 border-t dark:border-neutral-850 border-border-subtle">
+                  <button
+                    onClick={() => {
+                      setSelectedSubjectId(task.subjectId);
+                      setSelectedSection(task.section);
+                      setPage(1);
+                    }}
+                    className="flex-1 py-1.5 text-[10.5px] font-semibold rounded dark:bg-neutral-800 bg-neutral-100 hover:bg-neutral-200 dark:hover:bg-neutral-750 dark:text-neutral-300 text-text-primary transition flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Filter size={11} />
+                    <span>Inspect Roster</span>
+                  </button>
+                  <button
+                    onClick={() => handleVerifyTask(task.id)}
+                    className="flex-1 py-1.5 text-[10.5px] font-semibold rounded bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center justify-center gap-1 cursor-pointer shadow-sm shadow-emerald-600/10"
+                  >
+                    <CheckCircle2 size={11} />
+                    <span>Verify & Publish</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Main split: Roster + Filters (Left) / Publish Tools Batch (Right) */}
       <div className="flex flex-col xl:flex-row gap-6 items-start">

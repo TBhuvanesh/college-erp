@@ -21,9 +21,6 @@ import type {
   SubjectScheduleCard,
 } from '../types/examination';
 import {
-  VALID_TRANSITIONS,
-  FACULTY_ALLOWED_TRANSITIONS,
-  TERMINAL_STATUSES,
   NON_EDITABLE_STATUSES,
 } from '../types/examination';
 import type { Role } from '../types/roles';
@@ -80,6 +77,128 @@ const DETAIL_JOINS = `
 
 // ── Mappers ───────────────────────────────────────────────────────────────────
 
+// ── Mappers ───────────────────────────────────────────────────────────────────
+
+export function resolveExamStatus(r: {
+  status: string;
+  exam_date?: string | Date;
+  examDate?: string | Date;
+  start_time?: string;
+  startTime?: string;
+  end_time?: string;
+  endTime?: string;
+}): ExamStatus {
+  if (r.status === 'Cancelled') {
+    return 'Cancelled';
+  }
+  if (r.status === 'Archived') {
+    return 'Archived';
+  }
+
+  const examDate = r.exam_date || r.examDate;
+  const startTime = r.start_time || r.startTime;
+  const endTime = r.end_time || r.endTime;
+
+  if (!examDate || !startTime || !endTime) {
+    return r.status as ExamStatus;
+  }
+
+  const now = new Date();
+  
+  let dateStr = '';
+  if (typeof examDate === 'string') {
+    dateStr = examDate.split('T')[0];
+  } else if (examDate instanceof Date) {
+    dateStr = examDate.toISOString().split('T')[0];
+  } else {
+    return r.status as ExamStatus;
+  }
+
+  const startDt = new Date(`${dateStr}T${startTime}:00`);
+  const endDt = new Date(`${dateStr}T${endTime}:00`);
+
+  if (now < startDt) {
+    return 'Scheduled';
+  } else if (now >= startDt && now < endDt) {
+    return 'Ongoing';
+  } else {
+    return 'Completed';
+  }
+}
+
+export async function ensureCompletedExamsHaveTasks(): Promise<void> {
+  const { rows: completedExams } = await query<{
+    id: string;
+    subject_id: string;
+    semester: number;
+    section: string;
+    subject_name: string;
+    exam_type: string;
+    academic_year: string;
+    regulation: string;
+    department_id: string;
+  }>(
+    `SELECT e.id, e.subject_id, e.semester, e.section, s.name AS subject_name, e.exam_type,
+            es.academic_year, es.regulation, es.department_id
+     FROM exams e
+     JOIN subjects s ON s.id = e.subject_id
+     JOIN examination_sessions es ON es.id = e.session_id
+     LEFT JOIN result_entry_tasks ret ON ret.exam_id = e.id AND ret.deleted_at IS NULL
+     WHERE e.deleted_at IS NULL
+       AND e.status != 'Cancelled'
+       AND es.status = 'Published'
+       AND (e.exam_date + e.end_time) <= NOW()
+       AND ret.id IS NULL
+       AND EXISTS (
+         SELECT 1 FROM teaching_assignments ta
+         WHERE ta.subject_id = e.subject_id
+           AND ta.deleted_at IS NULL
+           AND ta.section = ANY(string_to_array(e.section, ','))
+       )`
+  );
+
+  for (const exam of completedExams) {
+    const sections = exam.section
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (sections.length === 0) continue;
+
+    const { rows: assignments } = await query<{
+      teaching_assignment_id: string;
+      faculty_id: string;
+      section: string;
+      faculty_user_id: string;
+      department_id: string;
+    }>(
+      `SELECT ta.id AS teaching_assignment_id, ta.faculty_id, ta.section,
+              f.user_id AS faculty_user_id, f.department_id
+       FROM teaching_assignments ta
+       JOIN faculty f ON f.id = ta.faculty_id
+       WHERE ta.subject_id = $1
+         AND ta.section = ANY($2::varchar[])
+         AND ta.deleted_at IS NULL`,
+      [exam.subject_id, sections]
+    );
+
+    for (const ta of assignments) {
+      await emitWorkflowEvent('exam.completed', 'SYSTEM', {
+        departmentId: ta.department_id,
+        semester: exam.semester,
+        title: 'Result Entry Window Open',
+        message: `Marks entry is now open for ${exam.subject_name} (Section ${ta.section}).`,
+        notificationType: 'Academic Alert',
+        sourceId: exam.id,
+        examId: exam.id,
+        teachingAssignmentId: ta.teaching_assignment_id,
+        facultyId: ta.faculty_id,
+        facultyUserId: ta.faculty_user_id,
+      });
+    }
+  }
+}
+
 function toDetail(r: ExamRow): ExamDetail {
   return {
     id: r.id,
@@ -96,7 +215,7 @@ function toDetail(r: ExamRow): ExamDetail {
     startTime: r.start_time,
     endTime: r.end_time,
     maximumMarks: parseFloat(r.maximum_marks),
-    status: r.status,
+    status: resolveExamStatus(r),
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -116,7 +235,7 @@ function toSummary(r: ExamRow): ExamSummary {
     startTime: r.start_time,
     endTime: r.end_time,
     maximumMarks: parseFloat(r.maximum_marks),
-    status: r.status,
+    status: resolveExamStatus(r),
   };
 }
 
@@ -145,6 +264,8 @@ export async function getExamById(id: string): Promise<ExamDetail> {
 }
 
 export async function listExams(filters: ListExamsQuery): Promise<PaginatedExams> {
+  await ensureCompletedExamsHaveTasks();
+
   const conditions: string[] = ['e.deleted_at IS NULL'];
   const params: unknown[] = [];
 
@@ -158,10 +279,23 @@ export async function listExams(filters: ListExamsQuery): Promise<PaginatedExams
   if (filters.semester)  push('e.semester =',   filters.semester);
   if (filters.section)   push('e.section =',    filters.section);
   if (filters.examType)  push('e.exam_type =',  filters.examType);
-  if (filters.status)    push('e.status =',     filters.status);
   if (filters.date)      push('e.exam_date =',  filters.date);
   if (filters.dateFrom)  push('e.exam_date >=', filters.dateFrom);
   if (filters.dateTo)    push('e.exam_date <=', filters.dateTo);
+
+  if (filters.status) {
+    if (filters.status === 'Cancelled') {
+      conditions.push("e.status = 'Cancelled'");
+    } else if (filters.status === 'Archived') {
+      conditions.push("e.status = 'Archived'");
+    } else if (filters.status === 'Scheduled') {
+      conditions.push("e.status != 'Cancelled' AND e.status != 'Archived' AND NOW() < (e.exam_date + e.start_time)");
+    } else if (filters.status === 'Ongoing') {
+      conditions.push("e.status != 'Cancelled' AND e.status != 'Archived' AND NOW() >= (e.exam_date + e.start_time) AND NOW() < (e.exam_date + e.end_time)");
+    } else if (filters.status === 'Completed') {
+      conditions.push("e.status != 'Cancelled' AND e.status != 'Archived' AND NOW() >= (e.exam_date + e.end_time)");
+    }
+  }
 
   params.push(filters.limit, (filters.page - 1) * filters.limit);
 
@@ -192,6 +326,7 @@ export async function listExams(filters: ListExamsQuery): Promise<PaginatedExams
  * ordered by exam_date ascending.
  */
 export async function getFacultySchedule(userId: string): Promise<ExamSummary[]> {
+  await ensureCompletedExamsHaveTasks();
   const facultyId = await resolveFacultyId(userId);
 
   const { rows } = await query<ExamRow>(
@@ -216,39 +351,75 @@ export async function getStudentTimetable(
   userId: string,
   statusFilter?: ExamStatus | 'upcoming'
 ): Promise<ExamSummary[]> {
-  const { rows: stu } = await query<{ program_id: string; semester: number; section: string; department_id: string }>(
-    `SELECT program_id, semester, section, department_id
+  await ensureCompletedExamsHaveTasks();
+
+  const { rows: stu } = await query<{
+    program_id: string;
+    semester: number;
+    section: string;
+    department_id: string;
+    regulation: string;
+    academic_year: string;
+  }>(
+    `SELECT program_id, semester, section, department_id, regulation, academic_year
      FROM students
      WHERE user_id = $1 AND deleted_at IS NULL`,
     [userId]
   );
   if (!stu[0]) throw AppError.forbidden('No student profile is linked to this account');
 
-  const { department_id, semester, section } = stu[0];
+  const { department_id, semester, section, regulation, program_id, academic_year } = stu[0];
 
   const conditions: string[] = [
     'e.deleted_at IS NULL',
-    'scm.department_id = $1',
-    'e.semester = $2',
-    '($3 = ANY(string_to_array(e.section, \',\')) OR e.section = $3)',
-    '(e.session_id IS NULL OR es.status = \'Published\')'
+    'scm.id IS NOT NULL',
+    '($5 = ANY(string_to_array(e.section, \',\')) OR e.section = $5)',
+    '(e.session_id IS NULL OR (es.status = \'Published\' AND LEFT(es.academic_year, 4) = LEFT($6, 4) AND es.regulation = $3 AND es.department_id = $1 AND es.semester = $2))'
   ];
-  const params: unknown[] = [department_id, semester, section];
+  const params: unknown[] = [department_id, semester, regulation, program_id, section, academic_year];
 
   if (statusFilter === 'upcoming') {
-    conditions.push(`e.exam_date >= CURRENT_DATE`);
-    conditions.push(`e.status IN ('Scheduled', 'Ongoing')`);
-  } else if (statusFilter) {
-    params.push(statusFilter);
-    conditions.push(`e.status = $${params.length}`);
-  } else {
-    // Full timetable: hide nothing except hard-deleted; show cancelled for awareness
     conditions.push(`e.status != 'Cancelled'`);
+    conditions.push(`(e.exam_date + e.end_time) > NOW()`);
+  } else if (statusFilter) {
+    if (statusFilter === 'Cancelled') {
+      conditions.push(`e.status = 'Cancelled'`);
+    } else if (statusFilter === 'Archived') {
+      conditions.push(`e.status = 'Archived'`);
+    } else if (statusFilter === 'Scheduled') {
+      conditions.push(`e.status != 'Cancelled' AND e.status != 'Archived' AND NOW() < (e.exam_date + e.start_time)`);
+    } else if (statusFilter === 'Ongoing') {
+      conditions.push(`e.status != 'Cancelled' AND e.status != 'Archived' AND NOW() >= (e.exam_date + e.start_time) AND NOW() < (e.exam_date + e.end_time)`);
+    } else if (statusFilter === 'Completed') {
+      conditions.push(`e.status != 'Cancelled' AND e.status != 'Archived' AND NOW() >= (e.exam_date + e.end_time)`);
+    }
   }
 
   const { rows } = await query<ExamRow>(
-    `SELECT ${DETAIL_COLS}
-     FROM exams e ${DETAIL_JOINS}
+    `SELECT
+       e.id,
+       e.subject_id,         sub.code                        AS subject_code,
+                             sub.name                        AS subject_name,
+                             d.name                          AS department_name,
+       e.faculty_id,         f.full_name                     AS faculty_name,
+       e.semester,           e.section,                      e.exam_type,
+       TO_CHAR(e.exam_date,   'YYYY-MM-DD')                  AS exam_date,
+       TO_CHAR(e.start_time,  'HH24:MI')                     AS start_time,
+       TO_CHAR(e.end_time,    'HH24:MI')                     AS end_time,
+       e.maximum_marks,      e.status,
+       e.created_at,         e.updated_at
+     FROM exams e
+     JOIN subjects     sub ON sub.id = e.subject_id
+     LEFT JOIN faculty      f   ON f.id   = e.faculty_id
+     LEFT JOIN subject_curriculum_mappings scm 
+       ON scm.subject_id = sub.id 
+      AND scm.semester = e.semester 
+      AND scm.department_id = $1
+      AND scm.regulation = $3
+      AND (scm.program_id IS NULL OR scm.program_id = $4)
+      AND scm.deleted_at IS NULL
+     LEFT JOIN departments  d   ON d.id   = scm.department_id
+     LEFT JOIN examination_sessions es ON es.id = e.session_id
      WHERE ${conditions.join(' AND ')}
      ORDER BY e.exam_date ASC, e.start_time ASC`,
     params
@@ -256,6 +427,7 @@ export async function getStudentTimetable(
 
   return rows.map(toSummary);
 }
+
 
 // ── Write operations ──────────────────────────────────────────────────────────
 
@@ -507,135 +679,41 @@ export async function updateExamStatus(
   );
   if (!rows[0]) throw AppError.notFound('Examination not found');
 
-  const { faculty_id, status: currentStatus } = rows[0];
+  const { status: currentStatus } = rows[0];
 
-  if (TERMINAL_STATUSES.has(currentStatus)) {
-    throw AppError.badRequest(
-      `Cannot change status of a ${currentStatus.toLowerCase()} examination`,
-      'EXAM_TERMINAL_STATUS'
-    );
-  }
-
-  if (userRole === 'faculty') {
-    const facultyId = await resolveFacultyId(userId);
-    if (faculty_id !== facultyId) {
-      throw AppError.forbidden(
-        'You can only update the status of examinations you are assigned to conduct',
-        'NOT_EXAM_OWNER'
-      );
+  if (newStatus === 'Cancelled') {
+    if (userRole !== 'admin') {
+      throw AppError.forbidden('Only administrators can cancel examinations');
     }
-    const allowed = FACULTY_ALLOWED_TRANSITIONS[currentStatus];
-    if (!allowed.includes(newStatus)) {
-      throw AppError.forbidden(
-        `Faculty cannot transition an exam from ${currentStatus} to ${newStatus}. ` +
-          `Allowed: ${allowed.join(', ') || 'none'}`,
-        'INVALID_TRANSITION'
-      );
+    if (currentStatus === 'Cancelled') {
+      throw AppError.badRequest('Examination is already cancelled');
     }
-  } else {
-    const allowed = VALID_TRANSITIONS[currentStatus];
-    if (!allowed.includes(newStatus)) {
-      throw AppError.badRequest(
-        `Cannot transition exam from ${currentStatus} to ${newStatus}. ` +
-          `Allowed: ${allowed.join(', ') || 'none'}`,
-        'INVALID_TRANSITION'
-      );
-    }
-  }
 
-  await query(
-    `UPDATE exams SET status = $1, updated_at = NOW() WHERE id = $2`,
-    [newStatus, id]
-  );
-
-  const updated = await getExamById(id);
-
-  await auditLog({
-    actorId: userId,
-    action: 'UPDATE_EXAM_STATUS',
-    resource: 'exams',
-    resourceId: id,
-    changes: { from: currentStatus, to: newStatus },
-  });
-
-  if (newStatus === 'Scripts Distributed') {
-    await openResultEntryTaskForCompletedExam(id, userId);
-  }
-
-  return updated;
-}
-
-async function openResultEntryTaskForCompletedExam(examId: string, actorId: string): Promise<void> {
-  const { rows } = await query<{
-    id: string;
-    subject_id: string;
-    section: string;
-    subject_name: string;
-    semester: number;
-  }>(
-    `SELECT e.id, e.subject_id, e.section, s.name AS subject_name, e.semester
-     FROM exams e
-     JOIN subjects s ON s.id = e.subject_id
-     WHERE e.id = $1`,
-    [examId]
-  );
-  const exam = rows[0];
-  if (!exam) return;
-
-  const sections = exam.section
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  if (sections.length === 0) return;
-
-  const { rows: assignments } = await query<{
-    teaching_assignment_id: string;
-    faculty_id: string;
-    section: string;
-    faculty_user_id: string;
-    department_id: string;
-  }>(
-    `SELECT ta.id AS teaching_assignment_id, ta.faculty_id, ta.section,
-            f.user_id AS faculty_user_id, f.department_id
-     FROM teaching_assignments ta
-     JOIN faculty f ON f.id = ta.faculty_id
-     WHERE ta.subject_id = $1
-       AND ta.section = ANY($2::varchar[])
-       AND ta.deleted_at IS NULL`,
-    [exam.subject_id, sections]
-  );
-
-  if (assignments.length === 0) {
-    // No resolvable Teaching Assignment — cannot safely identify the
-    // responsible faculty automatically; skip rather than guess.
-    return;
-  }
-
-  // Update exams row if there's exactly one resolved assignment (for single-section exams)
-  if (assignments.length === 1) {
+    // Cancel the exam and soft-delete any created result entry tasks
     await query(
-      `UPDATE exams
-       SET teaching_assignment_id = $1, faculty_id = $2, updated_at = NOW()
-       WHERE id = $3`,
-      [assignments[0].teaching_assignment_id, assignments[0].faculty_id, examId]
+      `UPDATE exams SET status = 'Cancelled', updated_at = NOW() WHERE id = $1`,
+      [id]
     );
+    await query(
+      `UPDATE result_entry_tasks SET deleted_at = NOW() WHERE exam_id = $1 AND deleted_at IS NULL`,
+      [id]
+    );
+
+    await auditLog({
+      actorId: userId,
+      action: 'CANCEL_EXAMINATION',
+      resource: 'exams',
+      resourceId: id,
+    });
+
+    const detail = await getExamById(id);
+    return detail;
   }
 
-  for (const ta of assignments) {
-    await emitWorkflowEvent('exam.completed', actorId, {
-      departmentId: ta.department_id,
-      semester: exam.semester,
-      title: 'Result Entry Window Open',
-      message: `Marks entry is now open for ${exam.subject_name} (Section ${ta.section}).`,
-      notificationType: 'Academic Alert',
-      sourceId: examId,
-      examId,
-      teachingAssignmentId: ta.teaching_assignment_id,
-      facultyId: ta.faculty_id,
-      facultyUserId: ta.faculty_user_id,
-    });
-  }
+  throw AppError.badRequest(
+    'Manual status transitions are disabled. Examination status transitions automatically based on server time.',
+    'MANUAL_TRANSITION_DISABLED'
+  );
 }
 
 /**

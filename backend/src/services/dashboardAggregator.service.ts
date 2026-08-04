@@ -165,11 +165,11 @@ export async function getExaminationStatusBreakdown(): Promise<ExaminationStatus
 async function computeExaminationStatusBreakdown(): Promise<ExaminationStatusBreakdown> {
   const { rows } = await query<{ scheduled: number; ongoing: number; completed: number; cancelled: number; total: number }>(`
     SELECT
-      COUNT(*) FILTER (WHERE status = 'Scheduled')::int AS scheduled,
-      COUNT(*) FILTER (WHERE status = 'Ongoing')::int   AS ongoing,
-      COUNT(*) FILTER (WHERE status = 'Completed')::int AS completed,
       COUNT(*) FILTER (WHERE status = 'Cancelled')::int AS cancelled,
-      COUNT(*)::int                                      AS total
+      COUNT(*) FILTER (WHERE status != 'Cancelled' AND status != 'Archived' AND NOW() < (exam_date + start_time))::int AS scheduled,
+      COUNT(*) FILTER (WHERE status != 'Cancelled' AND status != 'Archived' AND NOW() >= (exam_date + start_time) AND NOW() < (exam_date + end_time))::int AS ongoing,
+      COUNT(*) FILTER (WHERE status != 'Cancelled' AND status != 'Archived' AND NOW() >= (exam_date + end_time))::int AS completed,
+      COUNT(*)::int AS total
     FROM exams
     WHERE deleted_at IS NULL
   `);

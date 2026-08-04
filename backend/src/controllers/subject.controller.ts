@@ -191,3 +191,9 @@ export const deleteAllSubjects = asyncHandler(async (req: Request, res: Response
     `Wiped all ${result.deletedCount} subjects from the catalog successfully.`
   );
 });
+
+export const getMySubjects = asyncHandler(async (req: Request, res: Response) => {
+  const subjects = await subjectService.getSubjectsForStudent(req.user!.id);
+  sendSuccess(res, { subjects, total: subjects.length });
+});
+

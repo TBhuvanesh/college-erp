@@ -77,17 +77,17 @@ async function extractPdfText(filePath: string): Promise<string | null> {
 
 function toSummary(r: DocumentRow): DocumentSummary {
   return {
-    id:             r.id,
-    title:          r.title,
-    fileName:       r.file_name,
-    filePath:       r.file_path,
-    documentType:   r.document_type,
-    uploadDate:     r.upload_date,
-    uploadedBy:     r.uploaded_by,
+    id: r.id,
+    title: r.title,
+    fileName: r.file_name,
+    filePath: r.file_path,
+    documentType: r.document_type,
+    uploadDate: r.upload_date,
+    uploadedBy: r.uploaded_by,
     uploadedByName: r.uploaded_by_name,
-    status:         r.status,
-    createdAt:      r.created_at,
-    updatedAt:      r.updated_at,
+    status: r.status,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
   };
 }
 
@@ -142,8 +142,8 @@ export async function listDocuments(filters: ListDocumentsQuery): Promise<Pagina
   return {
     documents: rows.map(toSummary),
     pagination: {
-      page:       filters.page,
-      limit:      filters.limit,
+      page: filters.page,
+      limit: filters.limit,
       total,
       totalPages: Math.ceil(total / filters.limit),
     },
@@ -190,11 +190,11 @@ export async function uploadDocument(
   }
 
   await auditLog({
-    actorId:    userId,
-    action:     'UPLOAD_DOCUMENT',
-    resource:   'documents',
+    actorId: userId,
+    action: 'UPLOAD_DOCUMENT',
+    resource: 'documents',
     resourceId: id,
-    changes:    { title: data.title, documentType: data.documentType, fileName },
+    changes: { title: data.title, documentType: data.documentType, fileName },
   });
 
   return getDocumentById(id);
@@ -226,10 +226,10 @@ export async function deleteDocument(id: string, userId: string): Promise<void> 
   }
 
   await auditLog({
-    actorId:    userId,
-    action:     'DELETE_DOCUMENT',
-    resource:   'documents',
+    actorId: userId,
+    action: 'DELETE_DOCUMENT',
+    resource: 'documents',
     resourceId: id,
-    changes:    {},
+    changes: {},
   });
 }

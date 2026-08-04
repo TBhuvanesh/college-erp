@@ -1,25 +1,22 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useSimulation } from "@/context/SimulationContext";
 import { apiFetch } from "@/lib/api";
-import { CalendarView, AcademicCalendarEvent, getEventCategoryInfo } from "@/components/CalendarView";
-import { CalendarDays, Filter, Info, Eye, Clock, Award, Sparkles, BookOpen } from "lucide-react";
+import { CalendarView, AcademicCalendarEvent } from "@/components/CalendarView";
+import { Info } from "lucide-react";
 
 export default function StudentCalendar() {
-  const { accessToken } = useAuth();
-  const { students, currentStudentId } = useSimulation();
+  const { accessToken, user } = useAuth();
 
   const [events, setEvents] = useState<AcademicCalendarEvent[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Toggle between personalized and full institutional calendar
   const [personalizedFilter, setPersonalizedFilter] = useState(true);
 
-  // Find active student
-  const activeStudent = students.find((s) => s.id === currentStudentId) || students[0];
+  // Find active student profile
+  const activeStudent = user?.studentProfile;
 
   // Fetch live published events
   const fetchEvents = useCallback(async () => {
@@ -38,21 +35,9 @@ export default function StudentCalendar() {
     }
   }, [accessToken]);
 
-  // Fetch departments to match the student's department code to department UUID
   useEffect(() => {
-    const fetchDepts = async () => {
-      try {
-        const res = await apiFetch("/departments", {}, accessToken);
-        if (res.success && res.data?.departments) {
-          setDepartments(res.data.departments);
-        }
-      } catch (err) {
-        console.warn("Failed to load departments in StudentCalendar (session may be expired):", err);
-      }
-    };
     const timer = setTimeout(() => {
       if (accessToken) {
-        fetchDepts();
         fetchEvents();
       }
     }, 0);
@@ -60,9 +45,7 @@ export default function StudentCalendar() {
   }, [accessToken, fetchEvents]);
 
   // Helper to map student semester to target year audience string
-  const getYearAudience = (semStr: string): string => {
-    const sem = parseInt(semStr.replace("Semester ", ""), 10);
-    if (isNaN(sem)) return "";
+  const getYearAudience = (sem: number): string => {
     if (sem <= 2) return "I Year";
     if (sem <= 4) return "II Year";
     if (sem <= 6) return "III Year";
@@ -70,11 +53,9 @@ export default function StudentCalendar() {
     return "";
   };
 
-  // Find matching department ID for student's department code (e.g. "CSE")
-  const studentDept = departments.find(d => d.code === activeStudent?.department);
-  const studentDeptId = studentDept?.id;
-  const studentSemNum = activeStudent?.semester ? parseInt(activeStudent.semester.replace("Semester ", ""), 10) : null;
-  const studentYearAudience = activeStudent?.semester ? getYearAudience(activeStudent.semester) : "";
+  const studentDeptId = activeStudent?.departmentId || null;
+  const studentSemNum = activeStudent?.semester || null;
+  const studentYearAudience = studentSemNum ? getYearAudience(studentSemNum) : "";
 
   // Perform client-side personal filter
   const displayedEvents = events.filter((ev) => {
@@ -107,10 +88,10 @@ export default function StudentCalendar() {
         <div className="space-y-1">
           <span className="text-[9px] uppercase font-bold text-blue-500 tracking-wider font-mono">Student Calendar Access</span>
           <h2 className="font-display font-bold text-xl dark:text-white text-text-primary">
-            Milestones for {activeStudent?.name || "Rahul Sharma"}
+            Milestones for {activeStudent?.fullName || "Rahul Sharma"}
           </h2>
           <p className="text-[10px] dark:text-neutral-400 text-text-secondary">
-            Current Roll No: <strong className="dark:text-neutral-200 text-text-primary">{activeStudent?.rollNo}</strong> | Academic Stream: <strong className="dark:text-neutral-200 text-text-primary">{activeStudent?.department} • {activeStudent?.semester}</strong>
+            Current Roll No: <strong className="dark:text-neutral-200 text-text-primary">{activeStudent?.rollNumber || "2026CSE001"}</strong> | Academic Stream: <strong className="dark:text-neutral-200 text-text-primary">{activeStudent?.departmentCode || "CSE"} • Semester {activeStudent?.semester || "3"}</strong>
           </p>
         </div>
 
@@ -143,7 +124,7 @@ export default function StudentCalendar() {
         <div className="p-3.5 rounded-lg dark:bg-blue-500/5 bg-blue-50/50 border dark:border-blue-500/15 border-blue-200 dark:text-blue-400 text-blue-700 text-[10px] font-medium leading-normal flex items-start gap-2 shadow-sm">
           <Info size={14} className="shrink-0 mt-0.5" />
           <span>
-            Calendar is automatically scoped to <strong>{activeStudent.department}</strong> department, <strong>{activeStudent.semester}</strong> classes, and general announcements. Toggle &quot;All Institutional&quot; above to view timelines for other programs.
+            Calendar is automatically scoped to <strong>{activeStudent.departmentCode}</strong> department, <strong>Semester {activeStudent.semester}</strong> classes, and general announcements. Toggle &quot;All Institutional&quot; above to view timelines for other programs.
           </span>
         </div>
       )}

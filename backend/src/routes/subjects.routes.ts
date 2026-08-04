@@ -42,6 +42,12 @@ router.get(
 );
 
 router.get(
+  '/my',
+  requireRole('student'),
+  subjectController.getMySubjects
+);
+
+router.get(
   '/:id',
   requireRole('admin', 'faculty'),
   validate(uuidParam),

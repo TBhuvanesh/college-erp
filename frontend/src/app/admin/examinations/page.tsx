@@ -917,43 +917,43 @@ export default function AdminExaminations() {
                                       </div>
                                     </div>
                                     {activeSession.status === "Published" && secItem.examId && (
-                                      <div className="pt-1.5 border-t dark:border-neutral-800 border-border-subtle mt-1" onClick={(e) => e.stopPropagation()}>
-                                        {secItem.examStatus === "Scheduled" || !secItem.examStatus ? (
+                                      <div className="pt-1.5 border-t dark:border-neutral-800 border-border-subtle mt-1 flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                        <div className="flex items-center justify-between gap-1">
+                                          <span className="text-[10px] text-text-muted dark:text-neutral-500 font-mono uppercase">Status:</span>
+                                          {secItem.examStatus === "Scheduled" ? (
+                                            <span className="px-2 py-0.5 text-[9px] font-bold rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">
+                                              Scheduled
+                                            </span>
+                                          ) : secItem.examStatus === "Ongoing" ? (
+                                            <span className="px-2 py-0.5 text-[9px] font-bold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono animate-pulse">
+                                              Ongoing
+                                            </span>
+                                          ) : secItem.examStatus === "Completed" ? (
+                                            <span className="px-2 py-0.5 text-[9px] font-bold rounded bg-neutral-500/10 text-neutral-400 border border-neutral-500/20 font-mono">
+                                              Completed
+                                            </span>
+                                          ) : secItem.examStatus === "Cancelled" ? (
+                                            <span className="px-2 py-0.5 text-[9px] font-bold rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-mono">
+                                              Cancelled
+                                            </span>
+                                          ) : (
+                                            <span className="px-2 py-0.5 text-[9px] font-bold rounded bg-neutral-500/10 text-neutral-400 border border-neutral-500/20 font-mono">
+                                              {secItem.examStatus || "Scheduled"}
+                                            </span>
+                                          )}
+                                        </div>
+                                        {(secItem.examStatus === "Scheduled" || secItem.examStatus === "Ongoing" || !secItem.examStatus) && (
                                           <button
                                             type="button"
-                                            onClick={() => handleTransitionExamStatus(secItem.examId, "Ongoing")}
-                                            className="w-full py-1 text-[10px] font-semibold rounded bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition flex items-center justify-center gap-1"
+                                            onClick={() => {
+                                              if (confirm("Are you sure you want to cancel this examination? This cannot be undone and will prevent marks entry.")) {
+                                                handleTransitionExamStatus(secItem.examId, "Cancelled");
+                                              }
+                                            }}
+                                            className="w-full py-1 text-[9px] font-semibold rounded border border-rose-500/30 hover:bg-rose-500/10 text-rose-400 cursor-pointer transition flex items-center justify-center gap-1"
                                           >
-                                            <Play size={10} />
-                                            <span>Start Exam</span>
+                                            Cancel Exam
                                           </button>
-                                        ) : secItem.examStatus === "Ongoing" ? (
-                                          <button
-                                            type="button"
-                                            onClick={() => handleTransitionExamStatus(secItem.examId, "Completed")}
-                                            className="w-full py-1 text-[10px] font-semibold rounded bg-blue-600 hover:bg-blue-500 text-white cursor-pointer transition flex items-center justify-center gap-1"
-                                          >
-                                            <CheckCircle2 size={10} />
-                                            <span>Complete</span>
-                                          </button>
-                                        ) : secItem.examStatus === "Completed" ? (
-                                          <button
-                                            type="button"
-                                            onClick={() => handleTransitionExamStatus(secItem.examId, "Scripts Distributed")}
-                                            className="w-full py-1 text-[10px] font-semibold rounded bg-purple-600 hover:bg-purple-500 text-white cursor-pointer transition flex items-center justify-center gap-1"
-                                          >
-                                            <FileCheck size={10} />
-                                            <span>Enable Marks</span>
-                                          </button>
-                                        ) : secItem.examStatus === "Scripts Distributed" ? (
-                                          <span className="w-full py-1 text-[10px] font-semibold rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 flex items-center justify-center gap-1 font-mono">
-                                            <CheckSquare size={10} />
-                                            <span>Enabled</span>
-                                          </span>
-                                        ) : (
-                                          <span className="w-full py-1 text-[10px] font-semibold rounded bg-neutral-500/10 text-neutral-400 text-center font-mono block">
-                                            {secItem.examStatus}
-                                          </span>
                                         )}
                                       </div>
                                     )}
@@ -993,43 +993,43 @@ export default function AdminExaminations() {
                             </span>
                           </div>
                         )}
-
                         {activeSession.status === "Published" && card.examId && (
-                          <div className="pt-2 border-t dark:border-neutral-800 border-border-subtle flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
-                            <span className="text-xs text-text-muted dark:text-neutral-500 font-mono">Exam Status:</span>
-                            {card.examStatus === "Scheduled" || !card.examStatus ? (
+                          <div className="pt-2 border-t dark:border-neutral-800 border-border-subtle flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs text-text-muted dark:text-neutral-500 font-mono">Exam Status:</span>
+                              {card.examStatus === "Scheduled" ? (
+                                <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">
+                                  Scheduled
+                                </span>
+                              ) : card.examStatus === "Ongoing" ? (
+                                <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono animate-pulse">
+                                  Ongoing
+                                </span>
+                              ) : card.examStatus === "Completed" ? (
+                                <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-neutral-500/10 text-neutral-400 border border-neutral-500/20 font-mono">
+                                  Completed
+                                </span>
+                              ) : card.examStatus === "Cancelled" ? (
+                                <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 font-mono">
+                                  Cancelled
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-neutral-500/10 text-neutral-400 border border-neutral-500/20 font-mono">
+                                  {card.examStatus || "Scheduled"}
+                                </span>
+                              )}
+                            </div>
+                            {(card.examStatus === "Scheduled" || card.examStatus === "Ongoing" || !card.examStatus) && (
                               <button
-                                onClick={() => handleTransitionExamStatus(card.examId!, "Ongoing")}
-                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition flex items-center gap-1.5 shadow shadow-emerald-600/10"
+                                onClick={() => {
+                                  if (confirm("Are you sure you want to cancel this examination? This cannot be undone and will prevent marks entry.")) {
+                                    handleTransitionExamStatus(card.examId!, "Cancelled");
+                                  }
+                                }}
+                                className="w-full py-1.5 text-xs font-semibold rounded-lg border border-rose-500/30 hover:bg-rose-500/10 text-rose-400 cursor-pointer transition flex items-center justify-center gap-1.5 shadow-sm"
                               >
-                                <Play size={13} />
-                                <span>Start Exam</span>
+                                Cancel Exam
                               </button>
-                            ) : card.examStatus === "Ongoing" ? (
-                              <button
-                                onClick={() => handleTransitionExamStatus(card.examId!, "Completed")}
-                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white cursor-pointer transition flex items-center gap-1.5 shadow shadow-blue-600/10"
-                              >
-                                <CheckCircle2 size={13} />
-                                <span>Complete Exam</span>
-                              </button>
-                            ) : card.examStatus === "Completed" ? (
-                              <button
-                                onClick={() => handleTransitionExamStatus(card.examId!, "Scripts Distributed")}
-                                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-600 hover:bg-purple-500 text-white cursor-pointer transition flex items-center gap-1.5 shadow shadow-purple-600/10"
-                              >
-                                <FileCheck size={13} />
-                                <span>Enable Marks Entry</span>
-                              </button>
-                            ) : card.examStatus === "Scripts Distributed" ? (
-                              <span className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-teal-500/10 text-teal-400 border border-teal-500/20 flex items-center gap-1.5 font-mono">
-                                <CheckSquare size={13} />
-                                <span>Marks Entry Enabled</span>
-                              </span>
-                            ) : (
-                              <span className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-neutral-500/10 text-neutral-400 border border-neutral-500/20 font-mono">
-                                {card.examStatus}
-                              </span>
                             )}
                           </div>
                         )}

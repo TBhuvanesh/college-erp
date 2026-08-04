@@ -61,9 +61,9 @@ export default function StudentResults() {
     setError(null);
     try {
       // 1. Fetch subjects to resolve credits
-      const subRes = await apiFetch("/subjects?limit=100", {}, accessToken);
-      if (subRes.success && subRes.data?.subjects) {
-        setSubjects(subRes.data.subjects);
+      const subRes = await apiFetch("/subjects/my", {}, accessToken);
+      if (subRes.success && subRes.subjects) {
+        setSubjects(subRes.subjects);
       }
 
       // 2. Fetch student results

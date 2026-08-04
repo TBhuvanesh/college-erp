@@ -93,11 +93,15 @@ async function getFeedbackOverviewForStudent(userId: string) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getAdminDashboardStats(userId: string) {
+  const { ensureCompletedExamsHaveTasks } = require('./examination.service');
+  await ensureCompletedExamsHaveTasks();
+
   const [
     counts,
     feeTotals,
     attendanceSummary,
     examBreakdown,
+    taskOverview,
     notifRes,
     studentsRes,
     facultyRes,
@@ -116,6 +120,13 @@ export async function getAdminDashboardStats(userId: string) {
     getFeeTotals(),
     getCampusAttendanceSummary(),
     getExaminationStatusBreakdown(),
+    query<{ open_tasks: number; published_results: number }>(`
+      SELECT
+        COUNT(*) FILTER (WHERE status IN ('open', 'draft_saved', 'submitted_for_approval'))::int AS open_tasks,
+        COUNT(*) FILTER (WHERE status = 'published')::int AS published_results
+      FROM result_entry_tasks
+      WHERE deleted_at IS NULL
+    `),
 
     // ── Admin notification unread count ───────────────────────────────────────
     query<{ total: string; unread: string }>(`
@@ -307,6 +318,10 @@ export async function getAdminDashboardStats(userId: string) {
       completed: examBreakdown.completed,
       cancelled: examBreakdown.cancelled,
       total:     examBreakdown.total,
+    },
+    examTasksOverview: {
+      openTasks: Number(taskOverview.rows[0]?.open_tasks) || 0,
+      publishedResults: Number(taskOverview.rows[0]?.published_results) || 0,
     },
     feeStatistics: {
       totalBilled:      feeTotals.totalBilled,

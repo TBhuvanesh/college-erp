@@ -285,6 +285,8 @@ export async function getStudentSummary(userId: string): Promise<StudentAttendan
      JOIN subject_curriculum_mappings scm
        ON scm.department_id = st.department_id
       AND scm.semester   = st.semester
+      AND scm.regulation = st.regulation
+      AND (scm.program_id IS NULL OR scm.program_id = st.program_id)
       AND scm.deleted_at IS NULL
      JOIN subjects sub
        ON sub.id = scm.subject_id

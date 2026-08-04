@@ -3,6 +3,8 @@ import { AppError } from '../errors/AppError';
 import { auditLog } from '../utils/audit';
 import type { ResultEntryTask, ResultEntryTaskStatus, ListResultEntryTasksQuery } from '../types/resultEntryTask';
 
+import { ensureCompletedExamsHaveTasks } from './examination.service';
+
 // Faculty Results page consumes this instead of a manual subject dropdown —
 // "faculty should only see examinations assigned through their Teaching
 // Assignments" is enforced here by joining on teaching_assignments.faculty_id,
@@ -69,13 +71,32 @@ export async function resolveFacultyId(userId: string): Promise<string> {
   return rows[0].id;
 }
 
-export async function listMyResultEntryTasks(
+export async function listResultEntryTasks(
   userId: string,
+  userRole: string,
   filters: ListResultEntryTasksQuery
 ): Promise<ResultEntryTask[]> {
-  const facultyId = await resolveFacultyId(userId);
-  const conditions = ['ret.deleted_at IS NULL', 'ret.faculty_id = $1'];
-  const params: unknown[] = [facultyId];
+  await ensureCompletedExamsHaveTasks();
+
+  const conditions = ['ret.deleted_at IS NULL'];
+  const params: unknown[] = [];
+
+  if (userRole === 'faculty') {
+    const { rows: fac } = await query<{ id: string; designation: string; department_id: string }>(
+      'SELECT id, designation, department_id FROM faculty WHERE user_id = $1 AND deleted_at IS NULL',
+      [userId]
+    );
+    if (!fac[0]) throw AppError.forbidden('No faculty profile is linked to this account');
+
+    if (fac[0].designation === 'hod') {
+      params.push(fac[0].department_id);
+      conditions.push(`ta.department_id = $${params.length}`);
+    } else {
+      params.push(fac[0].id);
+      conditions.push(`ret.faculty_id = $${params.length}`);
+    }
+  }
+
   if (filters.status) {
     params.push(filters.status);
     conditions.push(`ret.status = $${params.length}`);
@@ -121,13 +142,22 @@ export async function assertTaskOpenForFaculty(taskId: string, userId: string): 
     throw AppError.badRequest('The result entry window for this task has closed', 'WINDOW_EXPIRED');
   }
 
-  // Tasks are created once an exam reaches 'Scripts Distributed' (see
-  // examination.service.ts); 'Completed' is accepted too for tasks that were
-  // opened before this lifecycle stage existed.
-  const { rows: examRows } = await query<{ status: string }>('SELECT status FROM exams WHERE id = $1', [task.examId]);
-  if (!examRows[0] || !['Completed', 'Scripts Distributed'].includes(examRows[0].status)) {
+  const { rows: examRows } = await query<{ status: string; exam_date: string; start_time: string; end_time: string }>(
+    `SELECT status, TO_CHAR(exam_date, 'YYYY-MM-DD') AS exam_date,
+            TO_CHAR(start_time, 'HH24:MI') AS start_time,
+            TO_CHAR(end_time, 'HH24:MI') AS end_time
+     FROM exams WHERE id = $1`,
+    [task.examId]
+  );
+  if (!examRows[0]) {
+    throw AppError.badRequest('Exam does not exist', 'EXAM_NOT_FOUND');
+  }
+
+  const { resolveExamStatus } = require('./examination.service');
+  const examStatus = resolveExamStatus(examRows[0]);
+  if (!['Completed', 'Scripts Distributed'].includes(examStatus)) {
     throw AppError.badRequest(
-      'Marks can only be entered once the examination has completed and scripts are distributed',
+      'Marks can only be entered once the examination has completed',
       'EXAM_NOT_READY'
     );
   }
@@ -171,6 +201,11 @@ export async function verifyTask(taskId: string, actorId: string): Promise<void>
   if (task.status !== 'submitted_for_approval') {
     throw AppError.badRequest('Only tasks submitted for approval can be verified', 'NOT_SUBMITTED');
   }
-  await markTaskStatus(taskId, 'verified');
+
+  // Automatically publish results when verified
+  const { publishResults } = require('./result.service');
+  await publishResults({ subjectId: task.subjectId, section: task.section }, actorId);
+
+  await markTaskStatus(taskId, 'published');
   await auditLog({ actorId, action: 'VERIFY_RESULT_ENTRY_TASK', resource: 'result_entry_tasks', resourceId: taskId });
 }

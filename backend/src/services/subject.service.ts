@@ -735,3 +735,58 @@ export async function deleteCurriculumMapping(mappingId: string, actorId: string
 
   return getSubjectById(mapping[0].subject_id);
 }
+
+export async function getSubjectsForStudent(userId: string): Promise<any[]> {
+  const { rows: stu } = await query<{
+    id: string;
+    department_id: string;
+    program_id: string;
+    semester: number;
+    regulation: string;
+  }>(
+    `SELECT id, department_id, program_id, semester, regulation
+     FROM students
+     WHERE user_id = $1 AND deleted_at IS NULL`,
+    [userId]
+  );
+  if (!stu[0]) {
+    throw AppError.forbidden('No student profile is linked to this account');
+  }
+
+  const { department_id, program_id, semester, regulation } = stu[0];
+
+  const { rows } = await query<any>(
+    `SELECT
+       s.id,
+       s.code,
+       s.name,
+       s.credits,
+       s.type,
+       scm.regulation,
+       scm.year,
+       scm.semester
+     FROM subject_curriculum_mappings scm
+     JOIN subjects s ON s.id = scm.subject_id
+     WHERE scm.department_id = $1
+       AND (scm.program_id IS NULL OR scm.program_id = $2)
+       AND scm.semester = $3
+       AND scm.regulation = $4
+       AND scm.deleted_at IS NULL
+       AND s.deleted_at IS NULL
+       AND s.status != 'archived'
+     ORDER BY s.code ASC`,
+    [department_id, program_id, semester, regulation]
+  );
+
+  return rows.map((r) => ({
+    id: r.id,
+    code: r.code,
+    name: r.name,
+    credits: Number(r.credits),
+    type: r.type,
+    regulation: r.regulation,
+    year: r.year,
+    semester: r.semester,
+  }));
+}
+

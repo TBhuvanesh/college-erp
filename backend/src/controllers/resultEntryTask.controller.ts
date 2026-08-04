@@ -8,11 +8,8 @@ import { listResultEntryTasksQuerySchema } from '../types/resultEntryTask';
 // ── GET /api/result-entry-tasks (Faculty Results page: replaces subject dropdown) ──
 export const listMyResultEntryTasks = asyncHandler(async (req: Request, res: Response) => {
   const user = req.user!;
-  if (user.role !== 'faculty') {
-    throw AppError.forbidden('Only faculty accounts have result entry tasks', 'FACULTY_ONLY');
-  }
   const filters = listResultEntryTasksQuerySchema.parse(req.query);
-  const tasks = await resultEntryTaskService.listMyResultEntryTasks(user.id, filters);
+  const tasks = await resultEntryTaskService.listResultEntryTasks(user.id, user.role, filters);
   sendSuccess(res, { tasks });
 });
 

@@ -78,7 +78,7 @@ export default function AdminDashboard() {
     if (!accessToken) return;
     setLoading(true);
     try {
-      const [dashRes, studRes, facRes, subRes, attRes, feeRes, examRes, annRes, calRes, lmsRes, subLmsRes, notifRes, oppRes, persRes, deptRes, progRes] = await Promise.all([
+      const [dashRes, studRes, facRes, subRes, attRes, feeRes, examRes, annRes, calRes, lmsRes, subLmsRes, notifRes, oppRes, persRes, deptRes, progRes, tasksRes] = await Promise.all([
         apiFetch("/dashboard/admin", {}, accessToken),
         apiFetch("/students?limit=500", {}, accessToken),
         apiFetch("/faculty?limit=500", {}, accessToken),
@@ -94,7 +94,8 @@ export default function AdminDashboard() {
         apiFetch("/opportunities?limit=50", {}, accessToken),
         apiFetch("/calendar-entries?limit=100", {}, accessToken),
         apiFetch("/departments", {}, accessToken),
-        apiFetch("/departments/programs/list", {}, accessToken)
+        apiFetch("/departments/programs/list", {}, accessToken),
+        apiFetch("/result-entry-tasks?status=submitted_for_approval", {}, accessToken)
       ]);
 
       if (dashRes.success && dashRes.data) setDashboardStats(dashRes.data);
@@ -113,6 +114,7 @@ export default function AdminDashboard() {
       if (persRes.success && persRes.data?.entries) setApiPersonalEntries(persRes.data.entries);
       if (deptRes.success && deptRes.data?.departments) setApiDepartments(deptRes.data.departments);
       if (progRes.success && progRes.data?.programs) setApiPrograms(progRes.data.programs);
+      if (tasksRes.success && tasksRes.data?.tasks) setPendingApprovals(tasksRes.data.tasks);
     } catch (err) {
       console.error("Admin dashboard failed to load API data", err);
     } finally {
@@ -225,13 +227,15 @@ export default function AdminDashboard() {
         scheduled: breakdown.scheduled,
         ongoing: breakdown.ongoing,
         completed: breakdown.completed,
+        cancelled: breakdown.cancelled || 0,
         total: breakdown.total
       };
     }
     const scheduled = apiExams.filter(ex => ex.status === "Scheduled").length;
     const ongoing = apiExams.filter(ex => ex.status === "Ongoing").length;
     const completed = apiExams.filter(ex => ex.status === "Completed").length;
-    return { scheduled, ongoing, completed, total: apiExams.length };
+    const cancelled = apiExams.filter(ex => ex.status === "Cancelled").length;
+    return { scheduled, ongoing, completed, cancelled, total: apiExams.length };
   })();
 
   // 5. Activity Feed Generation
@@ -509,7 +513,7 @@ export default function AdminDashboard() {
       />
 
       {/* Smart Progress Metrics Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SmartProgressCard 
           title="Tuition Billing & Collections"
           value={`₹${outstandingFees.toLocaleString("en-IN")} Dues`}
@@ -549,6 +553,21 @@ export default function AdminDashboard() {
           ]}
           actionText="Approve Result Roster"
           actionRoute="/admin/results"
+        />
+
+        <SmartProgressCard 
+          title="Examination Status Engine"
+          value={`${examStats.ongoing} Live Exams`}
+          icon={FileSpreadsheet}
+          progress={examStats.total > 0 ? Math.round(((examStats.completed + examStats.cancelled) / examStats.total) * 100) : 100}
+          trend={{ value: "Dynamic Lifecycle", isPositive: true }}
+          details={[
+            { label: "Upcoming Exams", value: `${examStats.scheduled} scheduled` },
+            { label: "Completed/Cancelled", value: `${examStats.completed} completed, ${examStats.cancelled} cancelled` },
+            { label: "Pending entries", value: `${dashboardStats?.examTasksOverview?.openTasks || 0} tasks` }
+          ]}
+          actionText="Open Exams Console"
+          actionRoute="/admin/examinations"
         />
       </div>
 

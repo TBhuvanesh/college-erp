@@ -82,13 +82,13 @@ export const LMSDashboard: React.FC = () => {
         }
       } else {
         // Student
-        const res = await apiFetch("/attendance/summary", {}, accessToken);
+        const res = await apiFetch("/subjects/my", {}, accessToken);
         if (res.success && res.subjects) {
           setSubjects(
             res.subjects.map((s: any) => ({
-              id: s.subjectId,
-              name: s.subjectName,
-              code: s.subjectCode,
+              id: s.id,
+              name: s.name,
+              code: s.code,
               semester: s.semester,
             }))
           );

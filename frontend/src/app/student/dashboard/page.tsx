@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { useSimulation } from "@/context/SimulationContext";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
 import {
@@ -29,14 +28,10 @@ import { QuickActions, ShortcutItem } from "@/components/UXL/QuickActions";
 import { SmartProgressCard } from "@/components/UXL/SmartProgressCard";
 
 export default function StudentDashboard() {
-  const { accessToken } = useAuth();
-  const {
-    students,
-    currentStudentId
-  } = useSimulation();
+  const { accessToken, user } = useAuth();
 
-  // Find active student (simulation context fallback)
-  const activeStudent = students.find(s => s.id === currentStudentId) || students[0];
+  // Find active student profile
+  const activeStudent = user?.studentProfile;
 
   // API State
   const [apiAttendance, setApiAttendance] = useState<any>(null);
@@ -265,14 +260,112 @@ export default function StudentDashboard() {
 
   // Upcoming Week forecast
   const upcomingWeekForecast = useMemo(() => {
-    return [
-      { day: "Mon", event: "DBMS Class Quiz", details: "Unit 3 DB Normalization quiz, 10:00 AM", type: "Exam" },
-      { day: "Tue", event: "Mentorship Meeting", details: "Review of Mid-Term marks with Dr. Amit Verma, 3:30 PM", type: "Mentorship" },
-      { day: "Thu", event: "Microsoft Cloud Event", details: "Microsoft Azure sandbox lab session", type: "Event" },
-      { day: "Fri", event: "WebTech Lab submission", details: "React Routing Lab assignment upload due, 5:00 PM", type: "Assignment" },
-      { day: "Sat", event: "Azure Internship Deadline", details: "Closing date for AWS Cloud engineer post applications", type: "Opportunity" }
-    ];
-  }, []);
+    const list: { day: string; event: string; details: string; type: string; dateVal: Date }[] = [];
+    const now = new Date();
+    const oneWeekLater = new Date();
+    oneWeekLater.setDate(now.getDate() + 7);
+
+    const getDayStr = (d: Date) => {
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      return days[d.getDay()];
+    };
+
+    // Add assignments
+    apiAssignments.forEach((a: any) => {
+      if (a.dueDate) {
+        const d = new Date(a.dueDate);
+        if (d >= now && d <= oneWeekLater) {
+          list.push({
+            day: getDayStr(d),
+            event: a.title,
+            details: `Due at ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+            type: "Assignment",
+            dateVal: d
+          });
+        }
+      }
+    });
+
+    // Add exams
+    apiExams.forEach((e: any) => {
+      if (e.examDate) {
+        const d = new Date(e.examDate + (e.startTime ? 'T' + e.startTime : ''));
+        if (d >= now && d <= oneWeekLater) {
+          list.push({
+            day: getDayStr(d),
+            event: `${e.subjectCode} - ${e.examType}`,
+            details: `${e.venue || 'Exam venue'} at ${e.startTime || ''}`,
+            type: "Exam",
+            dateVal: d
+          });
+        }
+      }
+    });
+
+    // Add calendar events
+    apiEvents.forEach((ev: any) => {
+      if (ev.startDate) {
+        const d = new Date(ev.startDate);
+        if (d >= now && d <= oneWeekLater) {
+          list.push({
+            day: getDayStr(d),
+            event: ev.title,
+            details: ev.description || ev.category || "Institutional Event",
+            type: "Event",
+            dateVal: d
+          });
+        }
+      }
+    });
+
+    // Add opportunities
+    apiOpportunities.forEach((opp: any) => {
+      if (opp.deadline) {
+        const d = new Date(opp.deadline);
+        if (d >= now && d <= oneWeekLater) {
+          list.push({
+            day: getDayStr(d),
+            event: `${opp.title} Deadline`,
+            details: opp.organizer || "Opportunity application closing",
+            type: "Opportunity",
+            dateVal: d
+          });
+        }
+      }
+    });
+
+    // Sort by dateVal ascending
+    list.sort((a, b) => a.dateVal.getTime() - b.dateVal.getTime());
+
+    // Fallback if list is empty
+    if (list.length === 0) {
+      return [
+        { day: "Mon", event: "No academic milestones scheduled", details: "Check calendar for monthly view", type: "Event" }
+      ];
+    }
+
+    return list.slice(0, 5).map(item => ({
+      day: item.day,
+      event: item.event,
+      details: item.details,
+      type: item.type
+    }));
+  }, [apiAssignments, apiExams, apiEvents, apiOpportunities]);
+
+  const focusTopic = useMemo(() => {
+    if (todaySchedule && todaySchedule.length > 0) {
+      const activeClass = todaySchedule.find(c => {
+        const now = new Date();
+        const nowTimeStr = now.toTimeString().slice(0, 8);
+        return c.startTime && c.startTime > nowTimeStr;
+      }) || todaySchedule[0];
+      return `${activeClass.subjectCode}: ${activeClass.subjectName} (${activeClass.classType || 'Lecture'})`;
+    }
+    if (apiAssignments && apiAssignments.length > 0) {
+      return `Next Task: ${apiAssignments[0].title}`;
+    }
+    return `Welcome back! Scoping: ${activeStudent?.departmentCode || 'B.Tech'} Academic Desk`;
+  }, [todaySchedule, apiAssignments, activeStudent]);
 
   if (!activeStudent) {
     return <div className="text-neutral-500 font-mono text-center py-10">No active student profile loaded.</div>;
@@ -284,11 +377,11 @@ export default function StudentDashboard() {
 
       {/* Hero Banner: Today's Focus */}
       <TodayFocus 
-        userName={activeStudent.name} 
+        userName={activeStudent.fullName} 
         role="Student"
-        topicText="Database Management Systems - Relational Normalization Form (1NF, 2NF, 3NF)"
+        topicText={focusTopic}
         metrics={focusMetrics}
-        subtitleText={`${activeStudent.rollNo} · ${activeStudent.program} · ${activeStudent.semester}`}
+        subtitleText={`${activeStudent.rollNumber || ""} · B.Tech ${activeStudent.departmentCode || ""} · Semester ${activeStudent.semester || ""}`}
       />
 
       {/* Main Grid: Timeline & Action centers */}

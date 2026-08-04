@@ -775,7 +775,7 @@ export async function getTimetableForStudent(userId: string): Promise<TimetableD
   const sp = studentProfile[0];
   const ttRowsRes = await query<{ id: string }>(
     `SELECT id FROM timetables
-     WHERE academic_year = $1 AND department_id = $2 AND semester = $3 AND section = $4
+     WHERE LEFT(academic_year, 4) = LEFT($1, 4) AND department_id = $2 AND semester = $3 AND section = $4
        AND status = 'published' AND deleted_at IS NULL
      ORDER BY version DESC, created_at DESC LIMIT 1`,
     [sp.academic_year, sp.department_id, sp.semester, sp.section]
