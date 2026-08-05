@@ -168,11 +168,11 @@ export async function getRoster(
   }
 
   // Verify subject exists and retrieve program_id + semester for enrollment join
-  const { rows: sub } = await query<{ program_id: string; semester: number }>(
-    `SELECT scm.program_id, scm.semester
-     FROM faculty_subject_assignments fsa
-     JOIN subject_curriculum_mappings scm ON scm.id = fsa.subject_curriculum_mapping_id
-     WHERE fsa.faculty_id = $1 AND fsa.subject_id = $2 AND fsa.section = $3 AND fsa.deleted_at IS NULL`,
+  const { rows: sub } = await query<{ program_id: string | null; semester: number; department_id: string }>(
+    `SELECT scm.program_id, scm.semester, scm.department_id
+     FROM teaching_assignments ta
+     JOIN subject_curriculum_mappings scm ON scm.id = ta.subject_curriculum_mapping_id
+     WHERE ta.faculty_id = $1 AND ta.subject_id = $2 AND ta.section = $3 AND ta.deleted_at IS NULL LIMIT 1`,
     [facultyId, subjectId, section]
   );
   if (!sub[0]) throw AppError.notFound('Subject not found');
@@ -190,13 +190,14 @@ export async function getRoster(
        ON a.student_id      = st.id
       AND a.subject_id      = $1
       AND a.attendance_date = $4::date
-     WHERE st.program_id   = $2
+     WHERE (st.program_id = $2 OR $2 IS NULL)
+       AND st.department_id = $6
        AND st.semester      = $3
        AND st.section       = $5
        AND st.status        = 'active'
        AND st.deleted_at    IS NULL
      ORDER BY st.roll_number`,
-    [subjectId, sub[0].program_id, sub[0].semester, date, section]
+    [subjectId, sub[0].program_id || null, sub[0].semester, date, section, sub[0].department_id]
   );
 
   return rows.map((r) => ({

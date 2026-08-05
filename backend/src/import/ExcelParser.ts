@@ -66,7 +66,7 @@ export async function parseSpreadsheet(buffer: Buffer, fileExtension: string): P
     'email', 'emailaddress', 'studentemail', 'emailid',
     'studentmobile', 'mobilenumber', 'mobile', 'phone', 'phonenumber', 'studentphone', 'studentmobileno',
     'department', 'dept', 'branch', 'yrbrsc',
-    'section', 'sec', 'ectio'
+    'section', 'sec', 'ectio', 'yrsem'
   ]);
 
   for (let r = 1; r <= Math.min(worksheet.rowCount, 15); r++) {

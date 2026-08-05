@@ -51,6 +51,7 @@ const REQUIRED_HEADERS: Array<{ label: string; aliases: string[] }> = [
 // may or may not carry these, and the ERP can derive sensible defaults.
 const OPTIONAL_HEADER_ALIASES = {
   program: ['program', 'course', 'branchprogram'],
+  yrSem: ['yrsem', 'yearsemester'],
   semester: ['semester', 'sem', 'currentsemester'],
   year: ['year', 'academicyear2', 'yearofstudy'],
   gender: ['gender', 'sex'],
@@ -126,7 +127,34 @@ function findProgramByAlias(
  * a start-of-year bulk onboarding import), clamped to the program's
  * total_semesters.
  */
-function resolveSemester(semesterStr: string, yearStr: string, admissionYear: number, academicYear: string, totalSemesters: number): number | null {
+function parseRomanOrArabic(val: string): number | null {
+  if (!val) return null;
+  const n = parseInt(val, 10);
+  if (Number.isInteger(n)) return n;
+  return YEAR_ROMAN[val.toUpperCase()] || null;
+}
+
+function resolveSemester(
+  yrSemStr: string,
+  semesterStr: string,
+  yearStr: string,
+  admissionYear: number,
+  academicYear: string,
+  totalSemesters: number
+): number | null {
+  if (yrSemStr) {
+    const match = yrSemStr.trim().match(/^([IV1-4]+)[\/\-]([IV1-2]+)$/i);
+    if (match) {
+      const yr = parseRomanOrArabic(match[1]);
+      const sem = parseRomanOrArabic(match[2]);
+      if (yr && sem) {
+        const calculatedSem = (yr - 1) * 2 + sem;
+        if (calculatedSem >= 1 && calculatedSem <= totalSemesters) {
+          return calculatedSem;
+        }
+      }
+    }
+  }
   if (semesterStr) {
     const n = Number(semesterStr);
     if (Number.isInteger(n) && n >= 1 && n <= totalSemesters) return n;
@@ -189,6 +217,7 @@ async function validateRows(sheet: ParsedSheet, mode: ImportMode): Promise<Valid
     const statusStr = (cell(row, ['studentstatus', 'status']) || 'Active').toLowerCase();
 
     const programStr = cell(row, OPTIONAL_HEADER_ALIASES.program);
+    const yrSemStr = cell(row, OPTIONAL_HEADER_ALIASES.yrSem);
     const semesterStr = cell(row, OPTIONAL_HEADER_ALIASES.semester);
     const yearStr = cell(row, OPTIONAL_HEADER_ALIASES.year);
     const gender = cell(row, OPTIONAL_HEADER_ALIASES.gender) || null;
@@ -311,7 +340,7 @@ async function validateRows(sheet: ParsedSheet, mode: ImportMode): Promise<Valid
     // ── Semester resolution (smart-detected when not in the sheet) ──
     let semester: number | null = null;
     if (matchedProgram) {
-      semester = resolveSemester(semesterStr, yearStr, admissionYear, resolvedAcademicYear, matchedProgram.total_semesters);
+      semester = resolveSemester(yrSemStr, semesterStr, yearStr, admissionYear, resolvedAcademicYear, matchedProgram.total_semesters);
       if (semester === null) {
         errors.push(
           `Could not determine Semester for Roll Number '${rollNumber}' — add a 'Semester' or 'Year' column, or verify Admission Year/Academic Session.`

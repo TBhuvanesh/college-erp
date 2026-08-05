@@ -187,7 +187,33 @@ export const TeachingAssignmentManager: React.FC = () => {
     };
     fetchModalSubjects();
   }, [showCreateModal, formDept, formProgram, formRegulation, formYearVal, formSemester, accessToken]);
-  
+
+  const [formClassStudentCount, setFormClassStudentCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchStudentCount = async () => {
+      if (!showCreateModal || !formDept || !formProgram || !formSemester || !formSection) {
+        setFormClassStudentCount(null);
+        return;
+      }
+      try {
+        const res = await apiFetch(
+          `/students?departmentId=${formDept}&programId=${formProgram}&semester=${formSemester}&section=${formSection}&status=active&limit=1`,
+          {},
+          accessToken
+        );
+        if (res.success && res.data?.pagination) {
+          setFormClassStudentCount(res.data.pagination.total);
+        } else {
+          setFormClassStudentCount(null);
+        }
+      } catch (err) {
+        setFormClassStudentCount(null);
+      }
+    };
+    fetchStudentCount();
+  }, [showCreateModal, formDept, formProgram, formSemester, formSection, accessToken]);
+
   // Workload and validation warnings
   const [workloadWarning, setWorkloadWarning] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -1175,7 +1201,14 @@ export const TeachingAssignmentManager: React.FC = () => {
 
                 {/* Section */}
                 <div className="col-span-2 space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Section</label>
+                  <label className="text-[10px] flex items-center justify-between font-bold uppercase tracking-wider text-text-muted">
+                    <span>Section</span>
+                    {formClassStudentCount !== null && (
+                      <span className="text-[9px] text-emerald-500 font-mono tracking-normal capitalize">
+                        {formClassStudentCount} Enrolled
+                      </span>
+                    )}
+                  </label>
                   <select
                     required
                     value={formSection}

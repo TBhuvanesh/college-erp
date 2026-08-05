@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
-import { useStudents, useDepartments } from "@/hooks/useRegistry";
+import { useStudents, useDepartments, useSections } from "@/hooks/useRegistry";
 import { apiFetch } from "@/lib/api";
 import { 
   Sparkles,
@@ -62,6 +62,12 @@ export default function AdminStudents() {
     }
     return "ALL";
   });
+  const [sectionFilter, setSectionFilter] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("erp_students_sectionFilter") || "ALL";
+    }
+    return "ALL";
+  });
   const [statusFilter, setStatusFilter] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("erp_students_statusFilter") || "ALL";
@@ -78,8 +84,25 @@ export default function AdminStudents() {
   }, [semFilter]);
 
   useEffect(() => {
+    localStorage.setItem("erp_students_sectionFilter", sectionFilter);
+  }, [sectionFilter]);
+
+  useEffect(() => {
     localStorage.setItem("erp_students_statusFilter", statusFilter);
   }, [statusFilter]);
+
+  const { data: availableSections = [], isLoading: sectionsLoading } = useSections(
+    deptFilter !== "ALL" ? deptFilter : undefined,
+    semFilter !== "ALL" ? parseInt(semFilter) : undefined
+  );
+
+  useEffect(() => {
+    if (availableSections.length > 0 && sectionFilter !== "ALL" && !availableSections.includes(sectionFilter)) {
+      setSectionFilter("ALL");
+    } else if (availableSections.length === 0 && (deptFilter === "ALL" || semFilter === "ALL") && sectionFilter !== "ALL") {
+      setSectionFilter("ALL");
+    }
+  }, [availableSections, sectionFilter, deptFilter, semFilter]);
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -118,8 +141,9 @@ export default function AdminStudents() {
     search: searchTerm,
     departmentId: deptFilter,
     semester: semFilter,
+    section: sectionFilter,
     status: statusFilter,
-  }), [page, limit, searchTerm, deptFilter, semFilter, statusFilter]);
+  }), [page, limit, searchTerm, deptFilter, semFilter, sectionFilter, statusFilter]);
 
   const {
     data: studentsResult,
@@ -135,7 +159,7 @@ export default function AdminStudents() {
   useEffect(() => {
     setPage(1);
     setSelectedStudentIds(new Set());
-  }, [searchTerm, deptFilter, semFilter, statusFilter]);
+  }, [searchTerm, deptFilter, semFilter, sectionFilter, statusFilter]);
 
   // Fetch student detail when selectedStudentId changes
   useEffect(() => {
@@ -282,6 +306,7 @@ export default function AdminStudents() {
     setSearchTerm("");
     setDeptFilter("ALL");
     setSemFilter("ALL");
+    setSectionFilter("ALL");
     setStatusFilter("ALL");
   };
 
@@ -354,6 +379,24 @@ export default function AdminStudents() {
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((sem) => (
               <option key={sem} value={sem.toString()}>
                 Semester {sem}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Section Filter */}
+        <div className="w-full md:w-32 flex items-center gap-2 bg-background border border-border-subtle rounded px-2 text-xs text-text-primary">
+          <span className="text-text-muted">Sec:</span>
+          <select
+            value={sectionFilter}
+            onChange={(e) => setSectionFilter(e.target.value)}
+            disabled={sectionsLoading || availableSections.length === 0}
+            className="bg-transparent text-text-primary cursor-pointer py-2 flex-1 focus:outline-none disabled:opacity-50"
+          >
+            <option value="ALL">All Sections</option>
+            {availableSections.map((sec) => (
+              <option key={sec} value={sec}>
+                {sec}
               </option>
             ))}
           </select>

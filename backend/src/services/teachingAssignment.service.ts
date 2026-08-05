@@ -132,7 +132,7 @@ export async function createAllocation(
       `SELECT id, department_id FROM subject_curriculum_mappings
        WHERE subject_id = $1 
          AND department_id = $2 
-         AND (program_id = $3 OR ($3 IS NULL AND program_id IS NULL))
+         AND (program_id = $3 OR program_id IS NULL)
          AND regulation = $4 
          AND year = $5 
          AND semester = $6 

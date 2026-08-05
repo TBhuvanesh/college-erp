@@ -140,6 +140,7 @@ export async function listStudents(filters: ListStudentsQuery): Promise<Paginate
   if (filters.departmentId) push('s.department_id =', filters.departmentId);
   if (filters.programId) push('s.program_id =', filters.programId);
   if (filters.semester) push('s.semester =', filters.semester);
+  if (filters.section) push('s.section =', filters.section);
   if (filters.status) push('s.status =', filters.status);
   if (filters.academicYear) push('s.academic_year =', filters.academicYear);
 

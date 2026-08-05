@@ -121,6 +121,7 @@ export const listStudentsQuerySchema = z.object({
   departmentId: z.string().uuid().optional(),
   programId: z.string().uuid().optional(),
   semester: z.coerce.number().int().min(1).max(12).optional(),
+  section: z.string().trim().optional(),
   status: z.enum(STUDENT_STATUSES).optional(),
   academicYear: z.string().optional(),
   search: z.string().max(100).trim().optional(),
