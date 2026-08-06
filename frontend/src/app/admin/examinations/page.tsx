@@ -436,6 +436,56 @@ export default function AdminExaminations() {
     }
   };
 
+  // Publish Examination Session Results
+  const handlePublishResults = async () => {
+    if (!activeSession) return;
+    if (!confirm("Are you sure you want to publish the results for this entire session? This will make the results visible to students and cannot be undone.")) return;
+    
+    setSubmitting(true);
+    try {
+      const res = await apiFetch(`/examinations/sessions/${activeSession.id}/publish-results`, {
+        method: "POST"
+      }, accessToken);
+
+      if (res.success && res.data?.session) {
+        triggerToast("Examination Session results published successfully! Students can now view their grades.");
+        setActiveSession(res.data.session);
+        fetchSessions();
+      }
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to publish examination results");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Complete Exam explicitly
+  const handleCompleteExam = async (examId: string) => {
+    if (!accessToken || !selectedSessionId) return;
+    if (!confirm("Complete Examination? \n\nThis will close the examination and allow assigned faculty to start entering student results.")) return;
+    
+    setSubmitting(true);
+    try {
+      const res = await apiFetch(`/examinations/${examId}/complete`, {
+        method: "POST"
+      }, accessToken);
+
+      if (res.success) {
+        triggerToast(`Examination successfully marked as Completed!`);
+        
+        // Re-fetch session to get the latest status
+        const sessionRes = await apiFetch(`/examinations/sessions/${selectedSessionId}`, {}, accessToken);
+        if (sessionRes.success && sessionRes.data?.session) {
+          setActiveSession(sessionRes.data.session);
+        }
+      }
+    } catch (err: any) {
+      triggerToast(err.message || "Failed to complete examination");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Transition Individual Exam Status (for completion and marks entry)
   const handleTransitionExamStatus = async (examId: string, nextStatus: string) => {
     if (!accessToken || !selectedSessionId) return;
@@ -672,8 +722,8 @@ export default function AdminExaminations() {
                       {/* Progress Bar */}
                       <div className="space-y-1.5 pt-1">
                         <div className="flex items-center justify-between text-[11px] font-mono">
-                          <span className="dark:text-neutral-400 text-text-muted">Scheduling Progress</span>
-                          <span className="font-bold dark:text-white text-text-primary">{session.scheduledSubjectCount} / {session.totalSubjectCount} Subjects</span>
+                          <span className="dark:text-neutral-400 text-text-muted">Scheduling</span>
+                          <span className="font-bold dark:text-white text-text-primary">{session.scheduledSubjectCount} / {session.totalSubjectCount} Sub</span>
                         </div>
                         <div className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
                           <div
@@ -682,6 +732,21 @@ export default function AdminExaminations() {
                           />
                         </div>
                       </div>
+
+                      {isPublished && session.resultStats && (
+                        <div className="space-y-1.5 pt-1 border-t dark:border-neutral-800 border-border-subtle mt-2">
+                          <div className="flex items-center justify-between text-[11px] font-mono mt-2">
+                            <span className="dark:text-neutral-400 text-text-muted">Results Entry</span>
+                            <span className="font-bold dark:text-white text-text-primary">{session.resultStats.submittedTasks} / {session.resultStats.requiredTasks} Tasks</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-indigo-500 transition-all duration-500"
+                              style={{ width: `${session.resultStats.requiredTasks > 0 ? Math.round((session.resultStats.submittedTasks / session.resultStats.requiredTasks) * 100) : 0}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Card Actions */}
@@ -782,23 +847,43 @@ export default function AdminExaminations() {
                         <span>Publish Schedule</span>
                       </button>
                     )}
+                    {activeSession.status === "Published" &&
+                     activeSession.resultStats &&
+                     activeSession.resultStats.requiredTasks > 0 &&
+                     activeSession.resultStats.submittedTasks === activeSession.resultStats.requiredTasks &&
+                     activeSession.resultStats.publishedTasks < activeSession.resultStats.requiredTasks && (
+                      <button
+                        onClick={handlePublishResults}
+                        disabled={submitting}
+                        className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-500/20 cursor-pointer transition flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <Send size={14} />
+                        <span>Publish Results</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 {/* Progress Indicator */}
-                <div className="pt-2 border-t dark:border-neutral-800 border-border-subtle grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="pt-2 border-t dark:border-neutral-800 border-border-subtle grid grid-cols-1 sm:grid-cols-4 gap-4">
                   <div className="bg-neutral-50 dark:bg-neutral-950/50 p-3 rounded-lg border dark:border-neutral-850 border-border-subtle">
-                    <span className="text-[10px] text-text-muted dark:text-neutral-500 font-mono uppercase block">Total Session Subjects</span>
+                    <span className="text-[10px] text-text-muted dark:text-neutral-500 font-mono uppercase block">Total Subjects</span>
                     <span className="text-base font-bold dark:text-white text-text-primary">{activeSession.totalSubjectCount}</span>
                   </div>
                   <div className="bg-neutral-50 dark:bg-neutral-950/50 p-3 rounded-lg border dark:border-neutral-850 border-border-subtle">
-                    <span className="text-[10px] text-text-muted dark:text-neutral-500 font-mono uppercase block">Configured Schedules</span>
+                    <span className="text-[10px] text-text-muted dark:text-neutral-500 font-mono uppercase block">Schedules</span>
                     <span className="text-base font-bold text-emerald-500">{activeSession.scheduledSubjectCount}</span>
                   </div>
                   <div className="bg-neutral-50 dark:bg-neutral-950/50 p-3 rounded-lg border dark:border-neutral-850 border-border-subtle">
-                    <span className="text-[10px] text-text-muted dark:text-neutral-500 font-mono uppercase block">Pending Schedules</span>
+                    <span className="text-[10px] text-text-muted dark:text-neutral-500 font-mono uppercase block">Pending</span>
                     <span className="text-base font-bold text-amber-500">{activeSession.totalSubjectCount - activeSession.scheduledSubjectCount}</span>
                   </div>
+                  {activeSession.status === 'Published' && activeSession.resultStats && (
+                    <div className="bg-neutral-50 dark:bg-neutral-950/50 p-3 rounded-lg border dark:border-neutral-850 border-border-subtle">
+                      <span className="text-[10px] text-text-muted dark:text-neutral-500 font-mono uppercase block">Results Submitted</span>
+                      <span className="text-base font-bold text-indigo-500">{activeSession.resultStats.submittedTasks} / {activeSession.resultStats.requiredTasks}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -943,17 +1028,28 @@ export default function AdminExaminations() {
                                           )}
                                         </div>
                                         {(secItem.examStatus === "Scheduled" || secItem.examStatus === "Ongoing" || !secItem.examStatus) && (
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              if (confirm("Are you sure you want to cancel this examination? This cannot be undone and will prevent marks entry.")) {
-                                                handleTransitionExamStatus(secItem.examId, "Cancelled");
-                                              }
-                                            }}
-                                            className="w-full py-1 text-[9px] font-semibold rounded border border-rose-500/30 hover:bg-rose-500/10 text-rose-400 cursor-pointer transition flex items-center justify-center gap-1"
-                                          >
-                                            Cancel Exam
-                                          </button>
+                                          <div className="flex flex-col gap-1.5 mt-2">
+                                            {secItem.examStatus === "Scheduled" && (
+                                              <button
+                                                type="button"
+                                                onClick={() => handleCompleteExam(secItem.examId)}
+                                                className="w-full py-1 text-[9px] font-semibold rounded border border-blue-500/30 hover:bg-blue-500/10 text-blue-400 cursor-pointer transition flex items-center justify-center gap-1"
+                                              >
+                                                Mark as Completed
+                                              </button>
+                                            )}
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                if (confirm("Are you sure you want to cancel this examination? This cannot be undone and will prevent marks entry.")) {
+                                                  handleTransitionExamStatus(secItem.examId, "Cancelled");
+                                                }
+                                              }}
+                                              className="w-full py-1 text-[9px] font-semibold rounded border border-rose-500/30 hover:bg-rose-500/10 text-rose-400 cursor-pointer transition flex items-center justify-center gap-1"
+                                            >
+                                              Cancel Exam
+                                            </button>
+                                          </div>
                                         )}
                                       </div>
                                     )}
@@ -1020,17 +1116,49 @@ export default function AdminExaminations() {
                               )}
                             </div>
                             {(card.examStatus === "Scheduled" || card.examStatus === "Ongoing" || !card.examStatus) && (
-                              <button
-                                onClick={() => {
-                                  if (confirm("Are you sure you want to cancel this examination? This cannot be undone and will prevent marks entry.")) {
-                                    handleTransitionExamStatus(card.examId!, "Cancelled");
-                                  }
-                                }}
-                                className="w-full py-1.5 text-xs font-semibold rounded-lg border border-rose-500/30 hover:bg-rose-500/10 text-rose-400 cursor-pointer transition flex items-center justify-center gap-1.5 shadow-sm"
-                              >
-                                Cancel Exam
-                              </button>
+                              <div className="flex flex-col gap-1.5 mt-2">
+                                {card.examStatus === "Scheduled" && (
+                                  <button
+                                    onClick={() => handleCompleteExam(card.examId!)}
+                                    className="w-full py-1.5 text-xs font-semibold rounded-lg border border-blue-500/30 hover:bg-blue-500/10 text-blue-400 cursor-pointer transition flex items-center justify-center shadow-sm"
+                                  >
+                                    Mark as Completed
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    if (confirm("Are you sure you want to cancel this examination? This cannot be undone and will prevent marks entry.")) {
+                                      handleTransitionExamStatus(card.examId!, "Cancelled");
+                                    }
+                                  }}
+                                  className="w-full py-1.5 text-xs font-semibold rounded-lg border border-rose-500/30 hover:bg-rose-500/10 text-rose-400 cursor-pointer transition flex items-center justify-center shadow-sm"
+                                >
+                                  Cancel Exam
+                                </button>
+                              </div>
                             )}
+                          </div>
+                        )}
+                        
+                        {activeSession.status === "Published" && card.resultTasks && card.resultTasks.length > 0 && (
+                          <div className="pt-2 border-t dark:border-neutral-800 border-border-subtle flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <span className="text-[10px] text-text-muted dark:text-neutral-500 font-mono uppercase">Results Tracking:</span>
+                            {card.resultTasks.map((rt) => (
+                              <div key={rt.taskId} className="flex items-center justify-between gap-1 text-[10px] bg-neutral-100 dark:bg-neutral-850 p-1.5 rounded border dark:border-neutral-800 border-border-subtle font-mono">
+                                <div className="flex flex-col">
+                                  <span className="font-bold dark:text-white text-text-primary">Sec {rt.section}</span>
+                                  <span className="text-[9px] dark:text-neutral-500 text-text-muted line-clamp-1">{rt.facultyName}</span>
+                                </div>
+                                <span className={`px-2 py-0.5 font-bold rounded ${
+                                  rt.status === "published" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                  : rt.status === "verified" ? "bg-teal-500/10 text-teal-400 border border-teal-500/20"
+                                  : rt.status === "submitted_for_approval" ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
+                                  : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                                }`}>
+                                  {rt.status.replace(/_/g, ' ')}
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>

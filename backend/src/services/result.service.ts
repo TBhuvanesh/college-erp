@@ -132,10 +132,6 @@ function toDetail(r: ResultRow): ResultDetail {
     examId: r.exam_id,
     semester: Number(r.semester),
     section: r.section,
-    internalMarks: parseFloat(r.internal_marks),
-    internalMaxMarks: parseFloat(r.internal_max_marks),
-    externalMarks: parseFloat(r.external_marks),
-    externalMaxMarks: parseFloat(r.external_max_marks),
     totalMarks: parseFloat(r.total_marks),
     grade: r.grade,
     resultStatus: r.result_status,
@@ -157,10 +153,6 @@ function toSummary(r: ResultRow): ResultSummary {
     subjectName: r.subject_name,
     semester: Number(r.semester),
     section: r.section,
-    internalMarks: parseFloat(r.internal_marks),
-    internalMaxMarks: parseFloat(r.internal_max_marks),
-    externalMarks: parseFloat(r.external_marks),
-    externalMaxMarks: parseFloat(r.external_max_marks),
     totalMarks: parseFloat(r.total_marks),
     grade: r.grade,
     resultStatus: r.result_status,
@@ -186,19 +178,15 @@ interface ComputedResult {
   effectiveExternalMarks: number;
 }
 
-function computeResult(
-  internalMarks: number,
-  externalMarks: number,
-  internalMaxMarks: number,
-  externalMaxMarks: number,
+export function computeResult(
+  marks: number,
+  maxMarks: number,
   isAbsent: boolean
 ): ComputedResult {
-  const effectiveExternalMarks = isAbsent ? 0 : externalMarks;
-  const totalMarks = internalMarks + effectiveExternalMarks;
-  const totalMax = internalMaxMarks + externalMaxMarks;
-  const grade = computeGrade(totalMarks, totalMax);
+  const totalMarks = isAbsent ? 0 : marks;
+  const grade = computeGrade(totalMarks, maxMarks);
   const resultStatus = computeResultStatus(grade, isAbsent);
-  return { totalMarks, grade, resultStatus, effectiveExternalMarks };
+  return { totalMarks, grade, resultStatus, effectiveExternalMarks: 0 };
 }
 
 // ── Read operations ───────────────────────────────────────────────────────────
@@ -267,11 +255,11 @@ export async function getRoster(
 ): Promise<RosterResultEntry[]> {
   const facultyId = await resolveFacultyId(userId);
   // Verify subject exists and get its program context
-  const { rows: sub } = await query<{ program_id: string; semester: number }>(
-    `SELECT scm.program_id, scm.semester
-     FROM faculty_subject_assignments fsa
-     JOIN subject_curriculum_mappings scm ON scm.id = fsa.subject_curriculum_mapping_id
-     WHERE fsa.faculty_id = $1 AND fsa.subject_id = $2 AND fsa.section = $3 AND fsa.deleted_at IS NULL`,
+  const { rows: sub } = await query<{ program_id: string | null; department_id: string; semester: number }>(
+    `SELECT scm.program_id, ta.department_id, scm.semester
+     FROM teaching_assignments ta
+     JOIN subject_curriculum_mappings scm ON scm.id = ta.subject_curriculum_mapping_id
+     WHERE ta.faculty_id = $1 AND ta.subject_id = $2 AND ta.section = $3 AND ta.deleted_at IS NULL`,
     [facultyId, subjectId, section]
   );
   if (!sub[0]) throw AppError.notFound('Subject not found');
@@ -297,13 +285,14 @@ export async function getRoster(
        ON r.student_id = st.id
       AND r.subject_id = $1
       AND r.deleted_at IS NULL
-     WHERE st.program_id = $2
+     WHERE (st.program_id = $2 OR $2 IS NULL)
+       AND (st.department_id = $5 OR $5 IS NULL)
        AND st.semester   = $3
        AND st.section    = $4
        AND st.status     = 'active'
        AND st.deleted_at IS NULL
      ORDER BY st.roll_number`,
-    [subjectId, sub[0].program_id, sub[0].semester, section]
+    [subjectId, sub[0].program_id, sub[0].semester, section, sub[0].department_id]
   );
 
   return rows.map((r) => ({
@@ -312,11 +301,7 @@ export async function getRoster(
     fullName: r.full_name,
     section: r.section,
     resultId: r.result_id,
-    internalMarks: r.internal_marks ? parseFloat(r.internal_marks) : null,
-    internalMaxMarks: r.internal_max_marks ? parseFloat(r.internal_max_marks) : null,
-    externalMarks: r.external_marks ? parseFloat(r.external_marks) : null,
-    externalMaxMarks: r.external_max_marks ? parseFloat(r.external_max_marks) : null,
-    totalMarks: r.total_marks ? parseFloat(r.total_marks) : null,
+    marks: r.total_marks ? parseFloat(r.total_marks) : null,
     grade: r.grade,
     resultStatus: r.result_status,
     publicationStatus: r.publication_status,
@@ -412,10 +397,10 @@ export async function bulkSubmitResults(
   // Verify subject exists and get semester for denormalization
   const { rows: sub } = await query<{ id: string; semester: number }>(
     `SELECT s.id, scm.semester
-     FROM faculty_subject_assignments fsa
-     JOIN subject_curriculum_mappings scm ON scm.id = fsa.subject_curriculum_mapping_id
+     FROM teaching_assignments ta
+     JOIN subject_curriculum_mappings scm ON scm.id = ta.subject_curriculum_mapping_id
      JOIN subjects s ON s.id = scm.subject_id
-     WHERE fsa.faculty_id = $1 AND fsa.subject_id = $2 AND fsa.section = $3 AND fsa.deleted_at IS NULL`,
+     WHERE ta.faculty_id = $1 AND ta.subject_id = $2 AND ta.section = $3 AND ta.deleted_at IS NULL`,
     [facultyId, data.subjectId, data.section]
   );
   if (!sub[0]) throw AppError.notFound('Subject not found');
@@ -441,11 +426,9 @@ export async function bulkSubmitResults(
 
   await withTransaction(async (client) => {
     for (const record of data.records) {
-      const { totalMarks, grade, resultStatus, effectiveExternalMarks } = computeResult(
-        record.internalMarks,
-        record.isAbsent ? 0 : record.externalMarks,
-        data.internalMaxMarks,
-        data.externalMaxMarks,
+      const { totalMarks, grade, resultStatus } = computeResult(
+        record.marks,
+        data.maxMarks,
         record.isAbsent
       );
 
@@ -475,10 +458,10 @@ export async function bulkSubmitResults(
           data.examId ?? null,
           sub[0].semester,
           data.section,
-          record.internalMarks,
-          data.internalMaxMarks,
-          effectiveExternalMarks,
-          data.externalMaxMarks,
+          0, // internal_marks unified out
+          0, // internal_max_marks unified out
+          totalMarks, // external_marks serves as single marks column for backwards compatibility
+          data.maxMarks, // external_max_marks serves as maxMarks
           totalMarks,
           grade,
           resultStatus,
@@ -499,8 +482,7 @@ export async function bulkSubmitResults(
       resourceId: data.subjectId,
       changes: {
         section: data.section,
-        internalMaxMarks: data.internalMaxMarks,
-        externalMaxMarks: data.externalMaxMarks,
+        maxMarks: data.maxMarks,
         totalRecords: data.records.length,
         inserted,
         updated,
@@ -525,14 +507,11 @@ export async function updateResult(
   const { rows } = await query<{
     faculty_id: string;
     publication_status: PublicationStatus;
-    internal_marks: string;
-    internal_max_marks: string;
     external_marks: string;
     external_max_marks: string;
     result_status: ResultStatus;
   }>(
     `SELECT faculty_id, publication_status,
-            internal_marks, internal_max_marks,
             external_marks, external_max_marks,
             result_status
      FROM results WHERE id = $1 AND deleted_at IS NULL`,
@@ -558,37 +537,26 @@ export async function updateResult(
     }
   }
 
-  // Determine effective values after partial update
-  const newInternalMarks =
-    data.internalMarks !== undefined ? data.internalMarks : parseFloat(current.internal_marks);
-  const newExternalMarks =
-    data.externalMarks !== undefined ? data.externalMarks : parseFloat(current.external_marks);
-  const internalMaxMarks = parseFloat(current.internal_max_marks);
-  const externalMaxMarks = parseFloat(current.external_max_marks);
+  // Determine effective values after partial update (external_marks stores our unified marks)
+  const newMarks =
+    data.marks !== undefined ? data.marks : parseFloat(current.external_marks);
+  const maxMarks = parseFloat(current.external_max_marks);
 
   // isAbsent: explicit flag in data overrides, otherwise derive from current status
   const isAbsent =
     data.isAbsent !== undefined ? data.isAbsent : current.result_status === 'Absent';
 
   // Validate marks within max bounds
-  if (newInternalMarks > internalMaxMarks) {
+  if (!isAbsent && newMarks > maxMarks) {
     throw AppError.badRequest(
-      `Internal marks (${newInternalMarks}) exceed maximum (${internalMaxMarks})`,
-      'INTERNAL_MARKS_EXCEED_MAX'
-    );
-  }
-  if (!isAbsent && newExternalMarks > externalMaxMarks) {
-    throw AppError.badRequest(
-      `External marks (${newExternalMarks}) exceed maximum (${externalMaxMarks})`,
-      'EXTERNAL_MARKS_EXCEED_MAX'
+      `Marks (${newMarks}) exceed maximum (${maxMarks})`,
+      'MARKS_EXCEED_MAX'
     );
   }
 
-  const { totalMarks, grade, resultStatus, effectiveExternalMarks } = computeResult(
-    newInternalMarks,
-    newExternalMarks,
-    internalMaxMarks,
-    externalMaxMarks,
+  const { totalMarks, grade, resultStatus } = computeResult(
+    newMarks,
+    maxMarks,
     isAbsent
   );
 
@@ -600,8 +568,8 @@ export async function updateResult(
     updates.push(`${col} = $${params.length}`);
   };
 
-  pushUpdate('internal_marks',  newInternalMarks);
-  pushUpdate('external_marks',  effectiveExternalMarks);
+  pushUpdate('internal_marks',  0);
+  pushUpdate('external_marks',  totalMarks);
   pushUpdate('total_marks',     totalMarks);
   pushUpdate('grade',           grade);
   pushUpdate('result_status',   resultStatus);

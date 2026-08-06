@@ -27,10 +27,6 @@ export interface ResultDetail {
   examId: string | null;
   semester: number;
   section: string;
-  internalMarks: number;
-  internalMaxMarks: number;
-  externalMarks: number;
-  externalMaxMarks: number;
   totalMarks: number;
   grade: Grade;
   resultStatus: ResultStatus;
@@ -50,10 +46,6 @@ export interface ResultSummary {
   subjectName: string;
   semester: number;
   section: string;
-  internalMarks: number;
-  internalMaxMarks: number;
-  externalMarks: number;
-  externalMaxMarks: number;
   totalMarks: number;
   grade: Grade;
   resultStatus: ResultStatus;
@@ -77,11 +69,7 @@ export interface RosterResultEntry {
   fullName: string;
   section: string;
   resultId: string | null;
-  internalMarks: number | null;
-  internalMaxMarks: number | null;
-  externalMarks: number | null;
-  externalMaxMarks: number | null;
-  totalMarks: number | null;
+  marks: number | null;
   grade: Grade | null;
   resultStatus: ResultStatus | null;
   publicationStatus: PublicationStatus | null;
@@ -95,10 +83,6 @@ export interface StudentResultEntry {
   subjectCode: string;
   subjectName: string;
   semester: number;
-  internalMarks: number;
-  internalMaxMarks: number;
-  externalMarks: number;
-  externalMaxMarks: number;
   totalMarks: number;
   grade: Grade;
   resultStatus: ResultStatus;
@@ -117,14 +101,12 @@ export const bulkSubmitResultsSchema = z
     subjectId: z.string().uuid('Invalid subject ID'),
     examId: z.string().uuid('Invalid exam ID').optional(),
     section: z.string().min(1).max(10).trim().toUpperCase(),
-    internalMaxMarks: z.coerce.number().min(1, 'Internal max marks must be at least 1').max(200),
-    externalMaxMarks: z.coerce.number().min(1, 'External max marks must be at least 1').max(200),
+    maxMarks: z.coerce.number().min(1, 'Max marks must be at least 1').max(200),
     records: z
       .array(
         z.object({
           studentId: z.string().uuid('Invalid student ID'),
-          internalMarks: z.coerce.number().min(0, 'Internal marks cannot be negative'),
-          externalMarks: z.coerce.number().min(0, 'External marks cannot be negative'),
+          marks: z.coerce.number().min(0, 'Marks cannot be negative'),
           isAbsent: z.boolean().default(false),
           remarks: z.string().trim().max(500).optional(),
         })
@@ -132,12 +114,8 @@ export const bulkSubmitResultsSchema = z
       .min(1, 'At least one student record is required'),
   })
   .refine(
-    (d) => d.records.every((r) => r.internalMarks <= d.internalMaxMarks),
-    { message: 'Internal marks cannot exceed internal max marks for any student', path: ['records'] }
-  )
-  .refine(
-    (d) => d.records.every((r) => r.isAbsent || r.externalMarks <= d.externalMaxMarks),
-    { message: 'External marks cannot exceed external max marks for any student', path: ['records'] }
+    (d) => d.records.every((r) => r.isAbsent || r.marks <= d.maxMarks),
+    { message: 'Marks cannot exceed max marks for any student', path: ['records'] }
   );
 
 export type BulkSubmitResultsInput = z.infer<typeof bulkSubmitResultsSchema>;
@@ -152,14 +130,12 @@ export type BulkSubmitResultsInput = z.infer<typeof bulkSubmitResultsSchema>;
  */
 export const taskSubmitResultsSchema = z
   .object({
-    internalMaxMarks: z.coerce.number().min(1, 'Internal max marks must be at least 1').max(200),
-    externalMaxMarks: z.coerce.number().min(1, 'External max marks must be at least 1').max(200),
+    maxMarks: z.coerce.number().min(1, 'Max marks must be at least 1').max(200),
     records: z
       .array(
         z.object({
           studentId: z.string().uuid('Invalid student ID'),
-          internalMarks: z.coerce.number().min(0, 'Internal marks cannot be negative'),
-          externalMarks: z.coerce.number().min(0, 'External marks cannot be negative'),
+          marks: z.coerce.number().min(0, 'Marks cannot be negative'),
           isAbsent: z.boolean().default(false),
           remarks: z.string().trim().max(500).optional(),
         })
@@ -167,12 +143,8 @@ export const taskSubmitResultsSchema = z
       .min(1, 'At least one student record is required'),
   })
   .refine(
-    (d) => d.records.every((r) => r.internalMarks <= d.internalMaxMarks),
-    { message: 'Internal marks cannot exceed internal max marks for any student', path: ['records'] }
-  )
-  .refine(
-    (d) => d.records.every((r) => r.isAbsent || r.externalMarks <= d.externalMaxMarks),
-    { message: 'External marks cannot exceed external max marks for any student', path: ['records'] }
+    (d) => d.records.every((r) => r.isAbsent || r.marks <= d.maxMarks),
+    { message: 'Marks cannot exceed max marks for any student', path: ['records'] }
   );
 
 export type TaskSubmitResultsInput = z.infer<typeof taskSubmitResultsSchema>;
@@ -183,8 +155,7 @@ export type TaskSubmitResultsInput = z.infer<typeof taskSubmitResultsSchema>;
  */
 export const updateResultSchema = z
   .object({
-    internalMarks: z.coerce.number().min(0).optional(),
-    externalMarks: z.coerce.number().min(0).optional(),
+    marks: z.coerce.number().min(0).optional(),
     isAbsent: z.boolean().optional(),
     remarks: z.string().trim().max(500).nullable().optional(),
   })

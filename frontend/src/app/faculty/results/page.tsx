@@ -35,6 +35,7 @@ interface ResultEntryTask {
   subjectName: string;
   section: string;
   examType: string;
+  maximumMarks: number;
   status: "open" | "draft_saved" | "submitted_for_approval" | "published" | "closed";
   windowClosesAt: string | null;
 }
@@ -43,8 +44,7 @@ interface RosterRecord {
   studentId: string;
   rollNumber: string;
   fullName: string;
-  internalMarks: string;
-  externalMarks: string;
+  marks: string;
   isAbsent: boolean;
   remarks: string;
   publicationStatus: "Draft" | "Published" | null;
@@ -72,9 +72,6 @@ export default function FacultyResults() {
 
   const [tasks, setTasks] = useState<ResultEntryTask[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string>("");
-
-  const [internalMax, setInternalMax] = useState("30");
-  const [externalMax, setExternalMax] = useState("70");
 
   const [records, setRecords] = useState<RosterRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -129,21 +126,11 @@ export default function FacultyResults() {
       if (res.success && res.data?.roster) {
         const rosterData = res.data.roster;
 
-        const firstWithMax = rosterData.find((r: any) => r.internalMaxMarks !== null);
-        if (firstWithMax) {
-          setInternalMax(firstWithMax.internalMaxMarks.toString());
-          setExternalMax(firstWithMax.externalMaxMarks.toString());
-        } else {
-          setInternalMax("30");
-          setExternalMax("70");
-        }
-
         const initialRecords = rosterData.map((r: any) => ({
           studentId: r.studentId,
           rollNumber: r.rollNumber,
           fullName: r.fullName,
-          internalMarks: r.internalMarks !== null ? r.internalMarks.toString() : "0",
-          externalMarks: r.externalMarks !== null ? r.externalMarks.toString() : "0",
+          marks: r.marks !== null ? r.marks.toString() : "0",
           isAbsent: r.resultStatus === "Absent",
           remarks: r.remarks || "",
           publicationStatus: r.publicationStatus,
@@ -169,7 +156,7 @@ export default function FacultyResults() {
         if (r.studentId !== studentId) return r;
         const updated = { ...r, [field]: value };
         if (field === "isAbsent" && value === true) {
-          updated.externalMarks = "0";
+          updated.marks = "0";
         }
         return updated;
       })
@@ -177,30 +164,24 @@ export default function FacultyResults() {
   };
 
   const buildFormattedRecords = (): { records: any[]; errors: string[] } | null => {
-    const intMaxNum = parseFloat(internalMax);
-    const extMaxNum = parseFloat(externalMax);
+    if (!selectedTask) return null;
+    const maxNum = selectedTask.maximumMarks;
     const errors: string[] = [];
 
-    if (isNaN(intMaxNum) || intMaxNum <= 0) errors.push("Internal max marks must be a valid positive number.");
-    if (isNaN(extMaxNum) || extMaxNum <= 0) errors.push("External max marks must be a valid positive number.");
+    if (isNaN(maxNum) || maxNum <= 0) errors.push("Invalid maximum marks configuration for this exam.");
     if (errors.length > 0) return { records: [], errors };
 
     const formattedRecords = records.map((r) => {
-      const intMarksNum = parseFloat(r.internalMarks || "0");
-      const extMarksNum = parseFloat(r.externalMarks || "0");
-
-      if (isNaN(intMarksNum) || intMarksNum < 0) errors.push(`Invalid internal marks for ${r.fullName}`);
-      if (intMarksNum > intMaxNum) errors.push(`Internal marks for ${r.fullName} cannot exceed ${intMaxNum}`);
+      const marksNum = parseFloat(r.marks || "0");
 
       if (!r.isAbsent) {
-        if (isNaN(extMarksNum) || extMarksNum < 0) errors.push(`Invalid external marks for ${r.fullName}`);
-        if (extMarksNum > extMaxNum) errors.push(`External marks for ${r.fullName} cannot exceed ${extMaxNum}`);
+        if (isNaN(marksNum) || marksNum < 0) errors.push(`Invalid marks for ${r.fullName}`);
+        if (marksNum > maxNum) errors.push(`Marks for ${r.fullName} cannot exceed ${maxNum}`);
       }
 
       return {
         studentId: r.studentId,
-        internalMarks: intMarksNum,
-        externalMarks: r.isAbsent ? 0 : extMarksNum,
+        marks: r.isAbsent ? 0 : marksNum,
         isAbsent: r.isAbsent,
         remarks: r.remarks.trim() || undefined,
       };
@@ -223,8 +204,7 @@ export default function FacultyResults() {
     setSubmitting(true);
     try {
       const body = {
-        internalMaxMarks: parseFloat(internalMax),
-        externalMaxMarks: parseFloat(externalMax),
+        maxMarks: selectedTask.maximumMarks,
         records: built.records,
       };
 
@@ -379,36 +359,7 @@ export default function FacultyResults() {
                 </div>
               </div>
 
-              <div className="pt-3 border-t dark:border-neutral-900 border-border-subtle grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] uppercase font-bold dark:text-neutral-500 text-text-muted flex items-center gap-1">
-                    <Settings size={10} />
-                    <span>Internal Max Marks</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="200"
-                    value={internalMax}
-                    onChange={(e) => setInternalMax(e.target.value)}
-                    className="mt-1.5 w-24 dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded px-2.5 py-1.5 text-xs dark:text-white text-text-primary font-mono focus:outline-none focus:border-blue-600 transition"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase font-bold dark:text-neutral-500 text-text-muted flex items-center gap-1">
-                    <Settings size={10} />
-                    <span>External Max Marks</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="200"
-                    value={externalMax}
-                    onChange={(e) => setExternalMax(e.target.value)}
-                    className="mt-1.5 w-24 dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded px-2.5 py-1.5 text-xs dark:text-white text-text-primary font-mono focus:outline-none focus:border-blue-600 transition"
-                  />
-                </div>
-              </div>
+              {/* Removed internal/external manual max marks editors */}
             </div>
 
             <form onSubmit={handleSaveDraft} className="space-y-4">
@@ -456,34 +407,18 @@ export default function FacultyResults() {
 
                         <div className="flex-1 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end sm:items-center">
                           <div>
-                            <label className="text-[9px] dark:text-neutral-500 text-text-muted uppercase font-bold block sm:hidden">Internal Marks</label>
-                            <div className="flex items-center gap-1.5 mt-1 sm:mt-0">
-                              <input
-                                type="number"
-                                disabled={isPublished}
-                                value={student.internalMarks}
-                                min="0"
-                                max={internalMax}
-                                onChange={(e) => handleRecordChange(student.studentId, "internalMarks", e.target.value)}
-                                className="w-16 dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle dark:disabled:bg-neutral-900 disabled:bg-neutral-100 dark:disabled:text-neutral-600 disabled:text-neutral-400 rounded px-2 py-1 text-xs dark:text-white text-text-primary font-mono text-center focus:outline-none focus:border-blue-600 transition"
-                              />
-                              <span className="text-[10px] dark:text-neutral-600 text-text-muted">/ {internalMax}</span>
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="text-[9px] dark:text-neutral-500 text-text-muted uppercase font-bold block sm:hidden">External Marks</label>
+                            <label className="text-[9px] dark:text-neutral-500 text-text-muted uppercase font-bold block sm:hidden">Marks</label>
                             <div className="flex items-center gap-1.5 mt-1 sm:mt-0">
                               <input
                                 type="number"
                                 disabled={isPublished || student.isAbsent}
-                                value={student.externalMarks}
+                                value={student.marks}
                                 min="0"
-                                max={externalMax}
-                                onChange={(e) => handleRecordChange(student.studentId, "externalMarks", e.target.value)}
-                                className="w-16 dark:bg-neutral-955 bg-background border dark:border-neutral-855 border-border-subtle dark:disabled:bg-neutral-900 disabled:bg-neutral-100 dark:disabled:text-neutral-600 disabled:text-neutral-400 rounded px-2 py-1 text-xs dark:text-white text-text-primary font-mono text-center focus:outline-none focus:border-blue-600 transition"
+                                max={selectedTask?.maximumMarks}
+                                onChange={(e) => handleRecordChange(student.studentId, "marks", e.target.value)}
+                                className="w-16 dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle dark:disabled:bg-neutral-900 disabled:bg-neutral-100 dark:disabled:text-neutral-600 disabled:text-neutral-400 rounded px-2 py-1 text-xs dark:text-white text-text-primary font-mono text-center focus:outline-none focus:border-blue-600 transition"
                               />
-                              <span className="text-[10px] dark:text-neutral-600 text-text-muted">/ {externalMax}</span>
+                              <span className="text-[10px] dark:text-neutral-600 text-text-muted">/ {selectedTask?.maximumMarks}</span>
                             </div>
                           </div>
 

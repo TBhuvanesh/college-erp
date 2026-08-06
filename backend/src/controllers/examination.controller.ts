@@ -106,6 +106,15 @@ export const updateExam = asyncHandler(async (req: Request, res: Response) => {
 
 // ── Admin + Faculty: update status ───────────────────────────────────────────
 
+export const completeExamination = asyncHandler(async (req: Request, res: Response) => {
+  const detail = await examService.completeExamination(
+    req.params.id,
+    req.user!.id,
+    req.user!.role
+  );
+  sendSuccess(res, detail, 'Examination manually completed successfully. Result entry tasks generated.');
+});
+
 export const updateExamStatus = asyncHandler(async (req: Request, res: Response) => {
   const { status } = req.body as UpdateExamStatusInput;
   const exam = await examService.updateExamStatus(
@@ -157,6 +166,11 @@ export const configureSubjectSchedule = asyncHandler(async (req: Request, res: R
 export const publishSession = asyncHandler(async (req: Request, res: Response) => {
   const session = await examService.publishExaminationSession(req.params.id, req.user!.id);
   sendSuccess(res, { session }, 'Examination Session published successfully');
+});
+
+export const publishSessionResults = asyncHandler(async (req: Request, res: Response) => {
+  const session = await examService.publishExaminationSessionResults(req.params.id, req.user!.id);
+  sendSuccess(res, { session }, 'Examination Session results published successfully');
 });
 
 export const deleteSession = asyncHandler(async (req: Request, res: Response) => {

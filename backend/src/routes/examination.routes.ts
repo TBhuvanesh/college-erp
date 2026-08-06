@@ -98,6 +98,13 @@ router.post(
   examController.publishSession
 );
 
+router.post(
+  '/sessions/:id/publish-results',
+  authenticate,
+  requireRole('admin'),
+  examController.publishSessionResults
+);
+
 router.delete(
   '/sessions/:id',
   authenticate,
@@ -132,6 +139,13 @@ router.patch(
   requireRole('admin', 'faculty'),
   validate({ ...uuidParam, body: updateExamStatusSchema }),
   examController.updateExamStatus
+);
+
+router.post(
+  '/:id/complete',
+  authenticate,
+  requireRole('admin'),
+  examController.completeExamination
 );
 
 // Admin only: soft-delete

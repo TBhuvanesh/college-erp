@@ -17,6 +17,7 @@ export interface ResultEntryTask {
   subjectName: string;
   section: string;
   examType: string;
+  maximumMarks: number;
   status: ResultEntryTaskStatus;
   windowOpensAt: Date;
   windowClosesAt: Date | null;

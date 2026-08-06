@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
-import { AcademicSubNav } from "@/components/Analytics/AcademicSubNav";
+
 import { FilterPanel, FilterState } from "@/components/Analytics/FilterPanel";
 import { ExportDialog } from "@/components/Analytics/ExportDialog";
 import {
@@ -86,7 +86,7 @@ export default function StudentReportCenter() {
 
   return (
     <div className="space-y-6 pb-12">
-      <AcademicSubNav />
+
 
       <div className="max-w-7xl mx-auto px-4 space-y-6 text-left">
         {/* Header Controls */}

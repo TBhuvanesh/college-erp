@@ -215,6 +215,12 @@ export interface SubjectScheduleCard {
     instructions?: string;
     examStatus?: ExamStatus;
   }>;
+  resultTasks?: Array<{
+    taskId: string;
+    section: string;
+    facultyName: string;
+    status: 'open' | 'draft_saved' | 'submitted_for_approval' | 'verified' | 'published' | 'closed';
+  }>;
 }
 
 export interface ExaminationSessionSummary {
@@ -233,6 +239,11 @@ export interface ExaminationSessionSummary {
   status: SessionStatus;
   scheduledSubjectCount: number;
   totalSubjectCount: number;
+  resultStats?: {
+    requiredTasks: number;
+    submittedTasks: number;
+    publishedTasks: number;
+  };
   createdAt: Date;
   updatedAt: Date;
 }

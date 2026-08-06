@@ -81,121 +81,65 @@ const DETAIL_JOINS = `
 
 export function resolveExamStatus(r: {
   status: string;
-  exam_date?: string | Date;
-  examDate?: string | Date;
-  start_time?: string;
-  startTime?: string;
-  end_time?: string;
-  endTime?: string;
 }): ExamStatus {
-  if (r.status === 'Cancelled') {
-    return 'Cancelled';
-  }
-  if (r.status === 'Archived') {
-    return 'Archived';
-  }
-
-  const examDate = r.exam_date || r.examDate;
-  const startTime = r.start_time || r.startTime;
-  const endTime = r.end_time || r.endTime;
-
-  if (!examDate || !startTime || !endTime) {
-    return r.status as ExamStatus;
-  }
-
-  const now = new Date();
-  
-  let dateStr = '';
-  if (typeof examDate === 'string') {
-    dateStr = examDate.split('T')[0];
-  } else if (examDate instanceof Date) {
-    dateStr = examDate.toISOString().split('T')[0];
-  } else {
-    return r.status as ExamStatus;
-  }
-
-  const startDt = new Date(`${dateStr}T${startTime}:00`);
-  const endDt = new Date(`${dateStr}T${endTime}:00`);
-
-  if (now < startDt) {
-    return 'Scheduled';
-  } else if (now >= startDt && now < endDt) {
-    return 'Ongoing';
-  } else {
-    return 'Completed';
-  }
+  return r.status as ExamStatus;
 }
 
 export async function ensureCompletedExamsHaveTasks(): Promise<void> {
-  const { rows: completedExams } = await query<{
+  const { rows: missingTasks } = await query<{
     id: string;
     subject_id: string;
     semester: number;
+    teaching_assignment_id: string;
     section: string;
     subject_name: string;
     exam_type: string;
     academic_year: string;
     regulation: string;
     department_id: string;
+    faculty_id: string;
+    faculty_user_id: string;
   }>(
-    `SELECT e.id, e.subject_id, e.semester, e.section, s.name AS subject_name, e.exam_type,
-            es.academic_year, es.regulation, es.department_id
+    `SELECT e.id, e.subject_id, e.semester, ta.id AS teaching_assignment_id, ta.section,
+            s.name AS subject_name, e.exam_type, es.academic_year, es.regulation,
+            es.department_id, ta.faculty_id, f.user_id AS faculty_user_id
      FROM exams e
-     JOIN subjects s ON s.id = e.subject_id
      JOIN examination_sessions es ON es.id = e.session_id
-     LEFT JOIN result_entry_tasks ret ON ret.exam_id = e.id AND ret.deleted_at IS NULL
+     JOIN subjects s ON s.id = e.subject_id
+     JOIN teaching_assignments ta ON ta.subject_id = e.subject_id
+          AND ta.section = ANY(string_to_array(replace(e.section, ' ', ''), ','))
+          AND ta.deleted_at IS NULL
+     JOIN faculty f ON f.id = ta.faculty_id
+     LEFT JOIN result_entry_tasks ret ON ret.exam_id = e.id
+          AND ret.teaching_assignment_id = ta.id
+          AND ret.deleted_at IS NULL
      WHERE e.deleted_at IS NULL
-       AND e.status != 'Cancelled'
+       AND e.status = 'Completed'
        AND es.status = 'Published'
-       AND (e.exam_date + e.end_time) <= NOW()
-       AND ret.id IS NULL
-       AND EXISTS (
-         SELECT 1 FROM teaching_assignments ta
-         WHERE ta.subject_id = e.subject_id
-           AND ta.deleted_at IS NULL
-           AND ta.section = ANY(string_to_array(e.section, ','))
-       )`
+       AND ret.id IS NULL`
   );
 
-  for (const exam of completedExams) {
-    const sections = exam.section
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    if (sections.length === 0) continue;
-
-    const { rows: assignments } = await query<{
-      teaching_assignment_id: string;
-      faculty_id: string;
-      section: string;
-      faculty_user_id: string;
-      department_id: string;
-    }>(
-      `SELECT ta.id AS teaching_assignment_id, ta.faculty_id, ta.section,
-              f.user_id AS faculty_user_id, f.department_id
-       FROM teaching_assignments ta
-       JOIN faculty f ON f.id = ta.faculty_id
-       WHERE ta.subject_id = $1
-         AND ta.section = ANY($2::varchar[])
-         AND ta.deleted_at IS NULL`,
-      [exam.subject_id, sections]
+  for (const task of missingTasks) {
+    // 1. Directly create the Result Entry Task in the DB
+    await query(
+      `INSERT INTO result_entry_tasks (exam_id, teaching_assignment_id, faculty_id)
+       VALUES ($1, $2, $3)`,
+      [task.id, task.teaching_assignment_id, task.faculty_id]
     );
 
-    for (const ta of assignments) {
-      await emitWorkflowEvent('exam.completed', 'SYSTEM', {
-        departmentId: ta.department_id,
-        semester: exam.semester,
-        title: 'Result Entry Window Open',
-        message: `Marks entry is now open for ${exam.subject_name} (Section ${ta.section}).`,
-        notificationType: 'Academic Alert',
-        sourceId: exam.id,
-        examId: exam.id,
-        teachingAssignmentId: ta.teaching_assignment_id,
-        facultyId: ta.faculty_id,
-        facultyUserId: ta.faculty_user_id,
-      });
-    }
+    // 2. Fire the workflow event strictly for academic alerts/notifications, not data creation
+    await emitWorkflowEvent('exam.completed', 'SYSTEM', {
+      departmentId: task.department_id,
+      semester: task.semester,
+      title: 'Result Entry Window Open',
+      message: `Marks entry is now open for ${task.subject_name} (Section ${task.section}).`,
+      notificationType: 'Academic Alert',
+      sourceId: task.id,
+      examId: task.id,
+      teachingAssignmentId: task.teaching_assignment_id,
+      facultyId: task.faculty_id,
+      facultyUserId: task.faculty_user_id,
+    });
   }
 }
 
@@ -685,19 +629,14 @@ export async function updateExamStatus(
     if (userRole !== 'admin') {
       throw AppError.forbidden('Only administrators can cancel examinations');
     }
+    
     if (currentStatus === 'Cancelled') {
       throw AppError.badRequest('Examination is already cancelled');
     }
 
     // Cancel the exam and soft-delete any created result entry tasks
-    await query(
-      `UPDATE exams SET status = 'Cancelled', updated_at = NOW() WHERE id = $1`,
-      [id]
-    );
-    await query(
-      `UPDATE result_entry_tasks SET deleted_at = NOW() WHERE exam_id = $1 AND deleted_at IS NULL`,
-      [id]
-    );
+    await query(`UPDATE exams SET status = 'Cancelled', updated_at = NOW() WHERE id = $1`, [id]);
+    await query(`UPDATE result_entry_tasks SET deleted_at = NOW() WHERE exam_id = $1 AND deleted_at IS NULL`, [id]);
 
     await auditLog({
       actorId: userId,
@@ -711,9 +650,50 @@ export async function updateExamStatus(
   }
 
   throw AppError.badRequest(
-    'Manual status transitions are disabled. Examination status transitions automatically based on server time.',
+    'Manual status transitions via this endpoint are disabled. Use the /complete endpoint instead.',
     'MANUAL_TRANSITION_DISABLED'
   );
+}
+
+/**
+ * Manually marks an examination as completed and immediately triggers
+ * the generation of faculty result entry tasks.
+ */
+export async function completeExamination(
+  id: string,
+  userId: string,
+  userRole: Role
+): Promise<ExamDetail> {
+  if (userRole !== 'admin') {
+    throw AppError.forbidden('Only administrators can manually complete examinations');
+  }
+
+  const { rows } = await query<{ status: string }>(
+    `SELECT status FROM exams WHERE id = $1 AND deleted_at IS NULL`,
+    [id]
+  );
+  if (!rows[0]) throw AppError.notFound('Examination not found');
+
+  if (rows[0].status === 'Completed') {
+    throw AppError.badRequest('Examination is already marked as completed');
+  }
+  if (rows[0].status === 'Cancelled') {
+    throw AppError.badRequest('Cannot complete a cancelled examination');
+  }
+
+  await query(`UPDATE exams SET status = 'Completed', updated_at = NOW() WHERE id = $1`, [id]);
+
+  // Immediately generate tasks for this exam (the function sweeps for all 'Completed' status exams missing tasks)
+  await ensureCompletedExamsHaveTasks();
+
+  await auditLog({
+    actorId: userId,
+    action: 'COMPLETE_EXAMINATION',
+    resource: 'exams',
+    resourceId: id,
+  });
+
+  return await getExamById(id);
 }
 
 /**
@@ -901,6 +881,7 @@ export async function getExaminationSessionById(
           maximumMarks: Number(e.maximum_marks),
           venue: e.venue || undefined,
           instructions: e.instructions || undefined,
+          examStatus: e.status as ExamStatus
         })),
       });
     } else {
@@ -918,12 +899,50 @@ export async function getExaminationSessionById(
         maximumMarks: first.maximum_marks ? Number(first.maximum_marks) : 50,
         venue: first.venue || undefined,
         instructions: first.instructions || undefined,
+        examStatus: first.id ? (first.status as ExamStatus) : undefined,
       });
     }
   }
 
   const subjectsList = Array.from(subjectsMap.values());
   const scheduledCount = subjectsList.filter((s) => s.status === 'Scheduled').length;
+
+  // Fetch result entry tasks for all exams in this session
+  const { rows: taskRows } = await executeQuery<{
+    id: string;
+    exam_id: string;
+    section: string;
+    status: string;
+    faculty_name: string;
+  }>(
+    `SELECT ret.id, ret.exam_id, ret.status, ta.section, u.full_name AS faculty_name
+     FROM result_entry_tasks ret
+     JOIN teaching_assignments ta ON ta.id = ret.teaching_assignment_id
+     JOIN faculty f ON f.id = ret.faculty_id
+     JOIN users u ON u.id = f.user_id
+     JOIN exams e ON e.id = ret.exam_id
+     WHERE e.session_id = $1 AND ret.deleted_at IS NULL
+     ORDER BY ta.section ASC`,
+    [sessionId]
+  );
+
+  for (const sub of subjectsList) {
+    let examIds: string[] = [];
+    if (sub.sectionSchedules) {
+      examIds = sub.sectionSchedules.map((s) => s.examId);
+    } else if (sub.examId) {
+      examIds = [sub.examId];
+    }
+    
+    sub.resultTasks = taskRows
+      .filter((t) => examIds.includes(t.exam_id))
+      .map((t) => ({
+        taskId: t.id,
+        section: t.section,
+        facultyName: t.faculty_name,
+        status: t.status as any,
+      }));
+  }
 
   // Conflict / Warning Calculations
   const warnings: string[] = [];
@@ -1008,12 +1027,31 @@ export async function listExaminationSessions(filters: {
 
   params.push(limit, offset);
 
-  const { rows } = await query<any>(
+      const { rows } = await query<any>(
     `SELECT es.id, es.name, es.academic_year, es.regulation, es.department_id,
             d.name AS department_name, d.code AS department_code,
             es.year, es.semester, es.exam_type, es.sections, es.subject_ids, es.status,
             es.created_at, es.updated_at,
             (SELECT COUNT(*) FROM exams e WHERE e.session_id = es.id AND e.exam_date IS NOT NULL AND e.deleted_at IS NULL)::text AS scheduled_count,
+            (SELECT COUNT(ta.id) 
+             FROM exams e 
+             JOIN teaching_assignments ta ON ta.subject_id = e.subject_id 
+                  AND ta.section = ANY(string_to_array(e.section, ',')) 
+                  AND ta.deleted_at IS NULL
+             WHERE e.session_id = es.id AND e.deleted_at IS NULL
+            )::text AS required_tasks,
+            (SELECT COUNT(ret.id) 
+             FROM exams e 
+             JOIN result_entry_tasks ret ON ret.exam_id = e.id AND ret.deleted_at IS NULL
+             WHERE e.session_id = es.id AND e.deleted_at IS NULL 
+               AND ret.status IN ('submitted_for_approval', 'verified', 'published')
+            )::text AS submitted_tasks,
+            (SELECT COUNT(ret.id) 
+             FROM exams e 
+             JOIN result_entry_tasks ret ON ret.exam_id = e.id AND ret.deleted_at IS NULL
+             WHERE e.session_id = es.id AND e.deleted_at IS NULL 
+               AND ret.status = 'published'
+            )::text AS published_tasks,
             COUNT(*) OVER() AS total_count
      FROM examination_sessions es
      JOIN departments d ON d.id = es.department_id
@@ -1039,10 +1077,15 @@ export async function listExaminationSessions(filters: {
     sections: r.sections,
     subjectIds: r.subject_ids,
     status: r.status,
-    scheduledSubjectCount: Number(r.scheduled_count),
-    totalSubjectCount: r.subject_ids.length,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
+      scheduledSubjectCount: parseInt(r.scheduled_count || '0', 10),
+      totalSubjectCount: r.subject_ids?.length || 0,
+      resultStats: {
+        requiredTasks: parseInt(r.required_tasks || '0', 10),
+        submittedTasks: parseInt(r.submitted_tasks || '0', 10),
+        publishedTasks: parseInt(r.published_tasks || '0', 10),
+      },
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
   }));
 
   return {
@@ -1279,6 +1322,72 @@ export async function publishExaminationSession(sessionId: string, userId: strin
       resource: 'examination_sessions',
       resourceId: sessionId,
       changes: { status: 'Published', notificationCount: students.length + faculty.length },
+    });
+
+    return await getExaminationSessionById(sessionId, client);
+  });
+}
+
+export async function publishExaminationSessionResults(sessionId: string, userId: string): Promise<ExaminationSessionDetail> {
+  return await withTransaction(async (client) => {
+    // 1. Verify session exists
+    const sessionRows = await client.query(
+      `SELECT id FROM examination_sessions WHERE id = $1 AND deleted_at IS NULL`,
+      [sessionId]
+    );
+    if (sessionRows.rowCount === 0) throw AppError.notFound('Examination session not found');
+
+    // 2. Check if all required tasks are submitted
+    const { rows: reqCountRow } = await client.query<any>(
+      `SELECT COUNT(ta.id) AS count
+       FROM exams e 
+       JOIN teaching_assignments ta ON ta.subject_id = e.subject_id 
+            AND ta.section = ANY(string_to_array(e.section, ',')) 
+            AND ta.deleted_at IS NULL
+       WHERE e.session_id = $1 AND e.deleted_at IS NULL`,
+      [sessionId]
+    );
+    const requiredTasks = parseInt(reqCountRow[0].count, 10);
+
+    const { rows: subCountRow } = await client.query<any>(
+      `SELECT COUNT(ret.id) AS count
+       FROM exams e 
+       JOIN result_entry_tasks ret ON ret.exam_id = e.id AND ret.deleted_at IS NULL
+       WHERE e.session_id = $1 AND e.deleted_at IS NULL 
+         AND ret.status IN ('submitted_for_approval', 'verified', 'published')`,
+      [sessionId]
+    );
+    const submittedTasks = parseInt(subCountRow[0].count, 10);
+
+    if (requiredTasks > 0 && submittedTasks < requiredTasks) {
+      throw AppError.badRequest('Cannot publish results. Not all required result entry tasks have been submitted.');
+    }
+
+    // 3. Update all result_entry_tasks to published
+    await client.query(
+      `UPDATE result_entry_tasks ret
+       SET status = 'published', updated_at = NOW()
+       FROM exams e
+       WHERE e.id = ret.exam_id AND e.session_id = $1 AND ret.deleted_at IS NULL`,
+      [sessionId]
+    );
+
+    // 4. Update all results to Published
+    await client.query(
+      `UPDATE results r
+       SET publication_status = 'Published', published_at = NOW(), updated_at = NOW()
+       FROM exams e
+       WHERE e.id = r.exam_id AND e.session_id = $1 AND r.publication_status = 'Draft' AND r.deleted_at IS NULL`,
+      [sessionId]
+    );
+
+    // 5. Audit log
+    await auditLog({
+      actorId: userId,
+      action: 'PUBLISH_SESSION_RESULTS',
+      resource: 'examination_sessions',
+      resourceId: sessionId,
+      changes: { status: 'Results Published' },
     });
 
     return await getExaminationSessionById(sessionId, client);

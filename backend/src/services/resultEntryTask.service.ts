@@ -32,7 +32,7 @@ const COLS = `
   ret.id, ret.exam_id,
   ret.teaching_assignment_id, ret.faculty_id,
   ta.subject_id, s.code AS subject_code, s.name AS subject_name, ta.section,
-  e.exam_type, ret.status, ret.window_opens_at, ret.window_closes_at,
+  e.exam_type, e.maximum_marks, ret.status, ret.window_opens_at, ret.window_closes_at,
   ret.submitted_at, ret.published_at, ret.created_at
 `;
 
@@ -53,6 +53,7 @@ function toTask(r: any): ResultEntryTask {
     subjectName: r.subject_name,
     section: r.section,
     examType: r.exam_type,
+    maximumMarks: parseFloat(r.maximum_marks),
     status: r.status,
     windowOpensAt: r.window_opens_at,
     windowClosesAt: r.window_closes_at,

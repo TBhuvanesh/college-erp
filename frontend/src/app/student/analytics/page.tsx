@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
-import { AcademicSubNav } from "@/components/Analytics/AcademicSubNav";
+
 import { InsightCards } from "@/components/Analytics/InsightCards";
 import {
   AreaChartComponent,
@@ -136,7 +136,7 @@ export default function StudentAnalyticsPage() {
 
   return (
     <div className="space-y-6 pb-12">
-      <AcademicSubNav />
+
 
       {/* Main Container - Mobile First Column layout, wrapping cleanly */}
       <div className="max-w-7xl mx-auto px-4 space-y-5 text-left">

@@ -17,7 +17,7 @@ import {
   ListTodo
 } from "lucide-react";
 
-import { AcademicSubNav } from "@/components/Analytics/AcademicSubNav";
+
 import { AttendanceRadialChart, CGPATrendChart } from "@/components/Dashboard/DashboardCharts";
 
 // Import new UXL components
@@ -373,7 +373,7 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-4 pb-12 w-full max-w-7xl mx-auto">
-      <AcademicSubNav />
+
 
       {/* Hero Banner: Today's Focus */}
       <TodayFocus 
