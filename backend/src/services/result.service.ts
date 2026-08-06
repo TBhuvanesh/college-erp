@@ -459,8 +459,8 @@ export async function bulkSubmitResults(
           sub[0].semester,
           data.section,
           0, // internal_marks unified out
-          0, // internal_max_marks unified out
-          totalMarks, // external_marks serves as single marks column for backwards compatibility
+          1, // internal_max_marks bypassed check constraint (> 0)
+          totalMarks, // external_marks serves as single marks column
           data.maxMarks, // external_max_marks serves as maxMarks
           totalMarks,
           grade,
@@ -670,8 +670,7 @@ export async function saveDraftForTask(
       subjectId: task.subjectId,
       section: task.section,
       examId: task.examId,
-      internalMaxMarks: data.internalMaxMarks,
-      externalMaxMarks: data.externalMaxMarks,
+      maxMarks: data.maxMarks,
       records: data.records,
     },
     userId

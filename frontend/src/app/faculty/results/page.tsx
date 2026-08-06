@@ -190,8 +190,8 @@ export default function FacultyResults() {
     return { records: formattedRecords, errors };
   };
 
-  const handleSaveDraft = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePublish = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!selectedTask) return;
 
     setError(null);
@@ -201,41 +201,28 @@ export default function FacultyResults() {
       return;
     }
 
-    setSubmitting(true);
+    setPublishing(true);
     try {
       const body = {
         maxMarks: selectedTask.maximumMarks,
         records: built.records,
       };
 
-      const res = await apiFetch(
+      // Step 1: Save the data
+      const draftRes = await apiFetch(
         `/results/tasks/${selectedTask.id}/draft`,
         { method: "POST", body: JSON.stringify(body) },
         accessToken
       );
 
-      if (res.success) {
-        triggerToast("Marks saved as draft.");
-        fetchRoster();
-        fetchTasks();
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to save draft.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handlePublish = async () => {
-    if (!selectedTask) return;
-    setError(null);
-    setPublishing(true);
-    try {
-      const res = await apiFetch(`/results/tasks/${selectedTask.id}/publish`, { method: "POST" }, accessToken);
-      if (res.success) {
-        triggerToast("Results published to students.");
-        fetchRoster();
-        fetchTasks();
+      if (draftRes.success) {
+        // Step 2: Immediately publish
+        const pubRes = await apiFetch(`/results/tasks/${selectedTask.id}/publish`, { method: "POST" }, accessToken);
+        if (pubRes.success) {
+          triggerToast("Results published to students.");
+          fetchRoster();
+          fetchTasks();
+        }
       }
     } catch (err: any) {
       setError(err.message || "Failed to publish results.");
@@ -362,7 +349,7 @@ export default function FacultyResults() {
               {/* Removed internal/external manual max marks editors */}
             </div>
 
-            <form onSubmit={handleSaveDraft} className="space-y-4">
+            <form onSubmit={handlePublish} className="space-y-4">
               <div className="space-y-2">
                 {loadingRoster ? (
                   <div className="text-center py-16 text-neutral-500">
@@ -370,7 +357,7 @@ export default function FacultyResults() {
                     <span className="font-mono text-xs">Pulling class roster from database...</span>
                   </div>
                 ) : filteredRecords.length > 0 ? (
-                  filteredRecords.map((student) => {
+                  filteredRecords.map((student, index) => {
                     const isPublished = student.publicationStatus === "Published";
                     return (
                       <div
@@ -410,12 +397,23 @@ export default function FacultyResults() {
                             <label className="text-[9px] dark:text-neutral-500 text-text-muted uppercase font-bold block sm:hidden">Marks</label>
                             <div className="flex items-center gap-1.5 mt-1 sm:mt-0">
                               <input
+                                id={`marks-input-${index}`}
                                 type="number"
                                 disabled={isPublished || student.isAbsent}
                                 value={student.marks}
                                 min="0"
                                 max={selectedTask?.maximumMarks}
                                 onChange={(e) => handleRecordChange(student.studentId, "marks", e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    const nextInput = document.getElementById(`marks-input-${index + 1}`);
+                                    if (nextInput) {
+                                      nextInput.focus();
+                                      (nextInput as HTMLInputElement).select();
+                                    }
+                                  }
+                                }}
                                 className="w-16 dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle dark:disabled:bg-neutral-900 disabled:bg-neutral-100 dark:disabled:text-neutral-600 disabled:text-neutral-400 rounded px-2 py-1 text-xs dark:text-white text-text-primary font-mono text-center focus:outline-none focus:border-blue-600 transition"
                               />
                               <span className="text-[10px] dark:text-neutral-600 text-text-muted">/ {selectedTask?.maximumMarks}</span>
@@ -480,20 +478,11 @@ export default function FacultyResults() {
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                       <button
                         type="submit"
-                        disabled={submitting}
-                        className="flex-1 sm:flex-none px-6 py-2.5 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-bold text-xs shadow-lg shadow-blue-600/25 cursor-pointer disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
-                      >
-                        {submitting ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                        <span>Save Draft</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handlePublish}
-                        disabled={publishing || stats.draft === 0}
+                        disabled={publishing}
                         className="flex-1 sm:flex-none px-6 py-2.5 rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold text-xs shadow-lg shadow-emerald-600/25 cursor-pointer disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
                       >
                         {publishing ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
-                        <span>Publish</span>
+                        <span>Publish Results</span>
                       </button>
                     </div>
                   )}
@@ -512,8 +501,7 @@ export default function FacultyResults() {
                 <li>A task opens only after the exam is marked <strong className="dark:text-white text-text-primary">Completed</strong> and your Teaching Assignment is resolved.</li>
                 <li>You can only enter marks for tasks assigned to you — nothing here was manually picked.</li>
                 <li>
-                  <Check size={10} className="inline text-emerald-400" /> Save Draft as many times as needed; Publish
-                  is final and updates the student dashboard immediately.
+                  <Check size={10} className="inline text-emerald-400" /> Once you click Publish, the results are locked and update the student dashboard immediately.
                 </li>
               </ul>
             </div>
