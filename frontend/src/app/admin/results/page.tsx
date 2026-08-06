@@ -32,10 +32,6 @@ interface ResultSummary {
   subjectName: string;
   semester: number;
   section: string;
-  internalMarks: number;
-  internalMaxMarks: number;
-  externalMarks: number;
-  externalMaxMarks: number;
   totalMarks: number;
   grade: string;
   resultStatus: "Pass" | "Fail" | "Absent";
@@ -94,8 +90,7 @@ export default function AdminResults() {
   // Edit Override Drawer / Modal State
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingResult, setEditingResult] = useState<ResultSummary | null>(null);
-  const [overrideInternal, setOverrideInternal] = useState("0");
-  const [overrideExternal, setOverrideExternal] = useState("0");
+  const [overrideMarks, setOverrideMarks] = useState("0");
   const [overrideAbsent, setOverrideAbsent] = useState(false);
   const [overrideRemarks, setOverrideRemarks] = useState("");
   const [overrideError, setOverrideError] = useState<string | null>(null);
@@ -262,8 +257,7 @@ export default function AdminResults() {
   // Open Override dialog
   const openOverrideModal = async (result: ResultSummary) => {
     setEditingResult(result);
-    setOverrideInternal(result.internalMarks.toString());
-    setOverrideExternal(result.externalMarks.toString());
+    setOverrideMarks(result.totalMarks.toString());
     setOverrideAbsent(result.resultStatus === "Absent");
     setOverrideRemarks("");
     setOverrideError(null);
@@ -290,18 +284,11 @@ export default function AdminResults() {
     setOverrideError(null);
     setSubmittingOverride(true);
 
-    const intVal = parseFloat(overrideInternal);
-    const extVal = parseFloat(overrideExternal);
-
-    if (isNaN(intVal) || intVal < 0 || intVal > editingResult.internalMaxMarks) {
-      setOverrideError(`Internal marks must be between 0 and ${editingResult.internalMaxMarks}.`);
-      setSubmittingOverride(false);
-      return;
-    }
+    const mVal = parseFloat(overrideMarks);
 
     if (!overrideAbsent) {
-      if (isNaN(extVal) || extVal < 0 || extVal > editingResult.externalMaxMarks) {
-        setOverrideError(`External marks must be between 0 and ${editingResult.externalMaxMarks}.`);
+      if (isNaN(mVal) || mVal < 0) {
+        setOverrideError(`Marks must be a valid positive number.`);
         setSubmittingOverride(false);
         return;
       }
@@ -309,8 +296,7 @@ export default function AdminResults() {
 
     try {
       const body = {
-        internalMarks: intVal,
-        externalMarks: overrideAbsent ? 0 : extVal,
+        marks: overrideAbsent ? 0 : mVal,
         isAbsent: overrideAbsent,
         remarks: overrideRemarks.trim() || null
       };
@@ -456,6 +442,7 @@ export default function AdminResults() {
               : "dark:bg-neutral-850 bg-neutral-100 dark:text-neutral-600 text-text-muted dark:border-neutral-800 border-border-subtle"
           }`}>
             <Clock size={18} />
+          </div>
         </div>
       </div>
       {/* Verification Queue Section */}
@@ -686,18 +673,11 @@ export default function AdminResults() {
 
                             {/* Score info */}
                             <td className="px-4 py-3.5 text-center font-mono">
-                              <div>
-                                <span className="font-semibold dark:text-white text-text-primary">I: {r.internalMarks}</span>
-                                <span className="text-[10px] dark:text-neutral-600 text-text-muted">/{r.internalMaxMarks}</span>
-                              </div>
-                              <div className="mt-0.5 dark:text-neutral-400 text-text-secondary">
+                              <div className="dark:text-white text-text-primary font-semibold">
                                 {isAbsent ? (
                                   <span className="text-amber-500 italic text-[10px]">Absent</span>
                                 ) : (
-                                  <>
-                                    <span>E: {r.externalMarks}</span>
-                                    <span className="text-[10px] dark:text-neutral-600 text-text-muted">/{r.externalMaxMarks}</span>
-                                  </>
+                                  <span>{r.totalMarks} Marks</span>
                                 )}
                               </div>
                             </td>
@@ -889,41 +869,21 @@ export default function AdminResults() {
             )}
 
             <form onSubmit={handleSaveOverride} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                {/* Internal Marks */}
+              <div className="grid grid-cols-1 gap-3">
+                {/* Marks */}
                 <div>
                   <label className="text-[10px] dark:text-neutral-500 text-text-muted uppercase font-bold block mb-1">
-                    Internal Obtained
+                    Marks Obtained
                   </label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
                       min="0"
-                      max={editingResult.internalMaxMarks}
-                      value={overrideInternal}
-                      onChange={(e) => setOverrideInternal(e.target.value)}
-                      className="w-full dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle rounded px-2 py-1.5 text-xs dark:text-white text-text-primary font-mono text-center focus:outline-none focus:border-neutral-700"
-                    />
-                    <span className="text-[11px] dark:text-neutral-600 text-text-muted">/ {editingResult.internalMaxMarks}</span>
-                  </div>
-                </div>
-
-                {/* External Marks */}
-                <div>
-                  <label className="text-[10px] dark:text-neutral-500 text-text-muted uppercase font-bold block mb-1">
-                    External Obtained
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      max={editingResult.externalMaxMarks}
                       disabled={overrideAbsent}
-                      value={overrideExternal}
-                      onChange={(e) => setOverrideExternal(e.target.value)}
+                      value={overrideMarks}
+                      onChange={(e) => setOverrideMarks(e.target.value)}
                       className="w-full dark:bg-neutral-955 bg-background border dark:border-neutral-850 border-border-subtle disabled:bg-neutral-800 disabled:text-neutral-600 rounded px-2 py-1.5 text-xs dark:text-white text-text-primary font-mono text-center focus:outline-none focus:border-neutral-700"
                     />
-                    <span className="text-[11px] dark:text-neutral-600 text-text-muted">/ {editingResult.externalMaxMarks}</span>
                   </div>
                 </div>
               </div>
