@@ -26,14 +26,7 @@ interface WorkloadChartProps {
 }
 
 export function WeeklyWorkloadChart({ weeklyData, height = 260 }: WorkloadChartProps) {
-  const defaultData = weeklyData || [
-    { name: "Mon", Hours: 4 },
-    { name: "Tue", Hours: 6 },
-    { name: "Wed", Hours: 5 },
-    { name: "Thu", Hours: 7 },
-    { name: "Fri", Hours: 4 },
-    { name: "Sat", Hours: 2 }
-  ];
+  const defaultData = weeklyData || [];
 
   return (
     <div style={{ width: "100%", height }}>
@@ -69,12 +62,7 @@ export function WeeklyWorkloadChart({ weeklyData, height = 260 }: WorkloadChartP
 }
 
 export function AssignmentReviewChart({ assignmentData, height = 260 }: WorkloadChartProps) {
-  const defaultData = assignmentData || [
-    { name: "Unit-1", Reviewed: 45, Pending: 5 },
-    { name: "Unit-2", Reviewed: 42, Pending: 8 },
-    { name: "Unit-3", Reviewed: 30, Pending: 20 },
-    { name: "Unit-4", Reviewed: 10, Pending: 40 }
-  ];
+  const defaultData = assignmentData || [];
 
   return (
     <div style={{ width: "100%", height }}>
@@ -117,10 +105,7 @@ export function AssignmentReviewChart({ assignmentData, height = 260 }: Workload
 }
 
 export function LessonCompletionDoughnut({ completionData, height = 240 }: WorkloadChartProps) {
-  const defaultData = completionData || [
-    { name: "Completed Lessons", value: 18 },
-    { name: "Pending Planners", value: 7 }
-  ];
+  const defaultData = completionData || [];
 
   return (
     <div style={{ width: "100%", height }} className="relative flex items-center justify-center">

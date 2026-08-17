@@ -388,15 +388,6 @@ export const Sidebar: React.FC = () => {
       {/* Bottom actions */}
       <div className={`p-2 border-t border-border-subtle/60 space-y-0.5 shrink-0 ${collapsed ? "items-center flex flex-col" : ""}`}>
         <button
-          onClick={handleReset}
-          title={collapsed ? "Reset Database" : undefined}
-          className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-medium text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer group w-full ${collapsed ? "justify-center" : ""}`}
-        >
-          <Database size={14} className="text-text-muted group-hover:text-text-secondary transition-colors shrink-0" />
-          {!collapsed && <span>Reset Database</span>}
-        </button>
-
-        <button
           onClick={async () => {
             await logout();
             router.push("/");

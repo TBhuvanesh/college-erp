@@ -9,21 +9,24 @@ export const adminDashboard = asyncHandler(async (req: Request, res: Response) =
   sendSuccess(res, stats);
 });
 
-// GET /api/dashboard/faculty
+// GET /api/dashboard/faculty/:userId?
 export const facultyDashboard = asyncHandler(async (req: Request, res: Response) => {
-  const stats = await dashboardService.getFacultyDashboardStats(req.user!.id);
+  const targetUserId = req.params.userId && req.params.userId !== 'my' ? req.params.userId : req.user!.id;
+  const stats = await dashboardService.getFacultyDashboardStats(targetUserId);
   sendSuccess(res, stats);
 });
 
-// GET /api/dashboard/student
+// GET /api/dashboard/student/:userId?
 export const studentDashboard = asyncHandler(async (req: Request, res: Response) => {
-  const stats = await dashboardService.getStudentDashboardStats(req.user!.id);
+  const targetUserId = req.params.userId && req.params.userId !== 'my' ? req.params.userId : req.user!.id;
+  const stats = await dashboardService.getStudentDashboardStats(targetUserId);
   sendSuccess(res, stats);
 });
 
-// GET /api/dashboard/hod
+// GET /api/dashboard/hod/:userId?
 export const hodDashboard = asyncHandler(async (req: Request, res: Response) => {
-  const stats = await dashboardService.getHODDashboardStats(req.user!.id);
+  const targetUserId = req.params.userId && req.params.userId !== 'my' ? req.params.userId : req.user!.id;
+  const stats = await dashboardService.getHODDashboardStats(targetUserId);
   sendSuccess(res, stats);
 });
 

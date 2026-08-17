@@ -11,14 +11,7 @@ export interface TaskItem {
   completed: boolean;
 }
 
-const INITIAL_TASKS: TaskItem[] = [
-  { id: "1", title: "Take Attendance (II Year CSE-A)", priority: "high", dueTime: "11:30 AM", completed: false },
-  { id: "2", title: "Upload DBMS Notes (Unit 3)", priority: "medium", dueTime: "1:00 PM", completed: false },
-  { id: "3", title: "Publish Web Tech Assignment 2", priority: "medium", dueTime: "3:00 PM", completed: false },
-  { id: "4", title: "Evaluate LMS Lab Submissions", priority: "high", dueTime: "5:00 PM", completed: false },
-  { id: "5", title: "Conduct Mentorship Meeting (Group 4)", priority: "low", dueTime: "4:00 PM", completed: false },
-  { id: "6", title: "Submit Unit-I Internal Marks", priority: "high", dueTime: "6:00 PM", completed: false }
-];
+const INITIAL_TASKS: TaskItem[] = [];
 
 export function TodayTaskCenter() {
   const [tasks, setTasks] = useState<TaskItem[]>(INITIAL_TASKS);

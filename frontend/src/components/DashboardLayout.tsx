@@ -82,14 +82,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                   My Profile & Settings
                 </Link>
 
-                <button
-                  onClick={handleReset}
-                  className="w-full flex items-center justify-center gap-2.5 py-3 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-500 text-sm font-semibold cursor-pointer"
-                >
-                  <Database size={16} />
-                  Reset Simulation Data
-                </button>
-
                  <button
                   onClick={async () => {
                     await logout();

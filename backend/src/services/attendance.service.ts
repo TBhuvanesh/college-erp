@@ -295,6 +295,7 @@ export async function getStudentSummary(userId: string): Promise<StudentAttendan
       AND sub.status    != 'archived'
      LEFT JOIN faculty_subject_assignments fsa
        ON fsa.subject_id = sub.id
+      AND fsa.section    = st.section
       AND fsa.deleted_at IS NULL
      LEFT JOIN faculty f
        ON f.id = fsa.faculty_id

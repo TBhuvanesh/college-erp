@@ -50,6 +50,7 @@ export default function FacultyDashboard() {
   const [mentorStudents, setMentorStudents] = useState<any[]>([]);
   const [todaySchedule, setTodaySchedule] = useState<any[]>([]);
   const [nextLectureSubtext, setNextLectureSubtext] = useState("None Scheduled");
+  const [facultySchedule, setFacultySchedule] = useState<any>(null);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +60,7 @@ export default function FacultyDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [workRes, examRes, calRes, notifRes, lmsRes, subRes, mentorRes, dashRes] = await Promise.all([
+      const [workRes, examRes, calRes, notifRes, lmsRes, subRes, mentorRes, dashRes, timetableRes] = await Promise.all([
         apiFetch("/teaching-assignments/my", {}, accessToken),
         apiFetch("/examinations/my-schedule", {}, accessToken),
         apiFetch("/calendar?limit=50", {}, accessToken),
@@ -67,7 +68,8 @@ export default function FacultyDashboard() {
         apiFetch("/lms/assignments?limit=50", {}, accessToken),
         apiFetch("/lms/submissions?limit=100", {}, accessToken),
         apiFetch("/mentorship/my-mentees", {}, accessToken).catch(() => ({ success: true, data: [] })),
-        apiFetch("/dashboard/faculty", {}, accessToken).catch(() => null)
+        apiFetch("/dashboard/faculty", {}, accessToken).catch(() => null),
+        apiFetch("/timetables/faculty/schedule", {}, accessToken).catch(() => null)
       ]);
 
       if (workRes.success && workRes.data?.teachingAssignments) setWorkload(workRes.data.teachingAssignments);
@@ -77,6 +79,7 @@ export default function FacultyDashboard() {
       if (lmsRes.success && lmsRes.data?.assignments) setLmsAssignments(lmsRes.data.assignments);
       if (subRes.success && subRes.data?.submissions) setLmsSubmissions(subRes.data.submissions);
       if (mentorRes.success && mentorRes.data) setMentorStudents(mentorRes.data);
+      if (timetableRes && timetableRes.success && timetableRes.data) setFacultySchedule(timetableRes.data);
 
       if (dashRes && dashRes.success && dashRes.data?.todaySchedule) {
         const schedule = dashRes.data.todaySchedule;
@@ -127,11 +130,7 @@ export default function FacultyDashboard() {
 
   const subjectProgressList: SubjectProgress[] = useMemo(() => {
     if (workload.length === 0) {
-      return [
-        { id: "1", name: "Database Management Systems", code: "CS-302", completedLessons: 18, totalLessons: 25, percentage: 72 },
-        { id: "2", name: "Web Technologies Lab", code: "CS-308", completedLessons: 8, totalLessons: 15, percentage: 53 },
-        { id: "3", name: "Software Engineering", code: "CS-304", completedLessons: 20, totalLessons: 24, percentage: 83 }
-      ];
+      return [];
     }
     return workload.map((sub: any) => {
       const total = 24;
@@ -147,13 +146,105 @@ export default function FacultyDashboard() {
     });
   }, [workload]);
 
+  // 1. Weekly Workload from timetable schedule
+  const weeklyData = useMemo(() => {
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const dayAbbreviations: Record<string, string> = {
+      Monday: "Mon",
+      Tuesday: "Tue",
+      Wednesday: "Wed",
+      Thursday: "Thu",
+      Friday: "Fri",
+      Saturday: "Sat",
+      Sunday: "Sun"
+    };
+
+    if (!facultySchedule || !facultySchedule.schedule) {
+      return days.map(day => ({ name: dayAbbreviations[day], Hours: 0 }));
+    }
+
+    return days.map(day => {
+      const entries = facultySchedule.schedule[day] || [];
+      let totalMinutes = 0;
+      entries.forEach((entry: any) => {
+        if (entry.slots && entry.slots.length > 0) {
+          entry.slots.forEach((slot: any) => {
+            const startParts = slot.startTime.split(":").map(Number);
+            const endParts = slot.endTime.split(":").map(Number);
+            const startMin = startParts[0] * 60 + startParts[1];
+            const endMin = endParts[0] * 60 + endParts[1];
+            if (endMin > startMin) {
+              totalMinutes += (endMin - startMin);
+            }
+          });
+        }
+      });
+      const hours = Math.round((totalMinutes / 60) * 10) / 10;
+      return {
+        name: dayAbbreviations[day],
+        Hours: hours
+      };
+    });
+  }, [facultySchedule]);
+
+  // 2. LMS Grading Load from lmsSubmissions
+  const assignmentData = useMemo(() => {
+    if (!lmsSubmissions || lmsSubmissions.length === 0) {
+      return [];
+    }
+
+    const countsMap = new Map<string, { Reviewed: number; Pending: number }>();
+    lmsSubmissions.forEach((sub: any) => {
+      const title = sub.assignmentTitle || "Unknown Assignment";
+      if (!countsMap.has(title)) {
+        countsMap.set(title, { Reviewed: 0, Pending: 0 });
+      }
+      const counts = countsMap.get(title)!;
+      if (sub.status === "Evaluated") {
+        counts.Reviewed += 1;
+      } else {
+        counts.Pending += 1;
+      }
+    });
+
+    return Array.from(countsMap.entries()).map(([name, counts]) => ({
+      name: name.length > 15 ? name.slice(0, 15) + "..." : name,
+      Reviewed: counts.Reviewed,
+      Pending: counts.Pending
+    })).slice(0, 6);
+  }, [lmsSubmissions]);
+
+  // 3. Syllabus planners completion data
+  const completionData = useMemo(() => {
+    if (subjectProgressList.length === 0) {
+      return [
+        { name: "Completed", value: 0 },
+        { name: "Remaining", value: 100 }
+      ];
+    }
+
+    let totalCompleted = 0;
+    let totalLessons = 0;
+    subjectProgressList.forEach((sub) => {
+      totalCompleted += sub.completedLessons;
+      totalLessons += sub.totalLessons;
+    });
+
+    const totalRemaining = Math.max(0, totalLessons - totalCompleted);
+
+    return [
+      { name: "Completed", value: totalCompleted },
+      { name: "Remaining", value: totalRemaining }
+    ];
+  }, [subjectProgressList]);
+
   // Today's Focus Metrics
   const focusMetrics: FocusMetric[] = useMemo(() => {
     return [
       { label: "Today's Lectures", value: todaySchedule.length, subtext: nextLectureSubtext },
       { label: "Grading Pending", value: pendingEvaluations, subtext: `${completedEvaluations} Evaluated`, colorClass: pendingEvaluations > 0 ? "text-amber-500" : "" },
-      { label: "Weekly Classes", value: weeklyClasses || 12, subtext: `${teachingHours} teaching hrs` },
-      { label: "Mentees List", value: mentorStudents.length || 15, subtext: "Group meeting" }
+      { label: "Weekly Classes", value: weeklyClasses, subtext: `${teachingHours} teaching hrs` },
+      { label: "Mentees List", value: mentorStudents.length, subtext: "Group meeting" }
     ];
   }, [todaySchedule, nextLectureSubtext, pendingEvaluations, completedEvaluations, weeklyClasses, teachingHours, mentorStudents]);
 
@@ -189,22 +280,6 @@ export default function FacultyDashboard() {
       });
     }
 
-    list.push({
-      id: "t-upload",
-      time: "01:00 PM",
-      title: "Upload Lesson Notes",
-      subtitle: "Upload Unit-III/IV notes to LMS.",
-      category: "LMS"
-    });
-
-    list.push({
-      id: "t-mentorship",
-      time: "03:30 PM",
-      title: "Mentorship Session",
-      subtitle: "Advice for academic risk students.",
-      category: "Mentorship"
-    });
-
     if (pendingEvaluations > 0) {
       list.push({
         id: "t-eval",
@@ -233,33 +308,6 @@ export default function FacultyDashboard() {
         actionRoute: "/faculty/lms"
       });
     }
-
-    list.push({
-      id: "fa2",
-      title: "Verify Class Attendance Registry Completion",
-      dueDate: "Daily attendance logs upload",
-      priority: "high",
-      actionText: "Mark Attendance",
-      actionRoute: "/faculty/attendance"
-    });
-
-    list.push({
-      id: "fa3",
-      title: "Submit Unit-I Internal Assessment Grades",
-      dueDate: "Registrar deadline tomorrow",
-      priority: "medium",
-      actionText: "Upload Grades",
-      actionRoute: "/faculty/grades"
-    });
-
-    list.push({
-      id: "fa4",
-      title: "Prepare Lesson Planners for next Unit",
-      dueDate: "Course scheme sync",
-      priority: "low",
-      actionText: "Planner",
-      actionRoute: "/faculty/teaching-planner"
-    });
 
     return list;
   }, [pendingEvaluations]);
@@ -329,7 +377,7 @@ export default function FacultyDashboard() {
               </h3>
               <p className="text-xs text-text-muted mt-0.5">Hours taught daily</p>
             </div>
-            <WeeklyWorkloadChart />
+            <WeeklyWorkloadChart weeklyData={weeklyData} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -337,14 +385,14 @@ export default function FacultyDashboard() {
               <h3 className="font-display font-bold text-sm text-text-primary uppercase tracking-wider">
                 LMS Grading Load
               </h3>
-              <AssignmentReviewChart />
+              <AssignmentReviewChart assignmentData={assignmentData} />
             </div>
 
             <div className="rounded-2xl border border-border-subtle bg-surface p-5 shadow-sm space-y-4">
               <h3 className="font-display font-bold text-sm text-text-primary uppercase tracking-wider">
                 Syllabus Planners Summary
               </h3>
-              <LessonCompletionDoughnut />
+              <LessonCompletionDoughnut completionData={completionData} />
             </div>
           </div>
         </div>
@@ -393,27 +441,24 @@ export default function FacultyDashboard() {
               title="Teaching Workload Level"
               value={workloadStatus.label}
               icon={Clock}
-              progress={weeklyClasses > 0 ? (weeklyClasses / 20) * 100 : 50}
+              progress={weeklyClasses > 0 ? (weeklyClasses / 20) * 100 : 0}
               trend={{ value: "Stable", isPositive: true }}
               details={[
                 { label: "Weekly classes", value: weeklyClasses },
                 { label: "Weekly hours", value: teachingHours }
               ]}
               actionText="Open Schedule"
-              actionRoute="/faculty/calendar"
+              actionRoute="/faculty/schedule"
             />
-          </div>
-
-          <div className="col-span-1 md:col-span-2">
             <SmartProgressCard 
               title="Mentorship Assignments"
-              value={`${mentorStudents.length || 15} Students`}
+              value={`${mentorStudents.length} Students`}
               icon={Users}
-              progress={80}
-              trend={{ value: "4 risk alerts", isPositive: false }}
+              progress={mentorStudents.length > 0 ? 100 : 0}
+              trend={{ value: "0 risk alerts", isPositive: true }}
               details={[
-                { label: "Assigned group size", value: mentorStudents.length || 15 },
-                { label: "Mentorship reviews", value: "3 pending" }
+                { label: "Assigned Group Size", value: mentorStudents.length },
+                { label: "Mentorship Reviews", value: "0 pending" }
               ]}
               actionText="Manage Mentee Roster"
               actionRoute="/faculty/mentorship"

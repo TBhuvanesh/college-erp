@@ -925,18 +925,13 @@ export default function AdminTimetables() {
                           }`}
                         >
                           {entry ? (
-                            <div className="flex flex-col items-center">
+                            <div className="flex flex-col items-center" title={entry.faculties && entry.faculties.length > 0 ? `Faculty: ${entry.faculties.map((f) => f.fullName).join(", ")}` : undefined}>
                               <span className="font-extrabold text-sky-700 dark:text-sky-400 text-sm tracking-wide">
                                 {entry.subjectAbbreviation || entry.subjectCode}
                               </span>
                               <span className="text-[10px] text-slate-400 uppercase mt-0.5">
                                 {entry.classType}
                               </span>
-                              {entry.faculties && entry.faculties.length > 0 && (
-                                <span className="text-xs text-slate-500 font-medium mt-1 truncate max-w-full">
-                                  {entry.faculties.map((f) => f.fullName.split(" ")[0]).join(", ")}
-                                </span>
-                              )}
                               
                               {/* Clear cell button on hover */}
                               <button
