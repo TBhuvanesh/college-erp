@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
-
+import { AcademicSubNav } from "@/components/Analytics/AcademicSubNav";
 import { InsightCards } from "@/components/Analytics/InsightCards";
 import {
   AreaChartComponent,

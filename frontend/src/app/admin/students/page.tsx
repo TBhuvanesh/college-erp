@@ -394,7 +394,7 @@ export default function AdminStudents() {
             className="bg-transparent text-text-primary cursor-pointer py-2 flex-1 focus:outline-none disabled:opacity-50"
           >
             <option value="ALL">All Sections</option>
-            {availableSections.map((sec) => (
+            {availableSections.map((sec: string) => (
               <option key={sec} value={sec}>
                 {sec}
               </option>

@@ -47,6 +47,20 @@ interface FacultyTeachingLoadSubject {
   equivalentLoad: number;
 }
 
+interface FacultyTeachingLoadSubject {
+  teachingAssignmentId: string;
+  subjectId: string;
+  subjectCode: string;
+  subjectName: string;
+  subjectType: string;
+  semester: number;
+  section: string;
+  lectureHours: number;
+  tutorialHours: number;
+  practicalHours: number;
+  equivalentLoad: number;
+}
+
 interface FacultyTeachingLoadRow {
   facultyId: string;
   facultyName: string;
@@ -62,6 +76,7 @@ interface FacultyTeachingLoadRow {
   maxAllowedLoad: number;
   minAllowedLoad: number | null;
   status: "Under Minimum" | "Balanced" | "Overloaded";
+  subjects: FacultyTeachingLoadSubject[];
 }
 
 const getSemestersForYear = (yr: string): number[] => {

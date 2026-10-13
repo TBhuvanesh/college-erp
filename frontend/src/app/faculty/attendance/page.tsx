@@ -15,6 +15,7 @@ import {
   Calendar, 
   Search, 
   Lock, 
+  Clock,
   History,
   CheckCircle,
   XCircle,

@@ -42,6 +42,8 @@ export interface SubjectSummary {
   lectureHours: number;
   tutorialHours: number;
   practicalHours: number;
+  abbreviation?: string | null;
+  description?: string | null;
   // If filtered by department, these fields represent that matching mapping's details:
   departmentId?: string;
   departmentName?: string;
@@ -51,6 +53,8 @@ export interface SubjectSummary {
   year?: string | null;
   semester?: number;
   semesterRaw?: string | null;
+  studentCount?: number;
+  facultyCount?: number;
   // General view: all mappings
   mappings?: SubjectCurriculumMappingDetail[];
 }

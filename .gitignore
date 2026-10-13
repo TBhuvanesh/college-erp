@@ -19,6 +19,7 @@ tsconfig.tsbuildinfo
 *.env*
 **/*.env*
 !**/*.env.example
+!.env.docker.example
 
 # Debug and Log files
 npm-debug.log*

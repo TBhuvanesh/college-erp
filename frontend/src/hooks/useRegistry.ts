@@ -127,16 +127,16 @@ export function useAcademicSessions() {
 export function useSections(departmentId?: string, semester?: number) {
   const { accessToken } = useAuth();
 
-  return useQuery({
+  return useQuery<string[]>({
     queryKey: ["sections", departmentId, semester],
-    queryFn: async () => {
+    queryFn: async (): Promise<string[]> => {
       if (!departmentId || !semester || departmentId === "ALL") return [];
       const queryParams = new URLSearchParams({
         departmentId,
         semester: semester.toString(),
       });
       const res = await apiFetch(`/students/sections?${queryParams.toString()}`, {}, accessToken);
-      return res.success && res.data?.sections ? res.data.sections : [];
+      return res.success && Array.isArray(res.data?.sections) ? (res.data.sections as string[]) : [];
     },
     enabled: !!accessToken && !!departmentId && !!semester && departmentId !== "ALL",
     staleTime: 30000,

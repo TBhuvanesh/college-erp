@@ -64,6 +64,12 @@ interface SubjectCard {
     instructions?: string;
     examStatus?: string;
   }>;
+  resultTasks?: Array<{
+    taskId: string;
+    section: string;
+    facultyName: string;
+    status: 'open' | 'draft_saved' | 'submitted_for_approval' | 'verified' | 'published' | 'closed';
+  }>;
 }
 
 interface SessionSummary {
@@ -82,6 +88,11 @@ interface SessionSummary {
   status: 'Draft' | 'Scheduling' | 'Ready for Review' | 'Published' | 'Archived';
   scheduledSubjectCount: number;
   totalSubjectCount: number;
+  resultStats?: {
+    requiredTasks: number;
+    submittedTasks: number;
+    publishedTasks: number;
+  };
   createdAt: string;
   updatedAt: string;
 }

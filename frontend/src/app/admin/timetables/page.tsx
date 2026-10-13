@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
+import type { CreateTimetableInput } from "@/types/timetable";
 import {
   Calendar,
   Clock,
@@ -38,6 +39,7 @@ interface Faculty {
   id: string;
   fullName: string;
   employeeNumber: string;
+  isAllocated?: boolean;
 }
 
 interface TeachingAssignment {
