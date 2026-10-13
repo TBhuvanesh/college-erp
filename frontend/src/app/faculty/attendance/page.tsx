@@ -18,8 +18,7 @@ import {
   History,
   CheckCircle,
   XCircle,
-  Filter,
-  Clock
+  Filter
 } from "lucide-react";
 
 interface AssignmentDetail {

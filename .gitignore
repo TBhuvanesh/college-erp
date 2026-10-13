@@ -48,15 +48,3 @@ eslint-report*
 # Operating System Files
 .DS_Store
 Thumbs.db
-
-# Docker & Database Persistence
-postgres_data/
-pgdata/
-*.dump
-*.sql.dump
-*.sql.tar
-*.sql.gz
-backend/uploads/*
-!backend/uploads/.gitkeep
-!backend/uploads/documents/
-!backend/uploads/lms/
