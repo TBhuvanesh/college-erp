@@ -25,7 +25,8 @@ export default function FacultyMentorGroupDetailPage() {
   const groupId = params.groupId as string;
 
   // States
-  const [loading, setLoading] = useState(true);
+  const [loadingGroup, setLoadingGroup] = useState(true);
+  const [loadingTelemetry, setLoadingTelemetry] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   // Data State
@@ -37,32 +38,44 @@ export default function FacultyMentorGroupDetailPage() {
   const [search, setSearch] = useState("");
   const [attentionFilter, setAttentionFilter] = useState("ALL"); // ALL, ATTENTION, GOOD_STANDING
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(() => {
     if (!accessToken || !groupId) return;
-    setLoading(true);
+    setLoadingGroup(true);
+    setLoadingTelemetry(true);
     setError(null);
-    try {
-      // 1. Fetch group details
-      const allGroups = await listMentorGroups({}, accessToken);
-      const found = allGroups.find(g => g.id === groupId);
-      if (found) {
-        setGroup(found);
-      } else {
-        throw new Error("Mentor group details not found");
-      }
 
-      // 2. Fetch students who match this group dynamically
-      const students = await getGroupStudents(groupId, accessToken);
-      setStudentsInGroup(students);
+    // 1. Fetch group details and students in parallel
+    Promise.all([
+      listMentorGroups({}, accessToken),
+      getGroupStudents(groupId, accessToken)
+    ])
+      .then(([allGroups, students]) => {
+        const found = allGroups.find(g => g.id === groupId);
+        if (found) {
+          setGroup(found);
+          setStudentsInGroup(students);
+        } else {
+          setError("Mentor group details not found");
+        }
+      })
+      .catch((err: any) => {
+        setError(err.message || "Failed to load group details");
+      })
+      .finally(() => {
+        setLoadingGroup(false);
+      });
 
-      // 3. Fetch all dashboard telemetry for this mentor
-      const telemetry = await getMentorDashboard(accessToken);
-      setDashboardTelemetry(telemetry);
-    } catch (err: any) {
-      setError(err.message || "Failed to load group details");
-    } finally {
-      setLoading(false);
-    }
+    // 2. Fetch all dashboard telemetry for this mentor separately
+    getMentorDashboard(accessToken)
+      .then((telemetry) => {
+        setDashboardTelemetry(telemetry);
+      })
+      .catch((err: any) => {
+        console.error("Failed to load telemetry", err);
+      })
+      .finally(() => {
+        setLoadingTelemetry(false);
+      });
   }, [accessToken, groupId]);
 
   useEffect(() => {
@@ -197,16 +210,7 @@ export default function FacultyMentorGroupDetailPage() {
     });
   }, [groupMentees, search, attentionFilter]);
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-        <Loader2 className="w-8 h-8 text-accent-blue animate-spin" />
-        <p className="text-text-secondary text-sm">Loading group telemetry...</p>
-      </div>
-    );
-  }
-
-  if (error || !group) {
+  if (error || (!loadingGroup && !group)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 p-6 max-w-md mx-auto text-center">
         <AlertCircle className="w-12 h-12 text-danger" />
@@ -235,68 +239,93 @@ export default function FacultyMentorGroupDetailPage() {
         </button>
         <div>
           <span className="text-xs uppercase font-bold text-accent-blue">Mentor Group Details</span>
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary">
-            {group.departmentName} — Section {group.section}
-          </h1>
-          <p className="text-text-secondary text-xs mt-0.5 font-semibold">
-            Session {group.academicSession} • {groupMentees.length} Students Assigned
-          </p>
+          {loadingGroup ? (
+            <div className="mt-2 space-y-2">
+              <div className="h-7 w-64 bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded" />
+              <div className="h-4 w-48 bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded" />
+            </div>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold tracking-tight text-text-primary">
+                {group?.departmentName} — Section {group?.section}
+              </h1>
+              <p className="text-text-secondary text-xs mt-0.5 font-semibold">
+                Session {group?.academicSession} • {groupMentees.length} Students Assigned
+              </p>
+            </>
+          )}
         </div>
       </div>
 
       {/* Group Telemetry Cards Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Attendance Avg */}
-        <div className="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-accent-blue-soft text-accent-blue">
-            <Percent size={20} />
-          </div>
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Average Attendance</span>
-            <h3 className="text-xl sm:text-2xl font-black text-text-primary leading-tight mt-0.5">
-              {groupMetrics.avgAttendance}%
-            </h3>
-          </div>
-        </div>
+        {loadingTelemetry || loadingGroup ? (
+          <>
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm h-[88px] animate-pulse flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-neutral-200 dark:bg-neutral-800 shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-24" />
+                  <div className="h-6 bg-neutral-200 dark:bg-neutral-800 rounded w-16" />
+                </div>
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
+            {/* Attendance Avg */}
+            <div className="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-accent-blue-soft text-accent-blue">
+                <Percent size={20} />
+              </div>
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Average Attendance</span>
+                <h3 className="text-xl sm:text-2xl font-black text-text-primary leading-tight mt-0.5">
+                  {groupMetrics.avgAttendance}%
+                </h3>
+              </div>
+            </div>
 
-        {/* Avg CGPA */}
-        <div className="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-success-soft text-success">
-            <TrendingUp size={20} />
-          </div>
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Average CGPA</span>
-            <h3 className="text-xl sm:text-2xl font-black text-success leading-tight mt-0.5">
-              {groupMetrics.avgCGPA > 0 ? groupMetrics.avgCGPA.toFixed(2) : "N/A"}
-            </h3>
-          </div>
-        </div>
+            {/* Avg CGPA */}
+            <div className="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-success-soft text-success">
+                <TrendingUp size={20} />
+              </div>
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Average CGPA</span>
+                <h3 className="text-xl sm:text-2xl font-black text-success leading-tight mt-0.5">
+                  {groupMetrics.avgCGPA > 0 ? groupMetrics.avgCGPA.toFixed(2) : "N/A"}
+                </h3>
+              </div>
+            </div>
 
-        {/* Pending Fees */}
-        <div className="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-warning-soft text-warning">
-            <CreditCard size={20} />
-          </div>
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Pending Fees</span>
-            <h3 className="text-xl sm:text-2xl font-black text-warning leading-tight mt-0.5">
-              {groupMetrics.pendingFeesCount} Students
-            </h3>
-          </div>
-        </div>
+            {/* Pending Fees */}
+            <div className="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-warning-soft text-warning">
+                <CreditCard size={20} />
+              </div>
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Pending Fees</span>
+                <h3 className="text-xl sm:text-2xl font-black text-warning leading-tight mt-0.5">
+                  {groupMetrics.pendingFeesCount} Students
+                </h3>
+              </div>
+            </div>
 
-        {/* Attention Needed count */}
-        <div className="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-danger-soft text-danger">
-            <AlertTriangle size={20} />
-          </div>
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Needs Attention</span>
-            <h3 className="text-xl sm:text-2xl font-black text-danger leading-tight mt-0.5">
-              {groupMetrics.attentionCount} Mentees
-            </h3>
-          </div>
-        </div>
+            {/* Attention Needed count */}
+            <div className="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-danger-soft text-danger">
+                <AlertTriangle size={20} />
+              </div>
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Needs Attention</span>
+                <h3 className="text-xl sm:text-2xl font-black text-danger leading-tight mt-0.5">
+                  {groupMetrics.attentionCount} Mentees
+                </h3>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Filter and Search Container */}
@@ -325,7 +354,28 @@ export default function FacultyMentorGroupDetailPage() {
 
       {/* Mentees Group Listing */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filteredMentees.length === 0 ? (
+        {loadingGroup ? (
+          <>
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="bg-surface border border-border-subtle rounded-xl overflow-hidden shadow-sm h-[256px] animate-pulse flex flex-col">
+                <div className="p-4 bg-surface-elevated/40 border-b border-border-subtle/50 h-16 flex justify-between items-center">
+                  <div className="space-y-2 flex-1 mr-4">
+                     <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-3/4" />
+                     <div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-1/2" />
+                  </div>
+                  <div className="w-9 h-9 rounded-lg bg-neutral-200 dark:bg-neutral-800 shrink-0" />
+                </div>
+                <div className="p-4 flex-1 space-y-3">
+                  <div className="flex justify-between"><div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3" /><div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-1/4" /></div>
+                  <div className="flex justify-between"><div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3" /><div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-1/4" /></div>
+                  <div className="flex justify-between"><div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3" /><div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-1/4" /></div>
+                  <div className="flex justify-between"><div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3" /><div className="h-3 bg-neutral-200 dark:bg-neutral-800 rounded w-1/4" /></div>
+                </div>
+                <div className="p-3 bg-surface-elevated/25 border-t border-border-subtle/50 h-11" />
+              </div>
+            ))}
+          </>
+        ) : filteredMentees.length === 0 ? (
           <div className="col-span-full bg-surface border border-border-subtle rounded-xl py-12 text-center text-text-muted text-sm">
             No mentees match the current search or status filters.
           </div>
@@ -341,7 +391,7 @@ export default function FacultyMentorGroupDetailPage() {
             return (
               <div 
                 key={mentee.profile.id}
-                className={`bg-surface border ${activeAlertsCount > 0 ? 'border-danger/35 hover:border-danger/60' : 'border-border-subtle hover:border-border-strong'} rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col`}
+                className={`bg-surface border ${activeAlertsCount > 0 && !loadingTelemetry ? 'border-danger/35 hover:border-danger/60' : 'border-border-subtle hover:border-border-strong'} rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col`}
               >
                 {/* Header info */}
                 <div className="p-4 bg-surface-elevated/40 border-b border-border-subtle/50 flex items-start justify-between gap-3">
@@ -358,49 +408,60 @@ export default function FacultyMentorGroupDetailPage() {
 
                 {/* Metrics */}
                 <div className="p-4 space-y-2 text-xs text-text-secondary flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1"><Percent size={13} /> Attendance</span>
-                    <span className={`font-semibold ${mentee.summary.attendancePercentage < 75 ? 'text-danger font-bold' : 'text-text-primary'}`}>
-                      {mentee.summary.attendancePercentage}%
-                    </span>
-                  </div>
+                  {loadingTelemetry ? (
+                     <div className="space-y-3 mt-1 animate-pulse">
+                        <div className="flex justify-between"><div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3" /><div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-1/4" /></div>
+                        <div className="flex justify-between"><div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3" /><div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-1/4" /></div>
+                        <div className="flex justify-between"><div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3" /><div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-1/4" /></div>
+                        <div className="flex justify-between"><div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-1/3" /><div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded w-1/4" /></div>
+                     </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1"><Percent size={13} /> Attendance</span>
+                        <span className={`font-semibold ${mentee.summary.attendancePercentage < 75 ? 'text-danger font-bold' : 'text-text-primary'}`}>
+                          {mentee.summary.attendancePercentage}%
+                        </span>
+                      </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1"><TrendingUp size={13} /> CGPA</span>
-                    <span className="font-semibold text-text-primary font-mono">{mentee.summary.latestCGPA > 0 ? mentee.summary.latestCGPA.toFixed(2) : "N/A"}</span>
-                  </div>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1"><TrendingUp size={13} /> CGPA</span>
+                        <span className="font-semibold text-text-primary font-mono">{mentee.summary.latestCGPA > 0 ? mentee.summary.latestCGPA.toFixed(2) : "N/A"}</span>
+                      </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1"><FileText size={13} /> Internals</span>
-                    <span className="font-semibold text-text-primary truncate max-w-[120px]">{mentee.summary.internalMarksSummary}</span>
-                  </div>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1"><FileText size={13} /> Internals</span>
+                        <span className="font-semibold text-text-primary truncate max-w-[120px]">{mentee.summary.internalMarksSummary}</span>
+                      </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1"><CreditCard size={13} /> Fees</span>
-                    <span className={`font-semibold ${mentee.alerts.feePending ? 'text-warning font-bold' : 'text-success'}`}>
-                      {mentee.summary.feeStatus}
-                    </span>
-                  </div>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1"><CreditCard size={13} /> Fees</span>
+                        <span className={`font-semibold ${mentee.alerts.feePending ? 'text-warning font-bold' : 'text-success'}`}>
+                          {mentee.summary.feeStatus}
+                        </span>
+                      </div>
 
-                  {/* Active Alert tags */}
-                  {activeAlertsCount > 0 && (
-                    <div className="border-t border-border-subtle/50 pt-2.5 mt-2 flex flex-wrap gap-1">
-                      {mentee.alerts.attendanceBelow75 && (
-                        <span className="text-[9px] bg-danger-soft text-danger border border-danger/10 px-1 py-0.5 rounded font-bold">Low Att</span>
+                      {/* Active Alert tags */}
+                      {activeAlertsCount > 0 && (
+                        <div className="border-t border-border-subtle/50 pt-2.5 mt-2 flex flex-wrap gap-1">
+                          {mentee.alerts.attendanceBelow75 && (
+                            <span className="text-[9px] bg-danger-soft text-danger border border-danger/10 px-1 py-0.5 rounded font-bold">Low Att</span>
+                          )}
+                          {mentee.alerts.feePending && (
+                            <span className="text-[9px] bg-warning-soft text-warning border border-warning/10 px-1 py-0.5 rounded font-bold">Fees</span>
+                          )}
+                          {mentee.alerts.failedSubjects && (
+                            <span className="text-[9px] bg-danger-soft text-danger border border-danger/10 px-1 py-0.5 rounded font-bold">Failed Subj</span>
+                          )}
+                          {mentee.alerts.assignmentOverdue && (
+                            <span className="text-[9px] bg-danger-soft text-danger border border-danger/10 px-1 py-0.5 rounded font-bold">Overdue LMS</span>
+                          )}
+                          {mentee.alerts.lowInternalMarks && (
+                            <span className="text-[9px] bg-warning-soft text-warning border border-warning/10 px-1 py-0.5 rounded font-bold">Internals</span>
+                          )}
+                        </div>
                       )}
-                      {mentee.alerts.feePending && (
-                        <span className="text-[9px] bg-warning-soft text-warning border border-warning/10 px-1 py-0.5 rounded font-bold">Fees</span>
-                      )}
-                      {mentee.alerts.failedSubjects && (
-                        <span className="text-[9px] bg-danger-soft text-danger border border-danger/10 px-1 py-0.5 rounded font-bold">Failed Subj</span>
-                      )}
-                      {mentee.alerts.assignmentOverdue && (
-                        <span className="text-[9px] bg-danger-soft text-danger border border-danger/10 px-1 py-0.5 rounded font-bold">Overdue LMS</span>
-                      )}
-                      {mentee.alerts.lowInternalMarks && (
-                        <span className="text-[9px] bg-warning-soft text-warning border border-warning/10 px-1 py-0.5 rounded font-bold">Internals</span>
-                      )}
-                    </div>
+                    </>
                   )}
                 </div>
 

@@ -202,10 +202,15 @@ export async function getMentorDashboard(mentorUserId: string) {
 
   const studentsDashboardData = [];
 
-  for (const student of mentees.rows) {
-    // 1. Attendance Percentage
-    const attRes = await query<{ attendance_pct: number }>(
-      `SELECT 
+  const [
+    attRes,
+    resRes,
+    intRes,
+    feeRes,
+    assignRes
+  ] = await Promise.all([
+    query<{ student_id: string; attendance_pct: number }>(
+      `SELECT student_id,
          COALESCE(
            ROUND(
              (COUNT(id) FILTER (WHERE status = 'present')::numeric / NULLIF(COUNT(id), 0)) * 100, 
@@ -214,63 +219,38 @@ export async function getMentorDashboard(mentorUserId: string) {
            0
          )::float AS attendance_pct
        FROM attendance
-       WHERE student_id = $1`,
-      [student.id]
-    );
-    const attendancePct = attRes.rows[0]?.attendance_pct ?? 0;
-
-    // 2. Latest CGPA & Failed Subjects
-    const resRes = await query<{ grade: string; result_status: string; credits: number }>(
-      `SELECT r.grade, r.result_status, sub.credits
+       WHERE student_id = ANY($1::uuid[])
+       GROUP BY student_id`,
+      [menteeIds]
+    ),
+    query<{ student_id: string; grade: string; result_status: string; credits: number }>(
+      `SELECT r.student_id, r.grade, r.result_status, sub.credits
        FROM results r
        JOIN subjects sub ON r.subject_id = sub.id
-       WHERE r.student_id = $1 AND r.publication_status = 'Published' AND r.deleted_at IS NULL`,
-      [student.id]
-    );
-    
-    let totalPoints = 0;
-    let totalCredits = 0;
-    let failedSubjectsCount = 0;
-    const gradeMap: Record<string, number> = { 'O': 10, 'A+': 9, 'A': 8, 'B+': 7, 'B': 6, 'C': 5, 'F': 0 };
-
-    resRes.rows.forEach(r => {
-      const points = gradeMap[r.grade] ?? 0;
-      const credits = Number(r.credits) || 0;
-      totalPoints += points * credits;
-      totalCredits += credits;
-      if (r.result_status === 'Fail' || r.grade === 'F') {
-        failedSubjectsCount++;
-      }
-    });
-    const latestCGPA = totalCredits > 0 ? Number((totalPoints / totalCredits).toFixed(2)) : 0;
-
-    // 3. Internal Marks Summary
-    const intRes = await query<{ obtained: number; maximum: number }>(
-      `SELECT 
+       WHERE r.student_id = ANY($1::uuid[]) AND r.publication_status = 'Published' AND r.deleted_at IS NULL`,
+      [menteeIds]
+    ),
+    query<{ student_id: string; obtained: number; maximum: number }>(
+      `SELECT student_id,
          COALESCE(SUM(obtained_marks), 0)::float AS obtained, 
          COALESCE(SUM(maximum_marks), 0)::float AS maximum 
        FROM internal_marks 
-       WHERE student_id = $1`,
-      [student.id]
-    );
-    const intSummary = intRes.rows[0] || { obtained: 0, maximum: 0 };
-    const internalPercentage = intSummary.maximum > 0 ? (intSummary.obtained / intSummary.maximum) * 100 : 100;
-
-    // 4. Fee Status
-    const feeRes = await query<{ pending: number; total: number; overdue_count: number }>(
-      `SELECT 
+       WHERE student_id = ANY($1::uuid[])
+       GROUP BY student_id`,
+      [menteeIds]
+    ),
+    query<{ student_id: string; pending: number; total: number; overdue_count: number }>(
+      `SELECT student_id,
          COALESCE(SUM(pending_amount), 0)::float AS pending, 
          COALESCE(SUM(total_amount), 0)::float AS total,
          COUNT(id) FILTER (WHERE payment_status = 'Overdue')::int AS overdue_count
        FROM fees 
-       WHERE student_id = $1 AND deleted_at IS NULL`,
-      [student.id]
-    );
-    const feeInfo = feeRes.rows[0] || { pending: 0, total: 0, overdue_count: 0 };
-
-    // 5. Assignment Status
-    const assignRes = await query<{ total: number; submitted: number; overdue: number }>(
-      `SELECT 
+       WHERE student_id = ANY($1::uuid[]) AND deleted_at IS NULL
+       GROUP BY student_id`,
+      [menteeIds]
+    ),
+    query<{ student_id: string; total: number; submitted: number; overdue: number }>(
+      `SELECT st.id AS student_id,
          COUNT(a.id)::int AS total, 
          COUNT(sub.id)::int AS submitted, 
          COUNT(a.id) FILTER (WHERE a.due_date < NOW() AND sub.id IS NULL)::int AS overdue
@@ -284,12 +264,49 @@ export async function getMentorDashboard(mentorUserId: string) {
         AND scm.regulation = st.regulation
         AND scm.deleted_at IS NULL
        LEFT JOIN assignment_submissions sub ON sub.assignment_id = a.id AND sub.student_id = st.id AND sub.deleted_at IS NULL
-       WHERE st.id = $1 AND a.deleted_at IS NULL AND st.deleted_at IS NULL`,
-      [student.id]
-    );
-    const assignInfo = assignRes.rows[0] || { total: 0, submitted: 0, overdue: 0 };
+       WHERE st.id = ANY($1::uuid[]) AND a.deleted_at IS NULL AND st.deleted_at IS NULL
+       GROUP BY st.id`,
+      [menteeIds]
+    )
+  ]);
 
-    // Identify Alerts
+  const attMap = new Map(attRes.rows.map(r => [r.student_id, r.attendance_pct]));
+  const intMap = new Map(intRes.rows.map(r => [r.student_id, r]));
+  const feeMap = new Map(feeRes.rows.map(r => [r.student_id, r]));
+  const assignMap = new Map(assignRes.rows.map(r => [r.student_id, r]));
+  const resultsByStudent = new Map<string, Array<typeof resRes.rows[number]>>();
+  resRes.rows.forEach(r => {
+    if (!resultsByStudent.has(r.student_id)) resultsByStudent.set(r.student_id, []);
+    resultsByStudent.get(r.student_id)!.push(r);
+  });
+
+  const gradeMap: Record<string, number> = { 'O': 10, 'A+': 9, 'A': 8, 'B+': 7, 'B': 6, 'C': 5, 'F': 0 };
+
+  for (const student of mentees.rows) {
+    const attendancePct = attMap.get(student.id) ?? 0;
+    
+    const studentResults = resultsByStudent.get(student.id) || [];
+    let totalPoints = 0;
+    let totalCredits = 0;
+    let failedSubjectsCount = 0;
+
+    studentResults.forEach(r => {
+      const points = gradeMap[r.grade] ?? 0;
+      const credits = Number(r.credits) || 0;
+      totalPoints += points * credits;
+      totalCredits += credits;
+      if (r.result_status === 'Fail' || r.grade === 'F') {
+        failedSubjectsCount++;
+      }
+    });
+    const latestCGPA = totalCredits > 0 ? Number((totalPoints / totalCredits).toFixed(2)) : 0;
+
+    const intSummary = intMap.get(student.id) || { obtained: 0, maximum: 0 };
+    const internalPercentage = intSummary.maximum > 0 ? (intSummary.obtained / intSummary.maximum) * 100 : 100;
+
+    const feeInfo = feeMap.get(student.id) || { pending: 0, total: 0, overdue_count: 0 };
+    const assignInfo = assignMap.get(student.id) || { total: 0, submitted: 0, overdue: 0 };
+
     const alerts = {
       attendanceBelow75: attendancePct < 75,
       feePending: feeInfo.pending > 0,

@@ -132,11 +132,11 @@ export default function FacultyDashboard() {
     if (workload.length === 0) {
       return [];
     }
-    return workload.map((sub: any) => {
+    return workload.map((sub: any, index: number) => {
       const total = 24;
       const completed = Math.min(Math.round(total * (sub.completedProgress || 0.65)), total);
       return {
-        id: sub.subjectId,
+        id: sub.id || `${sub.subjectId}-${index}`,
         name: sub.subjectName,
         code: sub.subjectCode,
         completedLessons: completed,

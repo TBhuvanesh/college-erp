@@ -104,7 +104,6 @@ export const Sidebar: React.FC = () => {
         { name: "Teaching Planner", href: "/admin/teaching-planner", icon: ClipboardList },
         { name: "Academic Feedback", href: "/admin/feedback", icon: ClipboardList },
         { name: "System Workflows", href: "/admin/workflows", icon: GitBranch },
-        { name: "Exam Seating", href: "/admin/seating", icon: ClipboardList },
       ]
     },
     {
@@ -143,7 +142,6 @@ export const Sidebar: React.FC = () => {
         { name: "Results Entry", href: "/faculty/results", icon: GraduationCap },
         { name: "Academic Calendar", href: "/faculty/calendar", icon: Calendar },
         { name: "Teaching Planner", href: "/faculty/teaching-planner", icon: ClipboardList },
-        { name: "Invigilation Duty", href: "/faculty/invigilation", icon: ClipboardList },
         { name: "Feedback Insights", href: "/faculty/feedback", icon: ClipboardList },
         { name: "Workflow Tracker", href: "/faculty/workflows", icon: GitBranch },
       ]
@@ -166,7 +164,6 @@ export const Sidebar: React.FC = () => {
         { name: "Attendance Logs", href: "/student/attendance", icon: Calendar },
         { name: "Semester Results", href: "/student/results", icon: GraduationCap },
         { name: "Examinations", href: "/student/examinations", icon: Calendar },
-        { name: "Exam Seating", href: "/student/seating", icon: ClipboardList },
         { name: "Academic Calendar", href: "/student/calendar", icon: Calendar },
         { name: "Academic Feedback", href: "/student/feedback", icon: ClipboardList },
       ]
@@ -203,7 +200,6 @@ export const Sidebar: React.FC = () => {
         { name: "Teaching Assignments", href: "/hod/subject-allocations", icon: UserCheck },
         { name: "Attendance Registry", href: "/hod/attendance", icon: Calendar },
         { name: "Feedback Analysis", href: "/hod/feedback", icon: ClipboardList },
-        { name: "Exam Seating", href: "/hod/seating", icon: ClipboardList },
       ]
     },
     {
@@ -216,7 +212,6 @@ export const Sidebar: React.FC = () => {
         { name: "Results Entry", href: "/faculty/results", icon: GraduationCap },
         { name: "Academic Calendar", href: "/faculty/calendar", icon: Calendar },
         { name: "Teaching Planner", href: "/faculty/teaching-planner", icon: ClipboardList },
-        { name: "Invigilation Duty", href: "/faculty/invigilation", icon: ClipboardList },
         { name: "My Feedback Insights", href: "/faculty/feedback", icon: ClipboardList },
         { name: "Workflow Tracker", href: "/faculty/workflows", icon: GitBranch },
       ]

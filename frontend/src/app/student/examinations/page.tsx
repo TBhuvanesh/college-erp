@@ -33,26 +33,17 @@ interface ExamSummary {
   status: string;
 }
 
-interface StudentSeat {
-  id: string;
-  examId: string;
-  subjectCode: string;
-  examType: string;
-  roomId: string;
-  roomName: string;
-  seatNumber: number;
-}
+
 
 export default function StudentExaminations() {
   const { accessToken } = useAuth();
 
-  // Tab state: "upcoming" | "all" | "completed" | "seating"
-  const [activeTab, setActiveTab] = useState<"upcoming" | "all" | "completed" | "seating">("upcoming");
+  // Tab state: "upcoming" | "all" | "completed"
+  const [activeTab, setActiveTab] = useState<"upcoming" | "all" | "completed">("upcoming");
   
   // Data lists
   const [timetable, setTimetable] = useState<ExamSummary[]>([]);
   const [upcoming, setUpcoming] = useState<ExamSummary[]>([]);
-  const [seatingList, setSeatingList] = useState<StudentSeat[]>([]);
   
   // Loading & error states
   const [loading, setLoading] = useState(true);
@@ -68,10 +59,9 @@ export default function StudentExaminations() {
     setError(null);
     try {
       // Fetch timetable, upcoming, and seating
-      const [timetableRes, upcomingRes, seatingRes] = await Promise.all([
+      const [timetableRes, upcomingRes] = await Promise.all([
         apiFetch("/examinations/timetable", {}, accessToken),
-        apiFetch("/examinations/upcoming", {}, accessToken),
-        apiFetch("/exam-seating/me", {}, accessToken).catch(() => ({ success: true, data: [] }))
+        apiFetch("/examinations/upcoming", {}, accessToken)
       ]);
 
       if (timetableRes.success) {
@@ -79,9 +69,6 @@ export default function StudentExaminations() {
       }
       if (upcomingRes.success) {
         setUpcoming(upcomingRes.data?.exams || []);
-      }
-      if (seatingRes.success && seatingRes.data?.seats) {
-        setSeatingList(seatingRes.data.seats);
       }
     } catch (err: any) {
       setError(err.message || "Failed to fetch examination schedules.");
@@ -102,11 +89,7 @@ export default function StudentExaminations() {
   // Derive unique semesters from the timetable list
   const uniqueSemesters = Array.from(new Set(timetable.map(e => e.semester))).sort();
 
-  // Find seating details for a specific exam
-  const getSeatForExam = (examId: string) => {
-    if (!Array.isArray(seatingList)) return undefined;
-    return seatingList.find(s => s.examId === examId);
-  };
+
 
   // Filter lists based on selected criteria
   const getFilteredExams = () => {
@@ -196,20 +179,8 @@ export default function StudentExaminations() {
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>
           )}
         </button>
-        <button
-          onClick={() => setActiveTab("seating")}
-          className={`pb-3 text-xs font-bold transition-all relative cursor-pointer shrink-0 ${
-            activeTab === "seating" ? "text-blue-500 font-semibold" : "dark:text-neutral-400 text-text-secondary dark:hover:text-white hover:text-text-primary"
-          }`}
-        >
-          Seating Allocations
-          {activeTab === "seating" && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-full"></span>
-          )}
-        </button>
       </div>
 
-      {activeTab !== "seating" && (
         <>
           {/* Filters Area */}
           <div className="glass-card border dark:border-neutral-800 border-border-subtle rounded-xl p-4 flex flex-col sm:flex-row gap-3">
@@ -275,7 +246,6 @@ export default function StudentExaminations() {
                     </thead>
                     <tbody className="divide-y dark:divide-neutral-900 divide-border-subtle dark:text-neutral-300 text-text-secondary">
                       {filteredExams.map((exam) => {
-                        const seat = getSeatForExam(exam.id);
                         return (
                           <tr key={exam.id} className="dark:hover:bg-neutral-900/30 hover:bg-surface-hover transition">
                             <td className="px-4 py-3">
@@ -300,20 +270,10 @@ export default function StudentExaminations() {
                               {exam.maximumMarks}
                             </td>
                             <td className="px-4 py-3 dark:text-neutral-400 text-text-secondary">
-                              {seat ? (
-                                <div className="flex flex-col">
-                                  <span className="flex items-center gap-1 font-bold text-accent-blue">
-                                    <MapPin size={12} className="shrink-0" />
-                                    <span>{seat.roomName}</span>
-                                  </span>
-                                  <span className="text-[10px] font-extrabold text-text-muted mt-0.5">Seat No: {seat.seatNumber}</span>
-                                </div>
-                              ) : (
                                 <span className="flex items-center gap-1 text-text-muted">
                                   <MapPin size={12} className="shrink-0" />
                                   <span>Unassigned / Main Block</span>
                                 </span>
-                              )}
                             </td>
                             <td className="px-4 py-3">
                               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border capitalize ${getStatusBadge(exam.status)}`}>
@@ -330,7 +290,6 @@ export default function StudentExaminations() {
                 {/* Mobile Card View */}
                 <div className="block md:hidden space-y-3">
                   {filteredExams.map((exam) => {
-                    const seat = getSeatForExam(exam.id);
                     return (
                       <div key={exam.id} className="glass-card border dark:border-neutral-800 border-border-subtle rounded-xl p-4 space-y-3">
                         <div className="flex items-start justify-between">
@@ -362,20 +321,10 @@ export default function StudentExaminations() {
                           </div>
                           <div className="col-span-2">
                             <span className="dark:text-neutral-500 text-text-muted block text-[9px] uppercase font-bold tracking-wider mb-0.5">Venue Location & Seat</span>
-                            {seat ? (
-                              <div className="flex flex-col font-sans">
-                                <span className="flex items-center gap-1 font-bold text-accent-blue">
-                                  <MapPin size={10} className="shrink-0" />
-                                  <span>{seat.roomName}</span>
-                                </span>
-                                <span className="text-[10px] font-extrabold text-text-muted mt-0.5">Seat Number: {seat.seatNumber}</span>
-                              </div>
-                            ) : (
                               <span className="flex items-center gap-1 font-sans text-text-muted">
                                 <MapPin size={10} className="shrink-0" />
                                 <span>Unassigned / Main Block</span>
                               </span>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -399,45 +348,6 @@ export default function StudentExaminations() {
             )}
           </div>
         </>
-      )}
-
-      {activeTab === "seating" && (
-        <div className="glass-card border dark:border-neutral-800 border-border-subtle rounded-xl p-5 space-y-4">
-          <div>
-            <h3 className="font-display font-bold text-sm text-text-primary uppercase tracking-wider">
-              My Seat Allocations
-            </h3>
-            <p className="text-[11px] text-text-muted mt-0.5">Your official room, building, and seat numbers for upcoming exams</p>
-          </div>
-
-          {seatingList.length === 0 ? (
-            <div className="text-center py-12 text-text-muted text-xs border border-dashed dark:border-neutral-800 border-border-subtle rounded-xl">
-              No active seat allocations discovered for upcoming exam sessions.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {seatingList.map((seat) => (
-                <div key={seat.id} className="p-4 border dark:border-neutral-800 border-border-subtle bg-surface rounded-xl space-y-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-accent-blue">
-                    <Grid size={16} />
-                    <span className="text-xs font-bold uppercase tracking-wider">{seat.examType}</span>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-text-primary">{seat.subjectCode} Seat Allocation</h4>
-                    <p className="text-[11px] text-text-muted mt-0.5">Assigned exam room location</p>
-                  </div>
-                  <div className="flex justify-between items-center pt-3 border-t dark:border-neutral-850 border-border-subtle">
-                    <span className="text-xs font-semibold dark:text-neutral-300 text-text-secondary">{seat.roomName}</span>
-                    <span className="text-xs font-black text-white bg-blue-600 px-3 py-1 rounded-lg">
-                      Seat {seat.seatNumber}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
     </div>
   );

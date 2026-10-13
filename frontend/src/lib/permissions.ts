@@ -107,7 +107,6 @@ export function hasAccessToPath(role: RbacRole, path: string): boolean {
       p.startsWith("/faculty/mentorship/") ||
       p === "/faculty/analytics" ||
       p === "/faculty/reports" ||
-      p === "/faculty/invigilation" ||
       p === "/faculty/lms" ||
       p.startsWith("/faculty/lms/")
     ) {
@@ -171,7 +170,6 @@ export function hasAccessToPath(role: RbacRole, path: string): boolean {
       p.startsWith("/faculty/mentorship/") ||
       p === "/faculty/analytics" ||
       p === "/faculty/reports" ||
-      p === "/faculty/invigilation" ||
       p === "/faculty/lms" ||
       p.startsWith("/faculty/lms/")
     );
