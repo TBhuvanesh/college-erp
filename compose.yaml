@@ -1,0 +1,116 @@
+# ==============================================================================
+# Docker Compose Specification - College ERP System
+# Services: PostgreSQL (Database), Express API (Backend), Next.js (Frontend)
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # Database: PostgreSQL
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: erp_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-erp_db}
+      POSTGRES_USER: ${POSTGRES_USER:-erp_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password required in .env}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - erp_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-erp_admin} -d ${POSTGRES_DB:-erp_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    # Isolated from host/external network by default for security.
+    # To connect directly via DBeaver or psql from host, uncomment the line below:
+    # ports:
+    #   - "127.0.0.1:5432:5432"
+
+  # ----------------------------------------------------------------------------
+  # Backend: Node.js / Express API
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: erp_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-erp_admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-erp_db}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET required in .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET required in .env}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://127.0.0.1:3000}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      UPLOAD_DIR: uploads/documents
+      LMS_UPLOAD_DIR: uploads/lms
+    volumes:
+      - backend_uploads:/app/uploads
+    ports:
+      - "3001:3001"
+    networks:
+      - erp_network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3001/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ----------------------------------------------------------------------------
+  # Frontend: Next.js Web Application
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:3001}
+    container_name: erp_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      INTERNAL_BACKEND_URL: http://backend:3001
+    ports:
+      - "3000:3000"
+    networks:
+      - erp_network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+# ------------------------------------------------------------------------------
+# Persistent Volumes & Network Definitions
+# ------------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    name: erp_postgres_data
+  backend_uploads:
+    name: erp_backend_uploads
+
+networks:
+  erp_network:
+    name: erp_network
+    driver: bridge

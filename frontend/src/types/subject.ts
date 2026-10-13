@@ -51,6 +51,11 @@ export interface SubjectSummary {
   year?: string | null;
   semester?: number;
   semesterRaw?: string | null;
+  description?: string | null;
+  abbreviation?: string | null;
+  // Summary counts
+  studentCount?: number;
+  facultyCount?: number;
   // General view: all mappings
   mappings?: SubjectCurriculumMappingDetail[];
 }
